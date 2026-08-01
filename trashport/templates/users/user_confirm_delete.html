@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Account | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-5 row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm border-top border-danger border-4">
+      <div class="card-body p-4 text-center">
+        <div class="fs-1 text-danger mb-3">⚠️</div>
+        <h2 class="h4 mb-3 text-danger fw-bold">Delete Your Account?</h2>
+        
+        <p class="text-secondary mb-4">
+          Are you absolutely sure you want to delete your TrashPort account? 
+          This will permanently remove your profile, address records, subscription details, and pickup history. 
+          <strong>This action is irreversible.</strong>
+        </p>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-center gap-3">
+            <button type="submit" class="btn btn-danger px-4">Delete My Account</button>
+            <a href="{% url 'users:detail' request.user.pk %}" class="btn btn-outline-secondary px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

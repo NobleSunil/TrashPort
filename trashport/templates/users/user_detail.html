@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Profile: {{ object.name|default:object.email }} | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        
+        <!-- Profile Header -->
+        <div class="text-center mb-4 pb-3 border-bottom">
+          <div class="fs-1 mb-2">👤</div>
+          <h2 class="h3 fw-bold mb-1">{{ object.name|default:"TrashPort User" }}</h2>
+          <p class="text-muted mb-2">{{ object.email }}</p>
+          <span class="badge bg-primary fs-6">{{ object.role|title }}</span>
+        </div>
+
+        <!-- Details Info -->
+        <div class="mb-4">
+          <h5 class="text-uppercase text-muted small fw-bold mb-2">Account Information</h5>
+          <p class="mb-1 text-secondary"><strong>Status:</strong> Active</p>
+          <p class="mb-0 text-muted small">Joined: {{ object.date_joined|date:"M d, Y" }}</p>
+        </div>
+
+        {% if object == request.user %}
+          <!-- Action Buttons -->
+          <div class="d-grid gap-2">
+            <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">Edit Profile Info</a>
+            
+            <div class="row g-2 mt-1">
+              <div class="col-6">
+                <a class="btn btn-outline-secondary w-100" href="{% url 'account_email' %}" role="button">Email Settings</a>
+              </div>
+              <div class="col-6">
+                <a class="btn btn-outline-secondary w-100" href="{% url 'mfa_index' %}" role="button">MFA Security</a>
+              </div>
+            </div>
+            
+            <hr class="my-3">
+            
+            <!-- Delete Button -->
+            <a class="btn btn-outline-danger" href="{% url 'users:delete' %}" role="button">Delete Account</a>
+          </div>
+        {% endif %}
+        
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

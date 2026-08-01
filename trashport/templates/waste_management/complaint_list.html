@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Complaints | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">Complaints & Support</h1>
+      <p class="text-muted">Trace and resolve your service complaints</p>
+    </div>
+    {% if request.user.role == 'CITIZEN' %}
+      <a href="{% url 'waste_management:complaint_create' %}" class="btn btn-danger">Raise a Complaint</a>
+    {% endif %}
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Pickup Request ID</th>
+            <th>Date Filed</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for complaint in complaints %}
+            <tr>
+              <td><strong>#{{ complaint.id }}</strong></td>
+              <td>{{ complaint.title }}</td>
+              <td>
+                {% if complaint.pickup_request %}
+                  <a href="{% url 'waste_management:pickup_detail' complaint.pickup_request.id %}">#{{ complaint.pickup_request.id }}</a>
+                {% else %}
+                  <span class="text-muted small italic">General Support</span>
+                {% endif %}
+              </td>
+              <td>{{ complaint.created_at|date:"M d, Y" }}</td>
+              <td>
+                {% if complaint.status == 'PENDING' %}
+                  <span class="badge bg-danger">Pending</span>
+                {% else %}
+                  <span class="badge bg-success">Resolved</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'waste_management:complaint_detail' complaint.id %}" class="btn btn-sm btn-outline-secondary">View Details</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No complaints filed. You have a clean record!</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

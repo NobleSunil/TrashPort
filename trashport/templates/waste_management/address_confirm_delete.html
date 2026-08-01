@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Address | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 text-center">
+        <h2 class="h4 mb-3 text-danger">Delete Address?</h2>
+        <p class="text-muted mb-4">Are you sure you want to delete the address "<strong>{{ object.address_line1 }}, {{ object.city }}</strong>"? This action cannot be undone.</p>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-center gap-2">
+            <button type="submit" class="btn btn-danger px-4">Delete</button>
+            <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

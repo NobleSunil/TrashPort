@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Book a Pickup | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h3 mb-3">Book Waste Pickup</h1>
+        <p class="text-muted mb-4">Request waste collection by selecting your address, category, and schedule.</p>
+        
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm">Confirm Booking</button>
+            <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
