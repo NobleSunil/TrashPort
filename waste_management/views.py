@@ -187,7 +187,6 @@ class PickupRequestCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.citizen = self.request.user
-        form.instance.status = PickupRequest.StatusChoices.PENDING
         messages.success(self.request, "Pickup request booked successfully!")
         return super().form_valid(form)
 
@@ -253,9 +252,14 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.save()
                 messages.warning(request, "Pickup request cancelled by Admin.")
 
-        # Citizen rating/feedback
+        # Citizen rating/feedback, cancel, or payment
         elif user.role == User.Roles.CITIZEN and pickup.citizen == user:
-            if action == "feedback":
+            if action == "pay" and pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT:
+                pickup.is_paid = True
+                pickup.status = PickupRequest.StatusChoices.PENDING
+                pickup.save()
+                messages.success(request, f"Payment of ${pickup.fee} processed successfully! Your request is now pending assignment.")
+            elif action == "feedback":
                 rating = request.POST.get("rating")
                 comments = request.POST.get("comments")
                 if rating:
@@ -263,7 +267,7 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
                     pickup.feedback_comments = comments
                     pickup.save()
                     messages.success(request, "Thank you for your feedback!")
-            elif action == "cancel" and pickup.status == PickupRequest.StatusChoices.PENDING:
+            elif action == "cancel" and pickup.status in [PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT]:
                 pickup.status = PickupRequest.StatusChoices.CANCELLED
                 pickup.save()
                 messages.warning(request, "Your pickup request has been cancelled.")

@@ -59,6 +59,16 @@ class Subscription(models.Model):
 class WasteCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    fee_per_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0.00,
+        help_text="Collection fee per kg"
+    )
+    points_per_kg = models.IntegerField(
+        default=0,
+        help_text="Points rewarded per kg for recycling valuable metals (Copper, Aluminum, Steel)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -71,6 +81,7 @@ class WasteCategory(models.Model):
 
 class PickupRequest(models.Model):
     class StatusChoices(models.TextChoices):
+        AWAITING_PAYMENT = "AWAITING_PAYMENT", "Awaiting Payment"
         PENDING = "PENDING", "Pending"
         ASSIGNED = "ASSIGNED", "Assigned"
         IN_TRANSIT = "IN_TRANSIT", "In Transit"
@@ -91,9 +102,31 @@ class PickupRequest(models.Model):
     )
     address = models.ForeignKey(Address, on_delete=models.PROTECT)
     category = models.ForeignKey(WasteCategory, on_delete=models.PROTECT)
+    weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=1.00,
+        validators=[MinValueValidator(0.01)],
+        help_text="Estimated weight in kg"
+    )
     quantity_estimate = models.CharField(
         max_length=100,
-        help_text="Estimated weight or volume (e.g. 5kg, 2 bags)"
+        blank=True,
+        null=True,
+        help_text="Additional quantity estimate (e.g. 2 bags, 3 boxes)"
+    )
+    fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Calculated collection fee"
+    )
+    points_earned = models.IntegerField(
+        default=0,
+        help_text="Points earned for recycling valuable metals"
+    )
+    is_paid = models.BooleanField(
+        default=False
     )
     schedule_date = models.DateTimeField()
     status = models.CharField(
@@ -109,6 +142,33 @@ class PickupRequest(models.Model):
     feedback_comments = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        is_new = not self.pk
+        if is_new:
+            # Check subscription
+            has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()
+            if has_sub:
+                self.fee = 0.00
+            else:
+                self.fee = self.weight_kg * self.category.fee_per_kg
+            
+            self.points_earned = int(self.weight_kg * self.category.points_per_kg)
+            
+            if self.fee > 0:
+                self.status = self.StatusChoices.AWAITING_PAYMENT
+                self.is_paid = False
+            else:
+                self.status = self.StatusChoices.PENDING
+                self.is_paid = True
+        else:
+            # Check if status has transitioned to COMPLETED
+            orig = PickupRequest.objects.get(pk=self.pk)
+            if orig.status != self.StatusChoices.COMPLETED and self.status == self.StatusChoices.COMPLETED:
+                self.citizen.wallet_points += self.points_earned
+                self.citizen.save()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Pickup #{self.id} ({self.status}) for {self.citizen.email}"

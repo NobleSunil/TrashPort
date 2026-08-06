@@ -18,11 +18,12 @@ class AddressForm(forms.ModelForm):
 class PickupRequestForm(forms.ModelForm):
     class Meta:
         model = PickupRequest
-        fields = ["address", "category", "quantity_estimate", "schedule_date"]
+        fields = ["address", "category", "weight_kg", "quantity_estimate", "schedule_date"]
         widgets = {
             "address": forms.Select(attrs={"class": "form-select"}),
             "category": forms.Select(attrs={"class": "form-select"}),
-            "quantity_estimate": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 2 bags, 5kg"}),
+            "weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01", "placeholder": "Estimated weight in kg"}),
+            "quantity_estimate": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 2 bags, 3 boxes (optional)"}),
             "schedule_date": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
         }
 
@@ -55,10 +56,12 @@ class ComplaintForm(forms.ModelForm):
 class WasteCategoryForm(forms.ModelForm):
     class Meta:
         model = WasteCategory
-        fields = ["name", "description"]
+        fields = ["name", "description", "fee_per_kg", "points_per_kg"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Category Name"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
+            "fee_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00"}),
+            "points_per_kg": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
         }
 
 

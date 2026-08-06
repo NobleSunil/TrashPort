@@ -30,6 +30,11 @@ class User(AbstractUser):
         default=Roles.CITIZEN,
     )
 
+    wallet_points = models.IntegerField(
+        _("Wallet Points"),
+        default=0,
+    )
+
     # First and last name do not cover name patterns around the globe
     name = CharField(_("Name of User"), blank=True, max_length=255)
     first_name = None  # type: ignore[assignment]

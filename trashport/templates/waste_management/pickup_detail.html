@@ -24,11 +24,31 @@
           <div class="col-md-6 border-end">
             <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
             <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }}</p>
-            <p class="mb-2"><strong>Estimate Quantity:</strong> {{ pickup.quantity_estimate }}</p>
+            <p class="mb-2"><strong>Estimated Weight:</strong> {{ pickup.weight_kg }} kg</p>
+            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
+            <p class="mb-2">
+              <strong>Collection Fee:</strong>
+              {% if pickup.fee > 0 %}
+                ${{ pickup.fee }}
+              {% else %}
+                <span class="text-success fw-bold">$0.00 (Subscription Waived/Free)</span>
+              {% endif %}
+            </p>
+            <p class="mb-2"><strong>Points to Earn:</strong> {{ pickup.points_earned }} pts</p>
+            <p class="mb-2">
+              <strong>Payment Status:</strong>
+              {% if pickup.is_paid %}
+                <span class="badge bg-success">Paid</span>
+              {% else %}
+                <span class="badge bg-danger">Awaiting Payment</span>
+              {% endif %}
+            </p>
             <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
             <p class="mb-2">
               <strong>Status:</strong>
-              {% if pickup.status == 'PENDING' %}
+              {% if pickup.status == 'AWAITING_PAYMENT' %}
+                <span class="badge bg-danger">Awaiting Payment</span>
+              {% elif pickup.status == 'PENDING' %}
                 <span class="badge bg-warning text-dark">Pending Assignment</span>
               {% elif pickup.status == 'ASSIGNED' %}
                 <span class="badge bg-primary">Assigned</span>
@@ -67,8 +87,23 @@
     <!-- 1. CITIZEN ACTIONS -->
     {% if request.user.role == 'CITIZEN' and pickup.citizen == request.user %}
       
+      <!-- Pay Collection Fee -->
+      {% if pickup.status == 'AWAITING_PAYMENT' %}
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="card-title text-primary">Payment Required</h5>
+            <p class="text-muted small">A collection fee of <strong>${{ pickup.fee }}</strong> is required for this pickup. Please complete payment to release the request to collectors.</p>
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="pay">
+              <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm">Pay Collection Fee</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
       <!-- Cancel Request -->
-      {% if pickup.status == 'PENDING' %}
+      {% if pickup.status == 'PENDING' or pickup.status == 'AWAITING_PAYMENT' %}
         <div class="card border-0 shadow-sm mb-4">
           <div class="card-body">
             <h5 class="card-title text-danger">Cancel Request</h5>

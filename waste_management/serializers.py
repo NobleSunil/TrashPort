@@ -51,8 +51,9 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id", "citizen", "citizen_details", "collector", "collector_details",
             "address", "address_details", "category", "category_details",
-            "quantity_estimate", "schedule_date", "status",
-            "feedback_rating", "feedback_comments", "created_at", "updated_at"
+            "weight_kg", "quantity_estimate", "fee", "points_earned", "is_paid",
+            "schedule_date", "status", "feedback_rating", "feedback_comments",
+            "created_at", "updated_at"
         ]
 
 
