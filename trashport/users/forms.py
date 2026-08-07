@@ -1,3 +1,4 @@
+import re
 from allauth.account.forms import SignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from django.contrib.auth import forms as admin_forms
@@ -46,6 +47,12 @@ class UserSignupForm(SignupForm):
         required=True,
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Full Name"})
     )
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if not re.match(r'^[a-zA-Z\s]+$', name):
+            raise forms.ValidationError("Name must contain only letters and spaces.")
+        return name
 
     def save(self, request):
         user = super().save(request)
