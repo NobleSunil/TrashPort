@@ -20,6 +20,7 @@
             <th>ID</th>
             <th>Name</th>
             <th>Description</th>
+            <th>Price per kg</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -29,13 +30,14 @@
               <td><strong>#{{ cat.id }}</strong></td>
               <td>{{ cat.name }}</td>
               <td class="text-muted">{{ cat.description|default:"-" }}</td>
+              <td><strong>${{ cat.price_per_kg }}</strong></td>
               <td>
                 <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="text-center py-4 text-muted">No waste categories defined.</td>
+              <td colspan="5" class="text-center py-4 text-muted">No waste categories defined.</td>
             </tr>
           {% endfor %}
         </tbody>

@@ -8,16 +8,17 @@ from django.db.models import Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from .models import Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest, Complaint
+from decimal import Decimal, InvalidOperation
+from django.db.models import Sum
+
+from .models import Address, WasteCategory, PickupRequest, Complaint
 from .serializers import (
     AddressSerializer,
-    SubscriptionTierSerializer,
-    SubscriptionSerializer,
     WasteCategorySerializer,
     PickupRequestSerializer,
     ComplaintSerializer,
 )
-from .forms import AddressForm, PickupRequestForm, ComplaintForm, WasteCategoryForm, SubscriptionTierForm
+from .forms import AddressForm, PickupRequestForm, ComplaintForm, WasteCategoryForm
 
 User = get_user_model()
 
@@ -31,16 +32,7 @@ class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [drf_permissions.AllowAny]
 
 
-class SubscriptionTierViewSet(viewsets.ModelViewSet):
-    queryset = SubscriptionTier.objects.all().order_by("price")
-    serializer_class = SubscriptionTierSerializer
-    permission_classes = [drf_permissions.AllowAny]
-
-
-class SubscriptionViewSet(viewsets.ModelViewSet):
-    queryset = Subscription.objects.all().order_by("-created_at")
-    serializer_class = SubscriptionSerializer
-    permission_classes = [drf_permissions.AllowAny]
+# Subscription Viewsets removed
 
 
 class WasteCategoryViewSet(viewsets.ModelViewSet):
@@ -86,10 +78,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["addresses"] = Address.objects.filter(user=user)
             context["complaints"] = Complaint.objects.filter(citizen=user).order_by("-created_at")
             
-            # Active subscription
-            active_sub = Subscription.objects.filter(user=user, is_active=True).first()
-            context["subscription"] = active_sub
-            context["available_tiers"] = SubscriptionTier.objects.filter(is_active=True)
+            # Billing context
+            unpaid_pickups = PickupRequest.objects.filter(
+                citizen=user,
+                status=PickupRequest.StatusChoices.COMPLETED,
+                payment_status=PickupRequest.PaymentStatus.UNPAID
+            ).order_by("-schedule_date")
+            context["unpaid_pickups"] = unpaid_pickups
+            context["total_unpaid"] = unpaid_pickups.aggregate(total=Sum("cost"))["total"] or Decimal("0.00")
 
         elif user.role == User.Roles.COLLECTOR:
             context["assigned_pickups"] = PickupRequest.objects.filter(
@@ -117,7 +113,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["complaints"] = Complaint.objects.filter(status=Complaint.StatusChoices.PENDING).order_by("-created_at")
             context["recent_pickups"] = PickupRequest.objects.all().order_by("-created_at")[:10]
             context["categories"] = WasteCategory.objects.all()
-            context["tiers"] = SubscriptionTier.objects.all()
 
         return context
 
@@ -228,9 +223,21 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.save()
                 messages.success(request, "Status updated to In Transit.")
             elif action == "complete" and pickup.collector == user:
+                weight_str = request.POST.get("weight")
+                try:
+                    weight = Decimal(weight_str)
+                    if weight <= 0:
+                        raise ValueError("Weight must be greater than zero.")
+                except (TypeError, ValueError, InvalidOperation):
+                    messages.error(request, "Invalid weight value. Please enter a valid number greater than 0.")
+                    return redirect("waste_management:pickup_detail", pk=pk)
+
+                pickup.weight = weight
+                pickup.cost = weight * pickup.category.price_per_kg
                 pickup.status = PickupRequest.StatusChoices.COMPLETED
+                pickup.payment_status = PickupRequest.PaymentStatus.UNPAID
                 pickup.save()
-                messages.success(request, "Pickup completed successfully!")
+                messages.success(request, f"Pickup completed successfully! Cost: ${pickup.cost:.2f}")
             elif action == "cancel" and pickup.collector == user:
                 # Release it back to pending or cancel
                 pickup.status = PickupRequest.StatusChoices.PENDING
@@ -253,7 +260,7 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.save()
                 messages.warning(request, "Pickup request cancelled by Admin.")
 
-        # Citizen rating/feedback
+        # Citizen rating/feedback/payment
         elif user.role == User.Roles.CITIZEN and pickup.citizen == user:
             if action == "feedback":
                 rating = request.POST.get("rating")
@@ -267,6 +274,10 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.status = PickupRequest.StatusChoices.CANCELLED
                 pickup.save()
                 messages.warning(request, "Your pickup request has been cancelled.")
+            elif action == "pay" and pickup.status == PickupRequest.StatusChoices.COMPLETED:
+                pickup.payment_status = PickupRequest.PaymentStatus.PAID
+                pickup.save()
+                messages.success(request, f"Payment of ${pickup.cost:.2f} completed successfully!")
 
         return redirect("waste_management:pickup_detail", pk=pk)
 
@@ -360,50 +371,4 @@ class WasteCategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class SubscriptionTierListView(LoginRequiredMixin, ListView):
-    model = SubscriptionTier
-    template_name = "waste_management/tier_list.html"
-    context_object_name = "tiers"
-
-
-class SubscriptionTierCreateView(LoginRequiredMixin, CreateView):
-    model = SubscriptionTier
-    form_class = SubscriptionTierForm
-    template_name = "waste_management/tier_form.html"
-    success_url = reverse_lazy("waste_management:tier_list")
-
-    def form_valid(self, form):
-        messages.success(self.request, "Subscription Tier created!")
-        return super().form_valid(form)
-
-
-class SubscriptionTierUpdateView(LoginRequiredMixin, UpdateView):
-    model = SubscriptionTier
-    form_class = SubscriptionTierForm
-    template_name = "waste_management/tier_form.html"
-    success_url = reverse_lazy("waste_management:tier_list")
-
-    def form_valid(self, form):
-        messages.success(self.request, "Subscription Tier updated!")
-        return super().form_valid(form)
-
-
-# --- Subscription Sign-Up ---
-
-class SubscribeView(LoginRequiredMixin, View):
-    def post(self, request, pk, *args, **kwargs):
-        tier = get_object_or_404(SubscriptionTier, pk=pk)
-        user = request.user
-
-        # Deactivate old subscriptions
-        Subscription.objects.filter(user=user, is_active=True).update(is_active=False)
-
-        # Create new subscription
-        Subscription.objects.create(
-            user=user,
-            tier=tier,
-            start_date=timezone.now().date(),
-            is_active=True
-        )
-        messages.success(request, f"Successfully subscribed to {tier.name}!")
-        return redirect("waste_management:dashboard")
+# Subscription views removed

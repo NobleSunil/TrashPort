@@ -27,37 +27,9 @@ class Address(models.Model):
         return f"{self.address_line1}, {self.city} ({self.user.email})"
 
 
-class SubscriptionTier(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.name} (${self.price})"
-
-
-class Subscription(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="subscriptions"
-    )
-    tier = models.ForeignKey(SubscriptionTier, on_delete=models.PROTECT)
-    start_date = models.DateField()
-    end_date = models.DateField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.user.email} - {self.tier.name}"
-
-
 class WasteCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,7 +38,7 @@ class WasteCategory(models.Model):
         verbose_name_plural = "Waste Categories"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (${self.price_per_kg}/kg)"
 
 
 class PickupRequest(models.Model):
@@ -76,6 +48,10 @@ class PickupRequest(models.Model):
         IN_TRANSIT = "IN_TRANSIT", "In Transit"
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
+
+    class PaymentStatus(models.TextChoices):
+        UNPAID = "UNPAID", "Unpaid"
+        PAID = "PAID", "Paid"
 
     citizen = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -94,6 +70,24 @@ class PickupRequest(models.Model):
     quantity_estimate = models.CharField(
         max_length=100,
         help_text="Estimated weight or volume (e.g. 5kg, 2 bags)"
+    )
+    weight = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual collected weight in kg"
+    )
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Calculated cost of collection"
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.UNPAID
     )
     schedule_date = models.DateTimeField()
     status = models.CharField(

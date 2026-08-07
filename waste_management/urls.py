@@ -5,8 +5,6 @@ from .views import (
     PickupRequestCreateView, PickupRequestDetailView, PickupStatusUpdateView,
     ComplaintListView, ComplaintCreateView, ComplaintDetailView,
     WasteCategoryListView, WasteCategoryCreateView, WasteCategoryUpdateView,
-    SubscriptionTierListView, SubscriptionTierCreateView, SubscriptionTierUpdateView,
-    SubscribeView
 )
 
 app_name = "waste_management"
@@ -35,12 +33,4 @@ urlpatterns = [
     path("admin/categories/", WasteCategoryListView.as_view(), name="category_list"),
     path("admin/categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
     path("admin/categories/<int:pk>/edit/", WasteCategoryUpdateView.as_view(), name="category_update"),
-    
-    # Admin Master Entries - Tiers
-    path("admin/tiers/", SubscriptionTierListView.as_view(), name="tier_list"),
-    path("admin/tiers/new/", SubscriptionTierCreateView.as_view(), name="tier_create"),
-    path("admin/tiers/<int:pk>/edit/", SubscriptionTierUpdateView.as_view(), name="tier_update"),
-    
-    # Subscription action
-    path("subscribe/<int:pk>/", SubscribeView.as_view(), name="subscribe"),
 ]

@@ -20,46 +20,19 @@
   <!-- CITIZEN DASHBOARD -->
   {% if role == 'CITIZEN' %}
     <div class="row g-4 mb-4">
-      <!-- Subscription Card -->
-      <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title text-uppercase text-muted small fw-bold">Active Subscription</h5>
-            {% if subscription %}
-              <div class="mt-3">
-                <span class="badge bg-success fs-6 mb-2">{{ subscription.tier.name }}</span>
-                <p class="mb-1 text-secondary">Price: <strong>${{ subscription.tier.price }}</strong></p>
-                <p class="mb-0 text-muted small">Started: {{ subscription.start_date }}</p>
-              </div>
-            {% else %}
-              <div class="mt-3">
-                <span class="badge bg-secondary fs-6 mb-2">No Active Subscription</span>
-                <p class="text-muted small">Please select a subscription tier below to start booking pickups.</p>
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Stats -->
-      <div class="col-md-8">
+      <!-- Quick Navigation -->
+      <div class="col-md-12">
         <div class="card h-100 border-0 shadow-sm">
           <div class="card-body">
             <h5 class="card-title text-uppercase text-muted small fw-bold mb-3">Quick Navigation</h5>
             <div class="row g-2">
-              <div class="col-6 col-md-3">
+              <div class="col-6 col-sm-3">
                 <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-primary w-100 py-3 text-center">
                   <div class="fs-4 mb-1">📍</div>
                   Addresses
                 </a>
               </div>
-              <div class="col-6 col-md-3">
-                <a href="{% url 'waste_management:complaint_list' %}" class="btn btn-outline-danger w-100 py-3 text-center">
-                  <div class="fs-4 mb-1">⚠️</div>
-                  Complaints
-                </a>
-              </div>
-              <div class="col-6 col-md-3">
+              <div class="col-6 col-sm-3">
                 <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-outline-success w-100 py-3 text-center">
                   <div class="fs-4 mb-1">🚛</div>
                   Book Pickup
@@ -120,35 +93,6 @@
       </div>
     </div>
 
-    <!-- Subscription Plans Choice -->
-    {% if not subscription %}
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-0 py-3">
-          <h5 class="card-title mb-0">Available Subscription Plans</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-4">
-            {% for tier in available_tiers %}
-              <div class="col-md-6 col-lg-4">
-                <div class="card border border-2 h-100">
-                  <div class="card-body text-center d-flex flex-column">
-                    <h4 class="card-title mb-2">{{ tier.name }}</h4>
-                    <p class="text-muted mb-4">{{ tier.description }}</p>
-                    <h2 class="mb-4">${{ tier.price }} <span class="fs-6 text-muted">/ month</span></h2>
-                    <form method="post" action="{% url 'waste_management:subscribe' tier.id %}" class="mt-auto">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-primary w-100">Activate Plan</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            {% empty %}
-              <div class="col-12 text-center text-muted py-3">No plans configured by Administrator yet.</div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    {% endif %}
 
   <!-- COLLECTOR DASHBOARD -->
   {% elif role == 'COLLECTOR' %}
@@ -283,7 +227,7 @@
   <!-- ADMINISTRATOR DASHBOARD -->
   {% elif role == 'ADMIN' %}
     <div class="row g-4 mb-4">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="card border-0 shadow-sm">
           <div class="card-body">
             <h5 class="card-title text-muted text-uppercase small fw-bold">Total Pickups</h5>
@@ -291,7 +235,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="card border-0 shadow-sm">
           <div class="card-body">
             <h5 class="card-title text-muted text-uppercase small fw-bold">Pending Requests</h5>
@@ -299,15 +243,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title text-muted text-uppercase small fw-bold">Pending Complaints</h5>
-            <h2 class="mt-2 text-danger">{{ active_complaints }}</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="card border-0 shadow-sm">
           <div class="card-body">
             <h5 class="card-title text-muted text-uppercase small fw-bold">Registered Users</h5>
@@ -320,7 +256,7 @@
 
     <!-- Admin Master Entry Quick Access -->
     <div class="row g-4 mb-4">
-      <div class="col-md-6">
+      <div class="col-md-12">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -330,7 +266,7 @@
             <ul class="list-group list-group-flush">
               {% for cat in categories %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ cat.name }}
+                  <span>{{ cat.name }} <strong class="text-muted">(${{ cat.price_per_kg }}/kg)</strong></span>
                   <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-link">Edit</a>
                 </li>
               {% empty %}
@@ -340,65 +276,9 @@
           </div>
         </div>
       </div>
-
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="card-title mb-0">Subscription Tiers Master Entry</h5>
-              <a href="{% url 'waste_management:tier_create' %}" class="btn btn-sm btn-primary">Add New</a>
-            </div>
-            <ul class="list-group list-group-flush">
-              {% for tier in tiers %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ tier.name }} (${{ tier.price }})
-                  <a href="{% url 'waste_management:tier_update' tier.id %}" class="btn btn-sm btn-link">Edit</a>
-                </li>
-              {% empty %}
-                <li class="list-group-item text-muted">No tiers seeded.</li>
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- Active Complaints Inbox -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-white border-0 py-3">
-        <h5 class="card-title mb-0">Active Complaints Inbox</h5>
-      </div>
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Citizen</th>
-              <th>Title</th>
-              <th>Date Filed</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for complaint in complaints %}
-              <tr>
-                <td><strong>#{{ complaint.id }}</strong></td>
-                <td>{{ complaint.citizen.email }}</td>
-                <td>{{ complaint.title }}</td>
-                <td>{{ complaint.created_at|date:"M d, Y" }}</td>
-                <td>
-                  <a href="{% url 'waste_management:complaint_detail' complaint.id %}" class="btn btn-sm btn-outline-danger">Resolve</a>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="5" class="text-center py-4 text-muted">No active complaints in your inbox! Keep up the good work.</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
+
   {% endif %}
 </div>
 {% endblock %}

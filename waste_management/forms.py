@@ -1,5 +1,5 @@
 from django import forms
-from .models import Address, PickupRequest, Complaint, WasteCategory, SubscriptionTier
+from .models import Address, PickupRequest, Complaint, WasteCategory
 
 class AddressForm(forms.ModelForm):
     class Meta:
@@ -55,20 +55,9 @@ class ComplaintForm(forms.ModelForm):
 class WasteCategoryForm(forms.ModelForm):
     class Meta:
         model = WasteCategory
-        fields = ["name", "description"]
+        fields = ["name", "price_per_kg", "description"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Category Name"}),
+            "price_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "placeholder": "e.g. 0.50"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
-        }
-
-
-class SubscriptionTierForm(forms.ModelForm):
-    class Meta:
-        model = SubscriptionTier
-        fields = ["name", "price", "description", "is_active"]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tier Name"}),
-            "price": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

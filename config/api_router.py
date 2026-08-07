@@ -5,8 +5,6 @@ from rest_framework.routers import SimpleRouter
 from trashport.users.api.views import UserViewSet
 from waste_management.views import (
     AddressViewSet,
-    SubscriptionTierViewSet,
-    SubscriptionViewSet,
     WasteCategoryViewSet,
     PickupRequestViewSet,
     ComplaintViewSet,
@@ -16,8 +14,6 @@ router = DefaultRouter() if settings.DEBUG else SimpleRouter()
 
 router.register("users", UserViewSet)
 router.register("addresses", AddressViewSet, basename="address")
-router.register("subscription-tiers", SubscriptionTierViewSet, basename="subscriptiontier")
-router.register("subscriptions", SubscriptionViewSet, basename="subscription")
 router.register("waste-categories", WasteCategoryViewSet, basename="wastecategory")
 router.register("pickup-requests", PickupRequestViewSet, basename="pickuprequest")
 router.register("complaints", ComplaintViewSet, basename="complaint")
