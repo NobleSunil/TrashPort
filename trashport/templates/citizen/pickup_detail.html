@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Pickup Request Details | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+    
+    <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      ← Back to Dashboard
+    </a>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.id }}</h2>
+          <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 border-end">
+            <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
+            <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }} (${{ pickup.category.price_per_kg }}/kg)</p>
+            <p class="mb-2"><strong>Estimate Quantity:</strong> {{ pickup.quantity_estimate }}</p>
+            <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <p class="mb-2">
+              <strong>Status:</strong>
+              {% if pickup.status == 'PENDING' %}
+                <span class="badge bg-warning text-dark">Pending Assignment</span>
+              {% elif pickup.status == 'ASSIGNED' %}
+                <span class="badge bg-primary">Assigned</span>
+              {% elif pickup.status == 'IN_TRANSIT' %}
+                <span class="badge bg-info">In Transit</span>
+              {% elif pickup.status == 'COMPLETED' %}
+                <span class="badge bg-success">Completed</span>
+              {% elif pickup.status == 'CANCELLED' %}
+                <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </p>
+            {% if pickup.status == 'COMPLETED' %}
+              <p class="mb-2"><strong>Actual Weight:</strong> {{ pickup.weight }} kg</p>
+              <p class="mb-2"><strong>Total Cost:</strong> ${{ pickup.cost }}</p>
+              <p class="mb-2">
+                <strong>Payment Status:</strong>
+                {% if pickup.payment_status == 'PAID' %}
+                  <span class="badge bg-success">Paid</span>
+                {% else %}
+                  <span class="badge bg-danger">Unpaid</span>
+                {% endif %}
+              </p>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <h5 class="text-uppercase text-muted small fw-bold">Location & Collector</h5>
+            <p class="mb-2"><strong>Address:</strong><br>
+              {{ pickup.address.address_line1 }}<br>
+              {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+              {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
+            </p>
+            <p class="mb-0"><strong>Assigned Collector:</strong><br>
+              {% if pickup.collector %}
+                {{ pickup.collector.name|default:pickup.collector.email }} ({{ pickup.collector.email }})
+              {% else %}
+                <span class="text-muted italic">Waiting for collector assignment</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Citizen Actions -->
+    {% if pickup.status == 'PENDING' %}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title text-danger">Cancel Request</h5>
+          <p class="text-muted small">You can cancel this pickup request as long as it has not been assigned to a collector.</p>
+          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-outline-danger">Cancel Pickup Request</button>
+          </form>
+        </div>
+      </div>
+    {% elif pickup.status == 'COMPLETED' %}
+      <!-- Payment status logic -->
+      {% if pickup.payment_status == 'UNPAID' %}
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="card-title text-primary">Pending Payment</h5>
+            <p class="text-muted small">A total of <strong>${{ pickup.cost }}</strong> is due for this waste collection request.</p>
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="pay">
+              <button type="submit" class="btn btn-success">Pay Now</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Feedback Form -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Feedback & Rating</h5>
+          {% if pickup.feedback_rating %}
+            <p class="mb-1"><strong>Your Rating:</strong> {{ pickup.feedback_rating }} / 5</p>
+            {% if pickup.feedback_comments %}
+              <p class="mb-0 text-muted">"{{ pickup.feedback_comments }}"</p>
+            {% endif %}
+          {% else %}
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="feedback">
+              <div class="mb-3">
+                <label for="rating" class="form-label fw-bold">Rate service (1-5):</label>
+                <select name="rating" id="rating" class="form-select w-25" required>
+                  <option value="">-- Rate --</option>
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Good</option>
+                  <option value="3">3 - Average</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="1">1 - Terrible</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="comments" class="form-label fw-bold">Comments (Optional):</label>
+                <textarea name="comments" id="comments" rows="3" class="form-control" placeholder="Tell us how we did..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Feedback</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

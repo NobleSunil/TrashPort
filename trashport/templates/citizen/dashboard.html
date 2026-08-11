@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <!-- Greeting -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 mb-0">Welcome, {{ request.user.name|default:request.user.email }}!</h1>
+      <p class="text-muted">You are logged in as a <strong>Citizen</strong></p>
+    </div>
+    <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-primary btn-lg shadow-sm">
+      <i class="bi bi-plus-circle me-2"></i>Book a Pickup
+    </a>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- Quick Navigation -->
+    <div class="col-md-12">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title text-uppercase text-muted small fw-bold mb-3">Quick Navigation</h5>
+          <div class="row g-2">
+            <div class="col-6 col-sm-3">
+              <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-primary w-100 py-3 text-center">
+                <div class="fs-4 mb-1">📍</div>
+                Addresses
+              </a>
+            </div>
+            <div class="col-6 col-sm-3">
+              <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-outline-success w-100 py-3 text-center">
+                <div class="fs-4 mb-1">🚛</div>
+                Book Pickup
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Pickups -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Active Pickup Requests</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Scheduled Time</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pickup in active_pickups %}
+            <tr>
+              <td><strong>#{{ pickup.id }}</strong></td>
+              <td>{{ pickup.category.name }}</td>
+              <td>{{ pickup.quantity_estimate }}</td>
+              <td>{{ pickup.schedule_date|date:"M d, Y h:i A" }}</td>
+              <td>
+                {% if pickup.status == 'PENDING' %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% elif pickup.status == 'ASSIGNED' %}
+                  <span class="badge bg-primary">Assigned</span>
+                {% elif pickup.status == 'IN_TRANSIT' %}
+                  <span class="badge bg-info">In Transit</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ pickup.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">View Details</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No active pickup requests. Click "Book a Pickup" above to schedule one!</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Billing / Payments Section -->
+  {% if unpaid_pickups %}
+    <div class="card border-0 shadow-sm mb-4 bg-light">
+      <div class="card-body p-4">
+        <h5 class="card-title text-danger fw-bold">Unpaid Trash Collections</h5>
+        <p class="text-muted">You have <strong>{{ unpaid_pickups.count }}</strong> pending payments for completed waste collections.</p>
+        <h4 class="mb-3">Total Amount Due: <strong class="text-primary">${{ total_unpaid }}</strong></h4>
+        <div class="list-group">
+          {% for pickup in unpaid_pickups %}
+            <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+              <span>Pickup #{{ pickup.id }} ({{ pickup.category.name }}, {{ pickup.weight }}kg) on {{ pickup.schedule_date|date:"M d, Y" }}</span>
+              <span class="badge bg-danger">${{ pickup.cost }} - Pay Now</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Past Pickups -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Past Completed Pickups</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Weight</th>
+            <th>Cost</th>
+            <th>Payment</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pickup in past_pickups %}
+            <tr>
+              <td><strong>#{{ pickup.id }}</strong></td>
+              <td>{{ pickup.category.name }}</td>
+              <td>{{ pickup.weight }} kg</td>
+              <td>${{ pickup.cost }}</td>
+              <td>
+                {% if pickup.payment_status == 'PAID' %}
+                  <span class="badge bg-success">Paid</span>
+                {% else %}
+                  <span class="badge bg-danger">Unpaid</span>
+                {% endif %}
+              </td>
+              <td>{{ pickup.schedule_date|date:"M d, Y" }}</td>
+              <td>
+                <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">View Details</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No past completed pickups.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Complaints -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Your Complaints</h5>
+      <a href="{% url 'waste_management:complaint_create' %}" class="btn btn-sm btn-outline-danger">File a Complaint</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Pickup Request ID</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for complaint in complaints %}
+            <tr>
+              <td><strong>#{{ complaint.id }}</strong></td>
+              <td>{{ complaint.title }}</td>
+              <td>#{{ complaint.pickup_request.id }}</td>
+              <td>
+                {% if complaint.status == 'PENDING' %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% else %}
+                  <span class="badge bg-success">Resolved</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'waste_management:complaint_detail' complaint.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No complaints filed.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

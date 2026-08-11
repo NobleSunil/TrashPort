@@ -50,13 +50,13 @@
     </div>
 
     <!-- Admin Resolve Button -->
-    {% if request.user.role == 'ADMIN' and complaint.status == 'PENDING' %}
+    {% if complaint.status == 'PENDING' %}
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
           <h5 class="card-title text-success">Resolve Complaint</h5>
           <p class="text-muted small">Verify that the issue has been resolved with the citizen/collector before marking as resolved.</p>
           
-          <form method="post">
+          <form method="post" action="{% url 'waste_management:complaint_detail' complaint.id %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="resolve">
             <button type="submit" class="btn btn-success">Mark as Resolved</button>

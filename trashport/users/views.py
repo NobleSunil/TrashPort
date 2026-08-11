@@ -1,27 +1,20 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
+from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
-from django.views.generic import DetailView
-from django.views.generic import RedirectView
-from django.views.generic import UpdateView
-from django.views.generic import DeleteView
-from django.contrib.auth import logout
-from django.contrib import messages
+from django.db.models import QuerySet
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils.translation import gettext_lazy as _
+from django.views.generic import DeleteView, DetailView, RedirectView, UpdateView
 
-from trashport.users.models import User
-
-if TYPE_CHECKING:
-    from django.db.models import QuerySet
+from .models import User
 
 
 class UserDetailView(LoginRequiredMixin, DetailView):
+    """
+    Renders detail page for a user profile.
+    """
     model = User
     slug_field = "id"
     slug_url_kwarg = "id"
@@ -31,6 +24,9 @@ user_detail_view = UserDetailView.as_view()
 
 
 class UserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+    """
+    Allows a user to update their name.
+    """
     model = User
     fields = ["name"]
     success_message = _("Information successfully updated")
@@ -48,6 +44,9 @@ user_update_view = UserUpdateView.as_view()
 
 
 class UserRedirectView(LoginRequiredMixin, RedirectView):
+    """
+    Redirects user to their own profile page.
+    """
     permanent = False
 
     def get_redirect_url(self) -> str:
@@ -57,7 +56,10 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
 user_redirect_view = UserRedirectView.as_view()
 
 
-class UserDeleteView(LoginRequiredMixin, DeleteView):
+class UserDeleteView(LoginRequiredMixin, View if False else DeleteView):
+    """
+    Allows a user to delete their account.
+    """
     model = User
     template_name = "users/user_confirm_delete.html"
     success_url = reverse_lazy("home")

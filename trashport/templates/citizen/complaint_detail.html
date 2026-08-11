@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Details | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-8">
+    
+    <a href="{% url 'waste_management:complaint_list' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      ← Back to Complaints
+    </a>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <h2 class="h4 mb-0 text-danger">Complaint #{{ complaint.id }}: {{ complaint.title }}</h2>
+          <span>
+            {% if complaint.status == 'PENDING' %}
+              <span class="badge bg-danger fs-6">Pending Review</span>
+            {% else %}
+              <span class="badge bg-success fs-6">Resolved</span>
+            {% endif %}
+          </span>
+        </div>
+
+        <div class="mb-4">
+          <h5 class="text-uppercase text-muted small fw-bold">Filed By</h5>
+          <p>{{ complaint.citizen.name|default:complaint.citizen.email }} ({{ complaint.citizen.email }})</p>
+        </div>
+
+        {% if complaint.pickup_request %}
+          <div class="mb-4">
+            <h5 class="text-uppercase text-muted small fw-bold">Linked Pickup Request</h5>
+            <p>
+              <a href="{% url 'waste_management:pickup_detail' complaint.pickup_request.id %}">Pickup Request #{{ complaint.pickup_request.id }}</a> 
+              (Scheduled: {{ complaint.pickup_request.schedule_date|date:"M d, Y" }}, Status: {{ complaint.pickup_request.status }})
+            </p>
+          </div>
+        {% endif %}
+
+        <div class="mb-4">
+          <h5 class="text-uppercase text-muted small fw-bold">Description of Issue</h5>
+          <div class="p-3 bg-light rounded text-secondary" style="white-space: pre-wrap;">{{ complaint.description }}</div>
+        </div>
+
+        <div class="text-muted small">
+          Filed on: {{ complaint.created_at|date:"M d, Y h:i A" }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

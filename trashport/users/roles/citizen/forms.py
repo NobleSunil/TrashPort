@@ -1,5 +1,6 @@
 from django import forms
-from .models import Address, PickupRequest, Complaint, WasteCategory
+from waste_management.models import Address, PickupRequest, Complaint, WasteCategory
+
 
 class AddressForm(forms.ModelForm):
     class Meta:
@@ -50,14 +51,3 @@ class ComplaintForm(forms.ModelForm):
         if user:
             # Only display pickup requests belonging to this citizen
             self.fields["pickup_request"].queryset = PickupRequest.objects.filter(citizen=user)
-
-
-class WasteCategoryForm(forms.ModelForm):
-    class Meta:
-        model = WasteCategory
-        fields = ["name", "price_per_kg", "description"]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Category Name"}),
-            "price_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "placeholder": "e.g. 0.50"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
-        }

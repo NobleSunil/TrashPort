@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <!-- Greeting -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 mb-0">Welcome, {{ request.user.name|default:request.user.email }}!</h1>
+      <p class="text-muted">You are logged in as a <strong>Collector</strong></p>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title text-muted text-uppercase small fw-bold">Active Jobs</h5>
+          <h2 class="mt-2">{{ assigned_pickups.count }}</h2>
+          <p class="text-muted mb-0">Pickups currently assigned to you</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title text-muted text-uppercase small fw-bold">Completed Jobs</h5>
+          <h2 class="mt-2 text-success">{{ completed_pickups.count }}</h2>
+          <p class="text-muted mb-0">Total successful collections</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assigned Pickups -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Your Active Pickups</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Customer</th>
+            <th>Address</th>
+            <th>Category</th>
+            <th>Scheduled Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pickup in assigned_pickups %}
+            <tr>
+              <td><strong>#{{ pickup.id }}</strong></td>
+              <td>{{ pickup.citizen.name|default:pickup.citizen.email }}</td>
+              <td>{{ pickup.address.address_line1 }}, {{ pickup.address.city }}</td>
+              <td>{{ pickup.category.name }}</td>
+              <td>{{ pickup.schedule_date|date:"M d, Y h:i A" }}</td>
+              <td>
+                {% if pickup.status == 'ASSIGNED' %}
+                  <span class="badge bg-primary">Assigned</span>
+                {% elif pickup.status == 'IN_TRANSIT' %}
+                  <span class="badge bg-info">In Transit</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ pickup.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                  {% if pickup.status == 'ASSIGNED' %}
+                    <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="transit">
+                      <button type="submit" class="btn btn-sm btn-info text-white">Start Transit</button>
+                    </form>
+                  {% elif pickup.status == 'IN_TRANSIT' %}
+                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-success">Complete Job</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No active assigned pickups. See unassigned jobs below to claim some!</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Unassigned Pickups Available -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Unassigned Pending Pickups</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>City</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Scheduled Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pickup in unassigned_pickups %}
+            <tr>
+              <td><strong>#{{ pickup.id }}</strong></td>
+              <td>{{ pickup.address.city }}</td>
+              <td>{{ pickup.category.name }}</td>
+              <td>{{ pickup.quantity_estimate }}</td>
+              <td>{{ pickup.schedule_date|date:"M d, Y h:i A" }}</td>
+              <td>
+                <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="claim">
+                  <button type="submit" class="btn btn-sm btn-primary">Claim Job</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No pending unassigned pickups in the system.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
