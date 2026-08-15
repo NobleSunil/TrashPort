@@ -1,5 +1,5 @@
 from django import forms
-from waste_management.models import Address, PickupRequest, Complaint, WasteCategory
+from waste_management.models import Address, PickupRequest, Complaint
 
 
 class AddressForm(forms.ModelForm):

@@ -99,6 +99,9 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "trashport.users",
+    "trashport.citizens",
+    "trashport.collectors",
+    "trashport.admins",
     "waste_management",
     # Your stuff: custom apps go here
 ]

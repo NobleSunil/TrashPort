@@ -12,12 +12,12 @@ from rest_framework import permissions as drf_permissions
 from rest_framework import viewsets
 
 # Expose role-specific view imports so urls.py pattern resolution works transparently
-from trashport.users.roles.admin.views import (
+from trashport.admins.views import (
     WasteCategoryCreateView,
     WasteCategoryListView,
     WasteCategoryUpdateView,
 )
-from trashport.users.roles.citizen.views import (
+from trashport.citizens.views import (
     AddressCreateView,
     AddressDeleteView,
     AddressListView,
@@ -86,13 +86,13 @@ class DashboardView(LoginRequiredMixin, View):
     """
     def get(self, request, *args, **kwargs):
         if request.user.role == User.Roles.CITIZEN:
-            from trashport.users.roles.citizen.views import CitizenDashboardView
+            from trashport.citizens.views import CitizenDashboardView
             return CitizenDashboardView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.COLLECTOR:
-            from trashport.users.roles.collector.views import CollectorDashboardView
+            from trashport.collectors.views import CollectorDashboardView
             return CollectorDashboardView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.ADMIN:
-            from trashport.users.roles.admin.views import AdminDashboardView
+            from trashport.admins.views import AdminDashboardView
             return AdminDashboardView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
@@ -104,13 +104,13 @@ class PickupRequestDetailView(LoginRequiredMixin, View):
     """
     def get(self, request, *args, **kwargs):
         if request.user.role == User.Roles.CITIZEN:
-            from trashport.users.roles.citizen.views import CitizenPickupRequestDetailView
+            from trashport.citizens.views import CitizenPickupRequestDetailView
             return CitizenPickupRequestDetailView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.COLLECTOR:
-            from trashport.users.roles.collector.views import CollectorPickupRequestDetailView
+            from trashport.collectors.views import CollectorPickupRequestDetailView
             return CollectorPickupRequestDetailView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.ADMIN:
-            from trashport.users.roles.admin.views import AdminPickupRequestDetailView
+            from trashport.admins.views import AdminPickupRequestDetailView
             return AdminPickupRequestDetailView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
@@ -121,13 +121,13 @@ class PickupStatusUpdateView(LoginRequiredMixin, View):
     """
     def post(self, request, *args, **kwargs):
         if request.user.role == User.Roles.CITIZEN:
-            from trashport.users.roles.citizen.views import CitizenPickupStatusUpdateView
+            from trashport.citizens.views import CitizenPickupStatusUpdateView
             return CitizenPickupStatusUpdateView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.COLLECTOR:
-            from trashport.users.roles.collector.views import CollectorPickupStatusUpdateView
+            from trashport.collectors.views import CollectorPickupStatusUpdateView
             return CollectorPickupStatusUpdateView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.ADMIN:
-            from trashport.users.roles.admin.views import AdminPickupStatusUpdateView
+            from trashport.admins.views import AdminPickupStatusUpdateView
             return AdminPickupStatusUpdateView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
@@ -138,10 +138,10 @@ class ComplaintListView(LoginRequiredMixin, View):
     """
     def get(self, request, *args, **kwargs):
         if request.user.role == User.Roles.CITIZEN:
-            from trashport.users.roles.citizen.views import CitizenComplaintListView
+            from trashport.citizens.views import CitizenComplaintListView
             return CitizenComplaintListView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.ADMIN:
-            from trashport.users.roles.admin.views import AdminComplaintListView
+            from trashport.admins.views import AdminComplaintListView
             return AdminComplaintListView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
@@ -153,9 +153,9 @@ class ComplaintDetailView(LoginRequiredMixin, View):
     """
     def dispatch(self, request, *args, **kwargs):
         if request.user.role == User.Roles.CITIZEN:
-            from trashport.users.roles.citizen.views import CitizenComplaintDetailView
+            from trashport.citizens.views import CitizenComplaintDetailView
             return CitizenComplaintDetailView.as_view()(request, *args, **kwargs)
         elif request.user.role == User.Roles.ADMIN:
-            from trashport.users.roles.admin.views import AdminComplaintDetailView
+            from trashport.admins.views import AdminComplaintDetailView
             return AdminComplaintDetailView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")

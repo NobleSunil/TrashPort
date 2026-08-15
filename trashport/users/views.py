@@ -56,7 +56,7 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
 user_redirect_view = UserRedirectView.as_view()
 
 
-class UserDeleteView(LoginRequiredMixin, View if False else DeleteView):
+class UserDeleteView(LoginRequiredMixin, DeleteView):
     """
     Allows a user to delete their account.
     """

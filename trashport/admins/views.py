@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
 from waste_management.models import Complaint, PickupRequest, WasteCategory
-from ...models import User
+from trashport.users.models import User
 from .forms import WasteCategoryForm
 
 

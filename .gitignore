@@ -275,3 +275,7 @@ trashport/media/
 .env
 .envs/*
 !.envs/.local/
+
+# Databases
+*.sqlite3
+
