@@ -1,61 +1,88 @@
-# TrashPort
+# TrashPort - On-Demand Smart Waste Collection System
 
-On-Demand Smart Waste Collection System
+TrashPort is a Django-based on-demand smart waste collection application featuring distinct interfaces for **Citizens**, **Collectors**, and **Administrators**.
 
-[![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+---
 
-## Settings
+## 📁 Repository Folder Structure
 
-Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getting-started/settings.html).
+Below is an overview of the key directories and files in this codebase, explaining what each component does:
 
-## Basic Commands
+```
+TrashPort/
+│
+├── .vscode/
+│   └── launch.json            # VS Code debugging configurations (local SQLite & Docker Postgres)
+│
+├── config/                    # Global Django settings and configuration
+│   ├── settings/
+│   │   ├── base.py            # Shared settings base
+│   │   ├── local.py           # Development settings overrides
+│   │   ├── production.py      # Production settings overrides
+│   │   └── test.py            # Test suite execution settings overrides
+│   ├── api_router.py          # DRF API ViewSet URL routing registrations
+│   ├── urls.py                # Main root URL mappings and entry points
+│   └── wsgi.py / asgi.py      # WSGI/ASGI application hooks
+│
+├── trashport/                 # Main project module containing the application logic
+│   ├── users/                 # App for authentication, login/signup/profile views, models & managers
+│   ├── citizens/              # App for Citizen dashboard, pickup requests, addresses, and complaints
+│   ├── collectors/            # App for Collector dashboard, job claiming, and status updates
+│   ├── admins/                # App for Custom Admin dashboard, stats, categories, and assignments
+│   ├── static/                # Static assets (custom JavaScript, styles/CSS, images)
+│   └── templates/             # Global templates (base layout, pages, and django-allauth overrides)
+│
+├── waste_management/          # Core data models and REST API viewsets
+│   ├── models.py              # Shared database models (Address, WasteCategory, PickupRequest, Complaint)
+│   ├── serializers.py         # DRF Serializers for shared waste models
+│   ├── views.py               # Dynamic dispatch controllers and standard REST ViewSets
+│   └── urls.py                # URL endpoints for waste management views
+│
+├── manage.py                  # Django administrative script
+├── pyproject.toml / uv.lock   # Project dependencies and lock file managed via 'uv'
+└── setup_and_run.ps1          # Automated setup PowerShell script for Windows developers
+```
 
-### Setting Up Your Users
+---
 
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
+## 🛠️ Windows Quick Setup
 
-- To create a **superuser account**, use this command:
+To set up your development environment on Windows, we recommend using the local **SQLite database** to get started without needing a Docker container.
 
-      uv run python manage.py createsuperuser
+### 1. Automated Setup Script
+Run the automated PowerShell script in the root directory:
+```powershell
+./setup_and_run.ps1
+```
+This script will:
+1. Check if the **`uv`** package manager is installed (and install it if missing).
+2. Sync all Python dependencies within a virtual environment.
+3. Apply database migrations to a local `db.sqlite3` file.
+4. Prompt you to create a Django Superuser account.
 
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
+---
 
-### Type checks
+## 🚀 Running the Project
 
-Running type checks with mypy:
+### Local Development (SQLite)
+Once the setup script completes, run the development server locally:
+```bash
+uv run python manage.py runserver
+```
+Navigate to `http://127.0.0.1:8000` in your web browser.
 
-    uv run mypy trashport
+### VS Code Debugging
+Pre-configured debug targets are available in the repository. To debug in VS Code:
+1. Open the project folder in VS Code.
+2. Select the **Run and Debug** tab (`Ctrl+Shift+D`).
+3. Choose **`Django (SQLite local)`** from the dropdown configuration list.
+4. Press **`F5`** to start debugging with active breakpoints.
 
-### Test coverage
+---
 
-To run the tests, check your test coverage, and generate an HTML coverage report:
+## 🧪 Testing
 
-    uv run coverage run -m pytest
-    uv run coverage html
-    uv run open htmlcov/index.html
-
-#### Running tests with pytest
-
-    uv run pytest
-
-### Live reloading and Sass CSS compilation
-
-Moved to [Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally.html#using-webpack-or-gulp).
-
-### Email Server
-
-In development, it is often nice to be able to see emails that are being sent from your application. For that reason local SMTP server [Mailpit](https://github.com/axllent/mailpit) with a web interface is available as docker container.
-
-Container mailpit will start automatically when you will run all docker containers.
-Please check [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally-docker.html) for more details how to start all containers.
-
-With Mailpit running, to view messages that are sent by your application, open your browser and go to `http://127.0.0.1:8025`
-
-## Deployment
-
-The following details how to deploy this application.
-
-### Docker
-
-See detailed [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/3-deployment/deployment-with-docker.html).
+To run the entire test suite locally using the SQLite database:
+```powershell
+$env:DATABASE_URL="sqlite:///db.sqlite3"; $env:DJANGO_READ_DOT_ENV_FILE="True"; uv run pytest
+```

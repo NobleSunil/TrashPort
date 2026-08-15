@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Pickup Request Details | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+    
+    <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      ← Back to Dashboard
+    </a>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.id }}</h2>
+          <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 border-end">
+            <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
+            <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }} (Fee: ${{ pickup.category.fee_per_kg }}/kg, Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
+            <p class="mb-2"><strong>Estimated Weight:</strong> {{ pickup.weight_kg }} kg</p>
+            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
+            <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <p class="mb-2">
+              <strong>Status:</strong>
+              {% if pickup.status == 'AWAITING_PAYMENT' %}
+                <span class="badge bg-danger">Awaiting Payment</span>
+              {% elif pickup.status == 'PENDING' %}
+                <span class="badge bg-warning text-dark">Pending Assignment</span>
+              {% elif pickup.status == 'ASSIGNED' %}
+                <span class="badge bg-primary">Assigned</span>
+              {% elif pickup.status == 'IN_TRANSIT' %}
+                <span class="badge bg-info">In Transit</span>
+              {% elif pickup.status == 'COMPLETED' %}
+                <span class="badge bg-success">Completed</span>
+              {% elif pickup.status == 'CANCELLED' %}
+                <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </p>
+            <p class="mb-2">
+              <strong>Collection Fee:</strong>
+              {% if pickup.fee > 0 %}
+                ${{ pickup.fee }}
+              {% else %}
+                <span class="text-success fw-bold">Free</span>
+              {% endif %}
+            </p>
+            <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
+            <p class="mb-2">
+              <strong>Payment Status:</strong>
+              {% if pickup.is_paid %}
+                <span class="badge bg-success">Paid</span>
+              {% else %}
+                <span class="badge bg-danger">Unpaid</span>
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="col-md-6">
+            <h5 class="text-uppercase text-muted small fw-bold">Location & Collector</h5>
+            <p class="mb-2"><strong>Customer:</strong> {{ pickup.citizen.name|default:pickup.citizen.email }} ({{ pickup.citizen.email }})</p>
+            <p class="mb-2"><strong>Address:</strong><br>
+              {{ pickup.address.address_line1 }}<br>
+              {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+              {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
+            </p>
+            <p class="mb-0"><strong>Assigned Collector:</strong><br>
+              {% if pickup.collector %}
+                {{ pickup.collector.name|default:pickup.collector.email }} ({{ pickup.collector.email }})
+              {% else %}
+                <span class="text-muted italic">Waiting for collector assignment</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collector Actions -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Collector Actions</h5>
+        
+        {% if pickup.status == 'PENDING' %}
+          <p class="text-muted small">This job is pending. Claim it to assign it to yourself.</p>
+          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="claim">
+            <button type="submit" class="btn btn-primary">Claim Job</button>
+          </form>
+        
+        {% elif pickup.status == 'ASSIGNED' and pickup.collector == request.user %}
+          <p class="text-muted small">Update status when you begin transit to customer location.</p>
+          <div class="d-flex gap-2">
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="transit">
+              <button type="submit" class="btn btn-info text-white">Start Transit</button>
+            </form>
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="cancel">
+              <button type="submit" class="btn btn-outline-danger">Release Job</button>
+            </form>
+          </div>
+
+        {% elif pickup.status == 'IN_TRANSIT' and pickup.collector == request.user %}
+          <p class="text-muted small">Proceed with collection. The customer fee was calculated upfront based on estimated weight.</p>
+          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="complete">
+            <button type="submit" class="btn btn-success btn-lg">Complete Collection</button>
+          </form>
+          
+        {% else %}
+          <p class="text-muted mb-0 small">No actions available. Job status is: <strong>{{ pickup.status }}</strong></p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

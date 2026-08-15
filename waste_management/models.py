@@ -81,8 +81,8 @@ class WasteCategory(models.Model):
 
 class PickupRequest(models.Model):
     class StatusChoices(models.TextChoices):
-        AWAITING_PAYMENT = "AWAITING_PAYMENT", "Awaiting Payment"
         PENDING = "PENDING", "Pending"
+        AWAITING_PAYMENT = "AWAITING_PAYMENT", "Awaiting Payment"
         ASSIGNED = "ASSIGNED", "Assigned"
         IN_TRANSIT = "IN_TRANSIT", "In Transit"
         COMPLETED = "COMPLETED", "Completed"

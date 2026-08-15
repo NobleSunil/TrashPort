@@ -7,7 +7,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-0">Subscription Tiers Master Entry</h1>
-      <p class="text-muted">Configure active service packages and prices for citizens</p>
+      <p class="text-muted">Configure monthly subscription packages for Citizens</p>
     </div>
     <a href="{% url 'waste_management:tier_create' %}" class="btn btn-primary">Add Subscription Tier</a>
   </div>
@@ -19,7 +19,7 @@
           <tr>
             <th>ID</th>
             <th>Name</th>
-            <th>Price</th>
+            <th>Monthly Price</th>
             <th>Description</th>
             <th>Status</th>
             <th>Action</th>
@@ -30,7 +30,7 @@
             <tr>
               <td><strong>#{{ tier.id }}</strong></td>
               <td>{{ tier.name }}</td>
-              <td><strong>${{ tier.price }}</strong></td>
+              <td>${{ tier.price }}</td>
               <td class="text-muted">{{ tier.description|default:"-" }}</td>
               <td>
                 {% if tier.is_active %}
