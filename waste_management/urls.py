@@ -5,6 +5,7 @@ from .views import (
     PickupRequestCreateView, PickupRequestDetailView, PickupStatusUpdateView,
     ComplaintListView, ComplaintCreateView, ComplaintDetailView,
     WasteCategoryListView, WasteCategoryCreateView, WasteCategoryUpdateView,
+    SubscribeView,
 )
 
 app_name = "waste_management"
@@ -12,6 +13,9 @@ app_name = "waste_management"
 urlpatterns = [
     # Dashboard
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    
+    # Subscriptions
+    path("subscriptions/<int:pk>/subscribe/", SubscribeView.as_view(), name="subscribe"),
     
     # Addresses CRUD
     path("addresses/", AddressListView.as_view(), name="address_list"),
