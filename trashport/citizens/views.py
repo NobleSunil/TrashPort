@@ -10,7 +10,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View
 
-from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription
+from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
 
 
@@ -48,6 +48,7 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         # Subscription details
         context["subscription"] = Subscription.objects.filter(user=user, is_active=True).first()
         context["available_tiers"] = SubscriptionTier.objects.filter(is_active=True)
+        context["waste_categories"] = WasteCategory.objects.all().order_by("name")
 
         return context
 
