@@ -1,149 +1,726 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Dashboard | TrashPort{% endblock %}
+{% block title %}Collector Dashboard | TrashPort{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  /* ── Dashboard Root Variables ── */
+  :root {
+    --brand-primary: #4f46e5;
+    --surface-bg: #f0f2f8;
+    --card-bg: #ffffff;
+    --card-border: rgba(79,70,229,0.08);
+    --text-primary: #1e1b4b;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --shadow-sm: 0 2px 8px rgba(79,70,229,0.07);
+    --shadow-md: 0 8px 32px rgba(79,70,229,0.13);
+    --shadow-lg: 0 20px 60px rgba(79,70,229,0.18);
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── Page Layout ── */
+  .collector-dashboard {
+    min-height: 100vh;
+    background: var(--surface-bg);
+    padding: 2rem 0 4rem;
+  }
+
+  /* ── Hero Header ── */
+  .dashboard-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 60%, #10b981 100%);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2.5rem 5rem;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: -3rem;
+    color: white;
+  }
+  .dashboard-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 280px; height: 280px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .dashboard-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50px;
+    padding: 0.35rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.25rem;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+  .hero-subtitle {
+    font-size: 1rem;
+    opacity: 0.85;
+    font-weight: 400;
+  }
+
+  /* ── Stat Cards ── */
+  .stats-row {
+    position: relative;
+    z-index: 10;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    padding: 1.6rem 1.75rem;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    height: 100%;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+  .stat-icon-wrap {
+    width: 58px; height: 58px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .stat-icon-blue   { background: linear-gradient(135deg, #ede9fe, #c7d2fe); color: #4f46e5; }
+  .stat-icon-green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+  .stat-icon-amber  { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+  .stat-icon-cyan   { background: linear-gradient(135deg, #cffafe, #a5f3fc); color: #0891b2; }
+  .stat-text-label {
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+  .stat-text-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .stat-text-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+  }
+
+  /* ── Section Cards ── */
+  .section-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 1.75rem;
+    transition: var(--transition);
+  }
+  .section-card:hover { box-shadow: var(--shadow-md); }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.35rem 1.75rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    background: #fafafa;
+  }
+  .section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .section-header-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+  }
+  .icon-primary { background: linear-gradient(135deg, #ede9fe, #c7d2fe); color: #4f46e5; }
+  .icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+  .icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .section-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .section-count-badge {
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 50px;
+  }
+
+  /* ── Data Table ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .data-table thead th {
+    background: #f8f9ff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    white-space: nowrap;
+  }
+  .data-table tbody tr {
+    transition: background 0.18s ease;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .data-table tbody tr:last-child { border-bottom: none; }
+  .data-table tbody tr:hover { background: #f8f9ff; }
+  .data-table tbody td {
+    padding: 1rem 1.2rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+  .pickup-id {
+    font-weight: 700;
+    color: var(--brand-primary);
+    font-size: 0.875rem;
+    background: #ede9fe;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .customer-name { font-weight: 600; color: var(--text-primary); }
+  .address-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .category-pill {
+    background: #f0f4ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    border-radius: 50px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .weight-text { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+  .schedule-text { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; }
+
+  /* ── Status Badges ── */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .status-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .status-assigned  { background: #ede9fe; color: #5b21b6; }
+  .status-transit   { background: #cffafe; color: #0e7490; }
+  .status-completed { background: #d1fae5; color: #047857; }
+  .status-pending   { background: #fef3c7; color: #92400e; }
+  .status-default   { background: #f3f4f6; color: #374151; }
+
+  /* ── Action Buttons ── */
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .btn-view {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+  }
+  .btn-view:hover { background: #e5e7eb; color: #111827; text-decoration: none; }
+  .btn-transit {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    color: white;
+  }
+  .btn-transit:hover {
+    background: linear-gradient(135deg, #0891b2, #0e7490);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(6,182,212,0.35);
+    color: white;
+  }
+  .btn-complete {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+  }
+  .btn-complete:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.35);
+    color: white;
+  }
+  .btn-claim {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+  }
+  .btn-claim:hover {
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79,70,229,0.4);
+    color: white;
+  }
+  .actions-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.35; }
+  .empty-state-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .empty-state-desc { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+
+  /* ── History Toggle ── */
+  .history-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: 1.5px solid var(--card-border);
+    border-radius: 8px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--brand-primary);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .history-toggle-btn:hover { background: #ede9fe; border-color: var(--brand-primary); }
+
+  /* ── Animations ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fadeInUp 0.5s ease both; }
+  .anim-delay-1 { animation-delay: 0.05s; }
+  .anim-delay-2 { animation-delay: 0.10s; }
+  .anim-delay-3 { animation-delay: 0.15s; }
+  .anim-delay-4 { animation-delay: 0.20s; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .dashboard-hero { padding: 2rem 1.5rem 4.5rem; }
+    .hero-title { font-size: 1.55rem; }
+    .stat-card { padding: 1.25rem; }
+    .stat-text-value { font-size: 1.65rem; }
+    .data-table thead { display: none; }
+    .data-table tbody tr { display: block; padding: 1rem; border-bottom: 1px solid #f0f0f0; }
+    .data-table tbody td { display: block; padding: 0.3rem 0; border: none; }
+    .data-table tbody td::before {
+      content: attr(data-label) ': ';
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .address-text { max-width: 100%; }
+  }
+</style>
+{% endblock css %}
 
 {% block content %}
-<div class="py-4">
-  <!-- Greeting -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h2 mb-0">Welcome, {{ request.user.name|default:request.user.email }}!</h1>
-      <p class="text-muted">You are logged in as a <strong>Collector</strong></p>
-    </div>
-  </div>
+<div class="collector-dashboard">
+  <div class="container-xl px-3 px-md-4">
 
-  <div class="row g-4 mb-4">
-    <div class="col-md-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title text-muted text-uppercase small fw-bold">Active Jobs</h5>
-          <h2 class="mt-2">{{ assigned_pickups.count }}</h2>
-          <p class="text-muted mb-0">Pickups currently assigned to you</p>
+    <!-- ── Hero Header ── -->
+    <div class="dashboard-hero anim-fade-up">
+      <div class="hero-badge">
+        <i class="fas fa-truck"></i>
+        Collector Portal
+      </div>
+      <h1 class="hero-title">
+        Welcome back, {{ request.user.name|default:request.user.email }}!
+      </h1>
+      <p class="hero-subtitle">Manage your pickups, claim new jobs, and track your collection history.</p>
+    </div>
+
+    <!-- ── Stat Cards ── -->
+    <div class="row g-3 stats-row">
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-1">
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-blue">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Active Jobs</div>
+            <div class="stat-text-value">{{ assigned_pickups.count }}</div>
+            <div class="stat-text-sub">Assigned to you</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-2">
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-green">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Completed</div>
+            <div class="stat-text-value">{{ completed_pickups.count }}</div>
+            <div class="stat-text-sub">Total collections</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-3">
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-amber">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Available</div>
+            <div class="stat-text-value">{{ unassigned_pickups.count }}</div>
+            <div class="stat-text-sub">Jobs to claim</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-4">
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-cyan">
+            <i class="fas fa-id-badge"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Role</div>
+            <div class="stat-text-value" style="font-size:1.1rem;letter-spacing:0;margin-top:0.25rem;">Collector</div>
+            <div class="stat-text-sub">{{ request.user.email }}</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title text-muted text-uppercase small fw-bold">Completed Jobs</h5>
-          <h2 class="mt-2 text-success">{{ completed_pickups.count }}</h2>
-          <p class="text-muted mb-0">Total successful collections</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Assigned Pickups -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-0 py-3">
-      <h5 class="card-title mb-0">Your Active Pickups</h5>
-    </div>
-    <div class="table-responsive">
-      <table class="table align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>ID</th>
-            <th>Customer</th>
-            <th>Address</th>
-            <th>Category</th>
-            <th>Weight</th>
-            <th>Quantity</th>
-            <th>Scheduled Time</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for pickup in assigned_pickups %}
+    <!-- ── Active Pickups ── -->
+    <div class="section-card anim-fade-up anim-delay-2">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-primary">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div>
+            <p class="section-title">Your Active Pickups</p>
+            <p class="section-subtitle">Assigned &amp; in-transit jobs</p>
+          </div>
+        </div>
+        {% if assigned_pickups.count > 0 %}
+          <span class="section-count-badge">{{ assigned_pickups.count }} active</span>
+        {% endif %}
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td><strong>#{{ pickup.id }}</strong></td>
-              <td>{{ pickup.citizen.name|default:pickup.citizen.email }}</td>
-              <td>{{ pickup.address.address_line1 }}, {{ pickup.address.city }}</td>
-              <td>{{ pickup.category.name }}</td>
-              <td>{{ pickup.weight_kg }} kg</td>
-              <td>{{ pickup.quantity_estimate|default:"-" }}</td>
-              <td>{{ pickup.schedule_date|date:"M d, Y h:i A" }}</td>
-              <td>
-                {% if pickup.status == 'ASSIGNED' %}
-                  <span class="badge bg-primary">Assigned</span>
-                {% elif pickup.status == 'IN_TRANSIT' %}
-                  <span class="badge bg-info">In Transit</span>
-                {% else %}
-                  <span class="badge bg-secondary">{{ pickup.status }}</span>
-                {% endif %}
-              </td>
-              <td>
-                <div class="d-flex gap-1">
-                  <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Address</th>
+              <th>Category</th>
+              <th>Weight</th>
+              <th>Qty</th>
+              <th>Scheduled</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pickup in assigned_pickups %}
+              <tr>
+                <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                <td data-label="Customer"><span class="customer-name">{{ pickup.citizen.name|default:pickup.citizen.email }}</span></td>
+                <td data-label="Address">
+                  <span class="address-text" title="{{ pickup.address.address_line1 }}, {{ pickup.address.city }}">
+                    {{ pickup.address.address_line1 }}, {{ pickup.address.city }}
+                  </span>
+                </td>
+                <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                <td data-label="Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                <td data-label="Qty"><span class="schedule-text">{{ pickup.quantity_estimate|default:"—" }}</span></td>
+                <td data-label="Scheduled">
+                  <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                </td>
+                <td data-label="Status">
                   {% if pickup.status == 'ASSIGNED' %}
-                    <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="transit">
-                      <button type="submit" class="btn btn-sm btn-info text-white">Start Transit</button>
-                    </form>
+                    <span class="status-badge status-assigned">Assigned</span>
                   {% elif pickup.status == 'IN_TRANSIT' %}
-                    <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="complete">
-                      <button type="submit" class="btn btn-sm btn-success">Complete Job</button>
-                    </form>
+                    <span class="status-badge status-transit">In Transit</span>
+                  {% else %}
+                    <span class="status-badge status-default">{{ pickup.status }}</span>
                   {% endif %}
-                </div>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="9" class="text-center py-4 text-muted">No active assigned pickups. See unassigned jobs below to claim some!</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                </td>
+                <td data-label="Actions">
+                  <div class="actions-wrap">
+                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-view">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                    {% if pickup.status == 'ASSIGNED' %}
+                      <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="transit">
+                        <button type="submit" class="action-btn btn-transit">
+                          <i class="fas fa-truck"></i> Start Transit
+                        </button>
+                      </form>
+                    {% elif pickup.status == 'IN_TRANSIT' %}
+                      <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="complete">
+                        <button type="submit" class="action-btn btn-complete">
+                          <i class="fas fa-check"></i> Complete Job
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9">
+                  <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-clipboard"></i></div>
+                    <p class="empty-state-title">No active pickups assigned to you</p>
+                    <p class="empty-state-desc">Claim an available job from the section below to get started!</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
 
-  <!-- Unassigned Pickups Available -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-0 py-3">
-      <h5 class="card-title mb-0">Unassigned Pending Pickups</h5>
-    </div>
-    <div class="table-responsive">
-      <table class="table align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>ID</th>
-            <th>City</th>
-            <th>Category</th>
-            <th>Estimated Weight</th>
-            <th>Quantity Estimate</th>
-            <th>Scheduled Time</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for pickup in unassigned_pickups %}
+    <!-- ── Available Jobs to Claim ── -->
+    <div class="section-card anim-fade-up anim-delay-3">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-warning">
+            <i class="fas fa-hand-pointer"></i>
+          </div>
+          <div>
+            <p class="section-title">Available Jobs to Claim</p>
+            <p class="section-subtitle">Unassigned pending pickups</p>
+          </div>
+        </div>
+        {% if unassigned_pickups.count > 0 %}
+          <span class="section-count-badge">{{ unassigned_pickups.count }} pending</span>
+        {% endif %}
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td><strong>#{{ pickup.id }}</strong></td>
-              <td>{{ pickup.address.city }}</td>
-              <td>{{ pickup.category.name }}</td>
-              <td>{{ pickup.weight_kg }} kg</td>
-              <td>{{ pickup.quantity_estimate|default:"-" }}</td>
-              <td>{{ pickup.schedule_date|date:"M d, Y h:i A" }}</td>
-              <td>
-                <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="claim">
-                  <button type="submit" class="btn btn-sm btn-primary">Claim Job</button>
-                </form>
-              </td>
+              <th>ID</th>
+              <th>City</th>
+              <th>Category</th>
+              <th>Est. Weight</th>
+              <th>Qty Estimate</th>
+              <th>Scheduled</th>
+              <th>Action</th>
             </tr>
-          {% empty %}
-            <tr>
-              <td colspan="7" class="text-center py-4 text-muted">No pending unassigned pickups in the system.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for pickup in unassigned_pickups %}
+              <tr>
+                <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                <td data-label="City"><span class="customer-name">{{ pickup.address.city }}</span></td>
+                <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                <td data-label="Est. Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                <td data-label="Qty Estimate"><span class="schedule-text">{{ pickup.quantity_estimate|default:"—" }}</span></td>
+                <td data-label="Scheduled">
+                  <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                </td>
+                <td data-label="Action">
+                  <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="claim">
+                    <button type="submit" class="action-btn btn-claim">
+                      <i class="fas fa-hand-pointer"></i> Claim Job
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-box-open"></i></div>
+                    <p class="empty-state-title">No pending jobs available</p>
+                    <p class="empty-state-desc">All pickups have been assigned. Check back soon!</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-</div>
+
+    <!-- ── Completed History (Collapsible) ── -->
+    {% if completed_pickups %}
+    <div class="section-card anim-fade-up anim-delay-4">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-success">
+            <i class="fas fa-history"></i>
+          </div>
+          <div>
+            <p class="section-title">Completed Collections</p>
+            <p class="section-subtitle">Your pickup history</p>
+          </div>
+        </div>
+        <button id="historyToggleBtn" class="history-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#completedHistoryTable" aria-expanded="false">
+          <i class="fas fa-chevron-down"></i>
+          Show History
+        </button>
+      </div>
+
+      <div class="collapse" id="completedHistoryTable">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Address</th>
+                <th>Category</th>
+                <th>Weight</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pickup in completed_pickups %}
+                <tr>
+                  <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                  <td data-label="Customer"><span class="customer-name">{{ pickup.citizen.name|default:pickup.citizen.email }}</span></td>
+                  <td data-label="Address">
+                    <span class="address-text" title="{{ pickup.address.address_line1 }}, {{ pickup.address.city }}">
+                      {{ pickup.address.address_line1 }}, {{ pickup.address.city }}
+                    </span>
+                  </td>
+                  <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                  <td data-label="Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                  <td data-label="Scheduled">
+                    <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                  </td>
+                  <td data-label="Status"><span class="status-badge status-completed">Completed</span></td>
+                  <td data-label="Details">
+                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-view">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /.container-xl -->
+</div><!-- /.collector-dashboard -->
 {% endblock %}
+
+{% block inline_javascript %}
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const historyCollapse = document.getElementById('completedHistoryTable');
+    const historyBtn = document.getElementById('historyToggleBtn');
+    if (historyCollapse && historyBtn) {
+      historyCollapse.addEventListener('show.bs.collapse', () => {
+        historyBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide History';
+      });
+      historyCollapse.addEventListener('hide.bs.collapse', () => {
+        historyBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show History';
+      });
+    }
+  });
+</script>
+{% endblock inline_javascript %}
