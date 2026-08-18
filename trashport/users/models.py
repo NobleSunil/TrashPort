@@ -30,6 +30,13 @@ class User(AbstractUser):
         _("Wallet Points"),
         default=0,
     )
+    firebase_uid = CharField(
+        _("Firebase UID"),
+        max_length=255,
+        unique=True,
+        blank=True,
+        null=True,
+    )
     name = CharField(_("Name of User"), blank=True, max_length=255)
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]

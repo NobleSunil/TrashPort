@@ -320,6 +320,7 @@ STATICFILES_FINDERS += ["compressor.finders.CompressorFinder"]
 # django-rest-framework - https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "trashport.users.authentication.FirebaseAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ),
@@ -341,3 +342,7 @@ SPECTACULAR_SETTINGS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+FIREBASE_CREDENTIALS_PATH = env("DJANGO_FIREBASE_CREDENTIALS", default=str(BASE_DIR / "serviceAccountKey.json"))
+FIREBASE_CREDENTIALS = Path(FIREBASE_CREDENTIALS_PATH)
+FIREBASE_WEB_API_KEY = env("DJANGO_FIREBASE_WEB_API_KEY", default="YOUR_API_KEY")
+

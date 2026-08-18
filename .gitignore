@@ -279,3 +279,7 @@ trashport/media/
 # Databases
 *.sqlite3
 
+# Firebase credentials
+serviceAccountKey.json
+
+
