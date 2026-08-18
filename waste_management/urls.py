@@ -5,6 +5,9 @@ from .views import (
     PickupRequestCreateView, PickupRequestDetailView, PickupStatusUpdateView,
     ComplaintListView, ComplaintCreateView, ComplaintDetailView,
     WasteCategoryListView, WasteCategoryCreateView, WasteCategoryUpdateView,
+    SubscriptionTierListView, SubscriptionTierCreateView, SubscriptionTierUpdateView,
+    UserListView, CollectorCreateView, UserDetailView, UserToggleActiveView, WalletAdjustView,
+    AutoAssignPickupsView, SubscriptionOverviewView, ExportPickupsCSVView, ExportRevenueCSVView,
 )
 
 app_name = "waste_management"
@@ -23,6 +26,7 @@ urlpatterns = [
     path("pickups/new/", PickupRequestCreateView.as_view(), name="pickup_create"),
     path("pickups/<int:pk>/", PickupRequestDetailView.as_view(), name="pickup_detail"),
     path("pickups/<int:pk>/status/", PickupStatusUpdateView.as_view(), name="pickup_status_update"),
+    path("admin/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
     
     # Complaints CRUD & actions
     path("complaints/", ComplaintListView.as_view(), name="complaint_list"),
@@ -30,7 +34,28 @@ urlpatterns = [
     path("complaints/<int:pk>/", ComplaintDetailView.as_view(), name="complaint_detail"),
     
     # Admin Master Entries - Categories
-    path("admin/categories/", WasteCategoryListView.as_view(), name="category_list"),
-    path("admin/categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
-    path("admin/categories/<int:pk>/edit/", WasteCategoryUpdateView.as_view(), name="category_update"),
+    path("manage/categories/", WasteCategoryListView.as_view(), name="category_list"),
+    path("manage/categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
+    path("manage/categories/<int:pk>/edit/", WasteCategoryUpdateView.as_view(), name="category_update"),
+
+    # Admin Master Entries - Tiers
+    path("manage/tiers/", SubscriptionTierListView.as_view(), name="tier_list"),
+    path("manage/tiers/new/", SubscriptionTierCreateView.as_view(), name="tier_create"),
+    path("manage/tiers/<int:pk>/edit/", SubscriptionTierUpdateView.as_view(), name="tier_update"),
+
+    # Admin User Administration
+    path("manage/users/", UserListView.as_view(), name="user_list"),
+    path("manage/users/collectors/new/", CollectorCreateView.as_view(), name="collector_create"),
+    path("manage/users/<int:pk>/", UserDetailView.as_view(), name="user_detail"),
+    path("manage/users/<int:pk>/toggle/", UserToggleActiveView.as_view(), name="user_toggle_active"),
+    path("manage/users/<int:pk>/wallet/", WalletAdjustView.as_view(), name="user_wallet_adjust"),
+
+    # Admin Subscriptions, Auto-Assign & Exports
+    path("manage/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
+    path("manage/subscriptions/", SubscriptionOverviewView.as_view(), name="subscription_overview"),
+    path("manage/export/pickups/", ExportPickupsCSVView.as_view(), name="export_pickups_csv"),
+    path("manage/export/revenue/", ExportRevenueCSVView.as_view(), name="export_revenue_csv"),
 ]
+
+
+

@@ -184,7 +184,7 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
             pickup.is_paid = True
             pickup.status = PickupRequest.StatusChoices.PENDING
             pickup.save()
-            messages.success(request, f"Payment of ${pickup.fee:.2f} processed successfully! Your request is now pending assignment.")
+            messages.success(request, f"Payment of Rs. {pickup.fee:.2f} processed successfully! Your request is now pending assignment.")
 
         return redirect("waste_management:pickup_detail", pk=pk)
 

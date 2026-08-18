@@ -30,7 +30,7 @@
             <tr>
               <td><strong>#{{ tier.id }}</strong></td>
               <td>{{ tier.name }}</td>
-              <td>${{ tier.price }}</td>
+              <td>Rs. {{ tier.price }}</td>
               <td class="text-muted">{{ tier.description|default:"-" }}</td>
               <td>
                 {% if tier.is_active %}

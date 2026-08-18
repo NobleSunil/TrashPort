@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Register Collector | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+          <h4 class="card-title mb-0 fw-bold">Register New Collector Account</h4>
+          <p class="text-muted small mb-0">Onboard a staff member with collector credentials</p>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Email Address</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Full Name</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Password</label>
+              {{ form.password }}
+              {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors }}</div>{% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Confirm Password</label>
+              {{ form.confirm_password }}
+              {% if form.confirm_password.errors %}<div class="text-danger small mt-1">{{ form.confirm_password.errors }}</div>{% endif %}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{% url 'waste_management:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary">Create Collector Account</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
