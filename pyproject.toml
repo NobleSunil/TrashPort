@@ -7,10 +7,10 @@ license = { text = "Not open source" }
 authors = [
   { name = "Albert Cyriac", email = "albertcyriac04@gmail.com" },
 ]
-requires-python = "==3.14.*"
+requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
   "argon2-cffi==25.1.0",
@@ -29,7 +29,7 @@ dependencies = [
   "gunicorn==26.0.0",
   "hiredis==3.4.0",
   "pillow==12.3.0",
-  "psycopg[c]==3.3.4",
+  "psycopg[binary]>=3.2.0",
   "python-slugify==8.0.4",
   "redis==8.0.1",
   "whitenoise==6.12.0",
@@ -49,7 +49,7 @@ dev = [
   "ipdb==0.13.13",
   "mypy==2.3.0",
   "pre-commit==4.6.1",
-  "psycopg[c]==3.3.4",
+  "psycopg[binary]>=3.2.0",
   "pytest==9.1.1",
   "pytest-django==4.12.0",
   "pytest-sugar==1.1.1",
