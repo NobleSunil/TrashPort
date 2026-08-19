@@ -36,7 +36,7 @@ class SubscriptionTier(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} (${self.price})"
+        return f"{self.name} (Rs. {self.price})"
 
 
 class Subscription(models.Model):

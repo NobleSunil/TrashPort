@@ -43,7 +43,7 @@
             <p class="mb-2">
               <strong>Collection Fee:</strong>
               {% if pickup.fee > 0 %}
-                ${{ pickup.fee }}
+                Rs. {{ pickup.fee }}
               {% else %}
                 <span class="text-success fw-bold">Free</span>
               {% endif %}
@@ -97,7 +97,7 @@
       <div class="card border-0 shadow-sm mb-4 border-danger">
         <div class="card-body">
           <h5 class="card-title text-danger">Pending Payment Required</h5>
-          <p class="text-muted small">A collection fee of <strong>${{ pickup.fee }}</strong> is required for this collection request.</p>
+          <p class="text-muted small">A collection fee of <strong>Rs. {{ pickup.fee }}</strong> is required for this collection request.</p>
           <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="pay">

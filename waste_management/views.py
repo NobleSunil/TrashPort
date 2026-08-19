@@ -193,3 +193,76 @@ class SubscribeView(LoginRequiredMixin, View):
             from trashport.citizens.views import CitizenSubscribeView
             return CitizenSubscribeView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
+
+
+class UserListView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminUserListView
+            return AdminUserListView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class CollectorCreateView(LoginRequiredMixin, View):
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminCollectorCreateView
+            return AdminCollectorCreateView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class UserDetailView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminUserDetailView
+            return AdminUserDetailView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class UserToggleActiveView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminUserToggleActiveView
+            return AdminUserToggleActiveView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class WalletAdjustView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminWalletAdjustView
+            return AdminWalletAdjustView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class AutoAssignPickupsView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminAutoAssignPickupsView
+            return AdminAutoAssignPickupsView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class SubscriptionOverviewView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminSubscriptionOverviewView
+            return AdminSubscriptionOverviewView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class ExportPickupsCSVView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminExportPickupsCSVView
+            return AdminExportPickupsCSVView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class ExportRevenueCSVView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN:
+            from trashport.admins.views import AdminExportRevenueCSVView
+            return AdminExportRevenueCSVView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
