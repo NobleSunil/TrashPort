@@ -172,7 +172,7 @@
             }
         });
 
-        // Google Signup Handler
+        // Google Signup Handler via Redirect
         const handleGoogleSignup = async () => {
             errorAlert.classList.add('hidden');
             if (!firebaseInitialized) {
@@ -181,15 +181,35 @@
             }
 
             const role = document.getElementById('role').value;
+            sessionStorage.setItem('signup_role', role);
+
             const provider = new firebase.auth.GoogleAuthProvider();
             try {
-                const result = await firebase.auth().signInWithPopup(provider);
-                const token = await result.user.getIdToken();
-                await sendTokenToBackend(token, role);
+                await firebase.auth().signInWithRedirect(provider);
             } catch (err) {
-                showError("Google Sign-In failed: " + err.message);
+                showError("Google Sign-Up failed: " + err.message);
             }
         };
+
+        // Check for Google redirect result on page load
+        async function handleRedirectResult() {
+            if (!firebaseInitialized) return;
+            try {
+                const result = await firebase.auth().getRedirectResult();
+                if (result && result.user) {
+                    const token = await result.user.getIdToken();
+                    const savedRole = sessionStorage.getItem('signup_role') || 'CITIZEN';
+                    sessionStorage.removeItem('signup_role');
+                    await sendTokenToBackend(token, savedRole);
+                }
+            } catch (error) {
+                console.error("Redirect result error:", error);
+                showError("Google Sign-Up error: " + error.message);
+            }
+        }
+
+        // Call on page load
+        handleRedirectResult();
     </script>
 </body>
 </html>
