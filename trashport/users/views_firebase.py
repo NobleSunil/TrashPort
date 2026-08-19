@@ -1,7 +1,7 @@
 import json
 import logging
 from django.http import JsonResponse
-from django.contrib.auth import login as django_login, get_user_model
+from django.contrib.auth import authenticate, login as django_login, get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from firebase_admin import auth
 
@@ -76,3 +76,37 @@ def firebase_session_login(request):
     except Exception as e:
         logger.error(f"Firebase session login failed: {e}")
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
+@csrf_exempt
+def password_session_login(request):
+    """
+    Accepts email and password via POST, authenticates with Django backend,
+    logs the user into the session, and returns a redirect URL.
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        email = data.get("email", "").strip()
+        password = data.get("password", "")
+
+        if not email or not password:
+            return JsonResponse({"status": "error", "message": "Missing email or password."}, status=400)
+
+        user = authenticate(request, email=email, password=password)
+        if not user:
+            return JsonResponse({"status": "error", "message": "Invalid email or password."}, status=400)
+
+        if not user.is_active:
+            return JsonResponse({"status": "error", "message": "This account is inactive."}, status=400)
+
+        django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        logger.info(f"User {user.email} successfully logged in via Password auth.")
+        return JsonResponse({"status": "success", "redirect_url": "/dashboard/"})
+
+    except Exception as e:
+        logger.error(f"Password session login failed: {e}")
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+

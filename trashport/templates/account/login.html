@@ -141,26 +141,49 @@
             }
         };
 
+        // Handle POST to backend for direct password authentication
+        const sendCredentialsToBackend = async (email, password) => {
+            try {
+                const response = await fetch("{% url 'users:password_login' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    window.location.href = result.redirect_url;
+                } else {
+                    showError(result.message || "Invalid email or password.");
+                }
+            } catch (err) {
+                showError("Connection error to server: " + err.message);
+            }
+        };
+
         // Form Submit handler
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorAlert.classList.add('hidden');
 
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            if (!firebaseInitialized) {
-                showError("Firebase is not initialized. Please verify configuration.");
-                return;
+            // 1. Try Firebase client authentication first if initialized
+            if (firebaseInitialized) {
+                try {
+                    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                    const token = await userCredential.user.getIdToken();
+                    await sendTokenToBackend(token);
+                    return;
+                } catch (err) {
+                    console.warn("Firebase sign-in failed, trying database authentication fallback:", err.code);
+                }
             }
 
-            try {
-                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-                const token = await userCredential.user.getIdToken();
-                await sendTokenToBackend(token);
-            } catch (err) {
-                showError(err.message);
-            }
+            // 2. Fallback to Django database authentication
+            await sendCredentialsToBackend(email, password);
         });
 
         // Google Login Handler
