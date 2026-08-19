@@ -80,6 +80,72 @@ Pre-configured debug targets are available in the repository. To debug in VS Cod
 
 ---
 
+## 🐳 Running with Docker
+
+You can run TrashPort and its PostgreSQL database inside Docker using Docker Compose.
+
+### 1. Local Development (Docker Compose)
+Build and start all local containers (Django + PostgreSQL):
+```powershell
+docker compose -f docker-compose.local.yml up --build
+```
+> Add `-d` to run in detached (background) mode:
+```powershell
+docker compose -f docker-compose.local.yml up -d --build
+```
+The app will be accessible at `http://localhost:8000`.
+
+### 2. Common Django Commands via Docker Compose
+* **Run Database Migrations:**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django python manage.py migrate
+  ```
+* **Create Superuser:**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django python manage.py createsuperuser
+  ```
+* **Run Tests (pytest):**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django pytest
+  ```
+* **View Logs:**
+  ```powershell
+  docker compose -f docker-compose.local.yml logs -f
+  ```
+* **Stop Containers:**
+  ```powershell
+  docker compose -f docker-compose.local.yml down
+  ```
+
+### 3. Using `just` Shortcuts
+If you have [just](https://github.com/casey/just) installed:
+```powershell
+just build       # Build images
+just up          # Start containers in background
+just down        # Stop containers
+just logs        # Follow container logs
+just manage <cmd># Run manage.py commands (e.g. just manage migrate)
+just pytest      # Run pytest test suite
+```
+
+### 4. Running a Standalone Docker Image (`docker run`)
+If you want to build and run the Django image directly:
+```powershell
+# 1. Build the image
+docker build -t trashport_django -f compose/local/django/Dockerfile .
+
+# 2. Run the container
+docker run -p 8000:8000 --env-file .envs/.local/.django trashport_django
+```
+
+### 5. Production Environment
+To run the full production stack (Django, PostgreSQL, Redis, Traefik, Nginx):
+```powershell
+docker compose -f docker-compose.production.yml up --build -d
+```
+
+---
+
 ## 🧪 Testing
 
 To run the entire test suite locally using the SQLite database:
