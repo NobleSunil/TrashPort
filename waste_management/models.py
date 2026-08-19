@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -149,11 +150,11 @@ class PickupRequest(models.Model):
             # Check subscription
             has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()
             if has_sub:
-                self.fee = 0.00
+                self.fee = Decimal("0.00")
             else:
-                self.fee = self.weight_kg * self.category.fee_per_kg
+                self.fee = Decimal(str(self.weight_kg)) * Decimal(str(self.category.fee_per_kg))
             
-            self.points_earned = int(self.weight_kg * self.category.points_per_kg)
+            self.points_earned = int(Decimal(str(self.weight_kg)) * Decimal(str(self.category.points_per_kg)))
             
             if self.fee > 0:
                 self.status = self.StatusChoices.AWAITING_PAYMENT

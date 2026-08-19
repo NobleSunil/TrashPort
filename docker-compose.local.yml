@@ -12,9 +12,7 @@ services:
     container_name: trashport_local_django
     depends_on:
       - postgres
-      - mailpit
     volumes:
-      - /app/.venv
       - .:/app:z
     env_file:
       - ./.envs/.local/.django
@@ -29,14 +27,10 @@ services:
       dockerfile: ./compose/production/postgres/Dockerfile
     image: trashport_production_postgres
     container_name: trashport_local_postgres
+    ports:
+      - "5432:5432"
     volumes:
       - trashport_local_postgres_data:/var/lib/postgresql/data
       - trashport_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
-
-  mailpit:
-    image: docker.io/axllent/mailpit:latest
-    container_name: trashport_local_mailpit
-    ports:
-      - "8025:8025"

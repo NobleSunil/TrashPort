@@ -34,7 +34,7 @@ def firebase_session_login(request):
                 "name": uid.capitalize()
             }
         else:
-            decoded = auth.verify_id_token(token)
+            decoded = auth.verify_id_token(token, clock_skew_seconds=60)
 
         uid = decoded.get("uid")
         email = decoded.get("email", "")

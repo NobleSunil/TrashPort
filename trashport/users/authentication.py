@@ -32,7 +32,7 @@ class FirebaseAuthentication(BaseAuthentication):
             }
         else:
             try:
-                decoded = auth.verify_id_token(token)
+                decoded = auth.verify_id_token(token, clock_skew_seconds=60)
             except Exception as e:
                 raise AuthenticationFailed(f"Invalid or expired Firebase token: {e}")
 

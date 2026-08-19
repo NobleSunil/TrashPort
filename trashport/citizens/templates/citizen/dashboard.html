@@ -372,7 +372,7 @@
                   <td>{{ pickup.weight_kg }} kg</td>
                   <td>
                     {% if pickup.fee > 0 %}
-                    <span class="fw-bold text-dark">${{ pickup.fee }}</span>
+                    <span class="fw-bold text-dark">Rs. {{ pickup.fee }}</span>
                     {% else %}
                     <span class="badge bg-success bg-opacity-10 text-success fw-bold">Free</span>
                     {% endif %}
@@ -416,7 +416,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" value="pay">
                         <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
-                          <i class="bi bi-credit-card-fill me-1"></i>Pay ${{ pickup.fee }}
+                          <i class="bi bi-credit-card-fill me-1"></i>Pay Rs. {{ pickup.fee }}
                         </button>
                       </form>
                       {% endif %}
@@ -459,7 +459,7 @@
                     <span class="badge bg-secondary text-uppercase small">{{ category.name }}</span>
                   </div>
                   <div class="mb-3">
-                    <span class="display-6 fw-bold text-primary">${{ category.fee_per_kg }}</span>
+                    <span class="display-6 fw-bold text-primary">Rs. {{ category.fee_per_kg }}</span>
                     <span class="text-muted">/ kg</span>
                   </div>
                   <p class="text-muted small mb-4">{{ category.description|default:"Standard waste collection rate applies." }}</p>
@@ -566,7 +566,7 @@
                   <td>{{ pickup.weight_kg }} kg</td>
                   <td>
                     {% if pickup.fee > 0 %}
-                    ${{ pickup.fee }}
+                    Rs. {{ pickup.fee }}
                     {% else %}
                     <span class="badge bg-success bg-opacity-10 text-success">Free</span>
                     {% endif %}

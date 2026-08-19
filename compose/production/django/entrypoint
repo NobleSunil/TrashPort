@@ -4,13 +4,15 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-if [ -z "${POSTGRES_USER}" ]; then
+if [ -z "${POSTGRES_USER:-}" ]; then
     base_postgres_image_default_user='postgres'
     export POSTGRES_USER="${base_postgres_image_default_user}"
 fi
 
-wait-for-it "${POSTGRES_HOST}:${POSTGRES_PORT}" -t 30
-
->&2 echo 'PostgreSQL is available'
+if [ -n "${POSTGRES_HOST:-}" ]; then
+    postgres_port="${POSTGRES_PORT:-5432}"
+    wait-for-it "${POSTGRES_HOST}:${postgres_port}" -t 30
+    >&2 echo 'PostgreSQL is available'
+fi
 
 exec "$@"

@@ -1,81 +1,69 @@
 
-# define an alias for the specific python version used in this file.
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS python-build-stage
+# Stage 1: Build stage with uv
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS python-build-stage
 
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0 \
+    UV_PROJECT_ENVIRONMENT=/venv
 
-ARG APP_HOME=/app
+WORKDIR /app
 
-WORKDIR ${APP_HOME}
-
-# Install apt packages
+# Install minimal build packages needed for C extensions
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg dependencies
-  libpq-dev
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-
-# Requirements are installed here to ensure they will be cached.
+# Install production dependencies only (--no-dev)
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-dev
-COPY . ${APP_HOME}
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-dev
-
-# Python 'run' stage
-FROM python:3.14-slim-bookworm AS python-run-stage
+# Stage 2: Minimal runtime stage
+FROM python:3.13-slim-bookworm AS python-run-stage
 
 ARG APP_HOME=/app
 
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/venv/bin:$PATH"
+
 WORKDIR ${APP_HOME}
 
+# Create dedicated non-root user
 RUN addgroup --system django \
-  && adduser --system --ingroup django --home /home/django django
+    && adduser --system --ingroup django --home /home/django django
 
-
-# Install required system dependencies
+# Install only runtime essentials and purge apt caches in the same layer
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg dependencies
-  libpq-dev \
-  # Translations dependencies
-  gettext \
-  # entrypoint
-  wait-for-it \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+    gettext \
+    wait-for-it \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.cache
 
+# Copy runtime virtual environment from build stage
+COPY --from=python-build-stage /venv /venv
 
-COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
+# Copy entrypoint and start scripts
+COPY ./compose/production/django/entrypoint /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && chmod +x /entrypoint
 
+COPY ./compose/production/django/start /start
+RUN sed -i 's/\r$//g' /start && chmod +x /start
 
-COPY --chown=django:django ./compose/production/django/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
+# Copy project source code
+COPY --chown=django:django . ${APP_HOME}
 
-# Copy the application from the builder
-COPY --from=python-build-stage --chown=django:django ${APP_HOME} ${APP_HOME}
-# explicitly create the media folder before changing ownership below
-RUN mkdir -p ${APP_HOME}/trashport/media
-
-# make django owner of the WORKDIR directory as well.
-RUN chown django:django ${APP_HOME}
-
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
+# Create media directory with appropriate permissions
+RUN mkdir -p ${APP_HOME}/trashport/media && chown -R django:django ${APP_HOME}
 
 USER django
 
+# Compile locale translations
 RUN DATABASE_URL="postgres://dummy" \
-  DJANGO_SETTINGS_MODULE="config.settings.test" \
-  python manage.py compilemessages
+    DJANGO_SETTINGS_MODULE="config.settings.test" \
+    python manage.py compilemessages
 
 ENTRYPOINT ["/entrypoint"]
