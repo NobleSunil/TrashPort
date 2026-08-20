@@ -5,12 +5,13 @@ Citizen-specific views for managing user addresses, booking pickup requests, pay
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View
 
-from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription
+from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
 
 
@@ -48,6 +49,21 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         # Subscription details
         context["subscription"] = Subscription.objects.filter(user=user, is_active=True).first()
         context["available_tiers"] = SubscriptionTier.objects.filter(is_active=True)
+        context["waste_categories"] = WasteCategory.objects.all().order_by("name")
+
+        # Statistics & Metrics
+        total_recycled = PickupRequest.objects.filter(
+            citizen=user,
+            status=PickupRequest.StatusChoices.COMPLETED
+        ).aggregate(total=Sum("weight_kg"))["total"] or Decimal("0.00")
+
+        context["total_recycled_kg"] = total_recycled
+        context["active_count"] = context["active_pickups"].count()
+        context["completed_count"] = context["past_pickups"].count()
+        context["pending_payment_count"] = context["active_pickups"].filter(
+            status=PickupRequest.StatusChoices.AWAITING_PAYMENT
+        ).count()
+        context["address_count"] = context["addresses"].count()
 
         return context
 
@@ -184,7 +200,7 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
             pickup.is_paid = True
             pickup.status = PickupRequest.StatusChoices.PENDING
             pickup.save()
-            messages.success(request, f"Payment of ${pickup.fee:.2f} processed successfully! Your request is now pending assignment.")
+            messages.success(request, f"Payment of Rs. {pickup.fee:.2f} processed successfully! Your request is now pending assignment.")
 
         return redirect("waste_management:pickup_detail", pk=pk)
 

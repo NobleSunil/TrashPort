@@ -1,66 +1,185 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | TrashPort{% endblock %}
+{% block title %}Admin Control Center | TrashPort{% endblock %}
 
 {% block content %}
 <div class="py-4">
-  <!-- Greeting -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <!-- Header Banner -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
     <div>
-      <h1 class="h2 mb-0">Welcome, {{ request.user.name|default:request.user.email }}!</h1>
-      <p class="text-muted">You are logged in as an <strong>Administrator</strong></p>
+      <h1 class="h2 mb-1 text-dark fw-bold">Admin Control Center</h1>
+      <p class="text-muted mb-0">System performance, waste collection analytics, and dispatch management</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-download me-1"></i> Export Reports
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'waste_management:export_pickups_csv' %}"><i class="bi bi-file-earmark-excel me-2 text-success"></i> Export Pickups (CSV)</a></li>
+          <li><a class="dropdown-item" href="{% url 'waste_management:export_revenue_csv' %}"><i class="bi bi-cash-stack me-2 text-primary"></i> Export Revenue (CSV)</a></li>
+        </ul>
+      </div>
+      <a href="{% url 'waste_management:user_list' %}" class="btn btn-outline-dark shadow-sm">
+        <i class="bi bi-people me-1"></i> Users Directory
+      </a>
+      <a href="{% url 'waste_management:category_list' %}" class="btn btn-outline-primary shadow-sm">
+        <i class="bi bi-tag-fill me-1"></i> Pay-As-You-Use Rates
+      </a>
+      <a href="{% url 'waste_management:category_create' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> New Category Rate
+      </a>
     </div>
   </div>
 
+  <!-- Admin Quick Actions Bar -->
+  <div class="row g-2 mb-4">
+    <div class="col-12 d-flex flex-wrap gap-2 align-items-center p-3 bg-white rounded shadow-sm">
+      <span class="fw-bold me-2 text-secondary"><i class="bi bi-lightning-charge-fill me-1 text-warning"></i> Quick Operations:</span>
+      <form method="post" action="{% url 'waste_management:pickup_auto_assign' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" onclick="return confirm('Auto-assign all pending requests to available collectors?')">
+          <i class="bi bi-magic me-1"></i> Auto-Assign Pending Pickups
+        </button>
+      </form>
+      <a href="{% url 'waste_management:subscription_overview' %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-receipt-cutoff me-1"></i> Pay-As-You-Use Overview
+      </a>
+      <a href="{% url 'waste_management:category_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-tags me-1"></i> Waste Category Rates
+      </a>
+      <a href="{% url 'waste_management:collector_create' %}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-person-plus me-1"></i> Onboard Collector
+      </a>
+    </div>
+  </div>
+
+
+  <!-- Key Performance Indicators (KPIs) -->
+  <div class="row g-3 mb-4">
+    <!-- Total Revenue -->
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #0d6efd !important;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small text-uppercase fw-semibold">Total Revenue</span>
+            <span class="badge bg-primary-subtle text-primary rounded-pill">Paid</span>
+          </div>
+          <h2 class="h3 fw-bold mb-1">Rs. {{ total_revenue|floatformat:2 }}</h2>
+          <div class="text-muted small">
+            <i class="bi bi-wallet2 text-primary me-1"></i> Collected from fees
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Recycled Waste -->
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small text-uppercase fw-semibold">Recycled Volume</span>
+            <span class="badge bg-success-subtle text-success rounded-pill">Completed</span>
+          </div>
+          <h2 class="h3 fw-bold mb-1">{{ total_weight_kg|floatformat:1 }} <span class="fs-6 text-muted">kg</span></h2>
+          <div class="text-muted small">
+            <i class="bi bi-star-fill text-warning me-1"></i> {{ total_points_earned }} pts rewarded
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pickups & Completion Rate -->
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small text-uppercase fw-semibold">Pickups Processed</span>
+            <span class="badge bg-info-subtle text-dark rounded-pill">{{ completion_rate }}% Completed</span>
+          </div>
+          <h2 class="h3 fw-bold mb-1">{{ total_pickups }}</h2>
+          <div class="text-muted small">
+            <span class="text-warning fw-semibold">{{ pending_pickups }}</span> pending requests
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Complaints & Users -->
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid {% if active_complaints > 0 %}#dc3545{% else %}#6c757d{% endif %} !important;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small text-uppercase fw-semibold">Active Issues</span>
+            {% if active_complaints > 0 %}
+              <span class="badge bg-danger rounded-pill">{{ active_complaints }} Urgent</span>
+            {% else %}
+              <span class="badge bg-secondary rounded-pill">All Clear</span>
+            {% endif %}
+          </div>
+          <h2 class="h3 fw-bold mb-1">{{ active_complaints }} <span class="fs-6 text-muted">Complaints</span></h2>
+          <div class="text-muted small">
+            <span>{{ total_citizens }} Citizens</span> • <span>{{ total_collectors }} Collectors</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Chart Widgets -->
   <div class="row g-4 mb-4">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm">
+    <!-- Pickup Volume Trend Line Chart -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fw-bold">Pickup Request Volume</h5>
+          <span class="badge bg-light text-dark border">Recent Days</span>
+        </div>
         <div class="card-body">
-          <h5 class="card-title text-muted text-uppercase small fw-bold">Total Pickups</h5>
-          <h2 class="mt-2">{{ total_pickups }}</h2>
+          <div style="height: 260px; position: relative;">
+            <canvas id="trendChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title text-muted text-uppercase small fw-bold">Pending Requests</h5>
-          <h2 class="mt-2 text-warning">{{ pending_pickups }}</h2>
+
+    <!-- Waste Distribution Doughnut Chart -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fw-bold">Waste Volume by Category</h5>
+          <span class="badge bg-light text-dark border">kg share</span>
         </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <h5 class="card-title text-muted text-uppercase small fw-bold">Registered Users</h5>
-          <p class="mb-1">Citizens: <strong>{{ total_citizens }}</strong></p>
-          <p class="mb-0">Collectors: <strong>{{ total_collectors }}</strong></p>
+          <div style="height: 260px; position: relative;" class="d-flex align-items-center justify-content-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Admin Master Entry Quick Access -->
+  <!-- Master Entries Quick Management Section -->
   <div class="row g-4 mb-4">
     <!-- Waste Categories -->
     <div class="col-md-4">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Waste Categories</h5>
-            <a href="{% url 'waste_management:category_create' %}" class="btn btn-sm btn-primary">Add New</a>
-          </div>
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fw-bold">Waste Categories</h5>
+          <a href="{% url 'waste_management:category_create' %}" class="btn btn-sm btn-outline-primary">Add New</a>
+        </div>
+        <div class="card-body pt-0">
           <ul class="list-group list-group-flush">
             {% for cat in categories %}
-              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
                 <div>
-                  <span class="fw-bold">{{ cat.name }}</span>
-                  <div class="text-muted small">Fee: ${{ cat.fee_per_kg }}/kg | Points: {{ cat.points_per_kg }} pts/kg</div>
+                  <span class="fw-bold text-dark">{{ cat.name }}</span>
+                  <div class="text-muted small">Fee: Rs. {{ cat.fee_per_kg }}/kg | Points: {{ cat.points_per_kg }} pts/kg</div>
                 </div>
-                <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-link">Edit</a>
+                <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-light text-primary">Edit</a>
               </li>
             {% empty %}
-              <li class="list-group-item text-muted px-0">No categories seeded.</li>
+              <li class="list-group-item text-muted px-0 py-3 text-center">No categories seeded.</li>
             {% endfor %}
           </ul>
         </div>
@@ -70,22 +189,22 @@
     <!-- Subscription Tiers -->
     <div class="col-md-4">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Subscription Tiers</h5>
-            <a href="{% url 'waste_management:tier_create' %}" class="btn btn-sm btn-primary">Add New</a>
-          </div>
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fw-bold">Subscription Tiers</h5>
+          <a href="{% url 'waste_management:tier_create' %}" class="btn btn-sm btn-outline-primary">Add New</a>
+        </div>
+        <div class="card-body pt-0">
           <ul class="list-group list-group-flush">
             {% for tier in tiers %}
-              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
                 <div>
-                  <span class="fw-bold">{{ tier.name }}</span>
-                  <div class="text-muted small">${{ tier.price }}/month | Active: {{ tier.is_active }}</div>
+                  <span class="fw-bold text-dark">{{ tier.name }}</span>
+                  <div class="text-muted small">Rs. {{ tier.price }}/month | Active: {{ tier.is_active }}</div>
                 </div>
-                <a href="{% url 'waste_management:tier_update' tier.id %}" class="btn btn-sm btn-link">Edit</a>
+                <a href="{% url 'waste_management:tier_update' tier.id %}" class="btn btn-sm btn-light text-primary">Edit</a>
               </li>
             {% empty %}
-              <li class="list-group-item text-muted px-0">No subscription tiers defined.</li>
+              <li class="list-group-item text-muted px-0 py-3 text-center">No subscription tiers defined.</li>
             {% endfor %}
           </ul>
         </div>
@@ -95,19 +214,22 @@
     <!-- Active Complaints -->
     <div class="col-md-4">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Active Complaints ({{ active_complaints }})</h5>
-            <a href="{% url 'waste_management:complaint_list' %}" class="btn btn-sm btn-outline-danger">View All</a>
-          </div>
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fw-bold text-danger">Pending Complaints ({{ active_complaints }})</h5>
+          <a href="{% url 'waste_management:complaint_list' %}" class="btn btn-sm btn-outline-danger">View All</a>
+        </div>
+        <div class="card-body pt-0">
           <ul class="list-group list-group-flush">
             {% for comp in complaints %}
-              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                <span><strong>#{{ comp.id }}</strong>: {{ comp.title }}</span>
-                <a href="{% url 'waste_management:complaint_detail' comp.id %}" class="btn btn-sm btn-link text-danger">Resolve</a>
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                <div class="text-truncate me-2" style="max-width: 220px;">
+                  <span class="fw-bold text-dark">#{{ comp.id }}</span>: {{ comp.title }}
+                  <div class="text-muted small">{{ comp.citizen.email }}</div>
+                </div>
+                <a href="{% url 'waste_management:complaint_detail' comp.id %}" class="btn btn-sm btn-danger">Resolve</a>
               </li>
             {% empty %}
-              <li class="list-group-item text-muted px-0">No active complaints!</li>
+              <li class="list-group-item text-muted px-0 py-3 text-center">No active complaints!</li>
             {% endfor %}
           </ul>
         </div>
@@ -115,32 +237,72 @@
     </div>
   </div>
 
-  <!-- Recent Pickups -->
+  <!-- Filterable Recent Pickups Table -->
   <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-0 py-3">
-      <h5 class="card-title mb-0">Recent Pickup Requests</h5>
+    <div class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+      <div>
+        <h5 class="card-title mb-0 fw-bold">Pickup Dispatch & Request Management</h5>
+        <span class="text-muted small">Filter by status or search by customer name/email/city</span>
+      </div>
+
+      <!-- Filter Controls Form -->
+      <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <!-- Status Filter Dropdown -->
+        <select name="status" class="form-select form-select-sm" style="width: 170px;" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Search Input -->
+        <div class="input-group input-group-sm" style="width: 220px;">
+          <input type="text" name="q" class="form-control" placeholder="Search customer/city..." value="{{ search_query }}">
+          <button type="submit" class="btn btn-primary">
+            Search
+          </button>
+        </div>
+
+        {% if selected_status or search_query %}
+          <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        {% endif %}
+      </form>
     </div>
+
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0 table-hover">
         <thead class="table-light">
           <tr>
-            <th>ID</th>
+            <th class="ps-3">ID</th>
             <th>Customer</th>
-            <th>City</th>
-            <th>Category</th>
-            <th>Date</th>
+            <th>Address / City</th>
+            <th>Waste Category</th>
+            <th>Weight / Fee</th>
+            <th>Scheduled Date</th>
             <th>Status</th>
-            <th>Action</th>
+            <th class="pe-3 text-end">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for pickup in recent_pickups %}
             <tr>
-              <td><strong>#{{ pickup.id }}</strong></td>
-              <td>{{ pickup.citizen.name|default:pickup.citizen.email }}</td>
-              <td>{{ pickup.address.city }}</td>
-              <td>{{ pickup.category.name }}</td>
-              <td>{{ pickup.schedule_date|date:"M d, Y" }}</td>
+              <td class="ps-3"><strong>#{{ pickup.id }}</strong></td>
+              <td>
+                <div class="fw-semibold text-dark">{{ pickup.citizen.name|default:pickup.citizen.email }}</div>
+                <div class="text-muted small">{{ pickup.citizen.email }}</div>
+              </td>
+              <td>
+                <div>{{ pickup.address.city }}</div>
+                <div class="text-muted small">{{ pickup.address.address_line1 }}</div>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span>
+              </td>
+              <td>
+                <div>{{ pickup.weight_kg }} kg</div>
+                <div class="text-muted small">Rs. {{ pickup.fee }}</div>
+              </td>
+              <td>{{ pickup.schedule_date|date:"M d, Y H:i" }}</td>
               <td>
                 {% if pickup.status == 'AWAITING_PAYMENT' %}
                   <span class="badge bg-danger">Awaiting Payment</span>
@@ -156,13 +318,15 @@
                   <span class="badge bg-secondary">{{ pickup.status }}</span>
                 {% endif %}
               </td>
-              <td>
-                <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">Details</a>
+              <td class="pe-3 text-end">
+                <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary">Manage / Assign</a>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="text-center py-4 text-muted">No pickups in the system.</td>
+              <td colspan="8" class="text-center py-4 text-muted">
+                No pickup requests match the current filters.
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -170,4 +334,79 @@
     </div>
   </div>
 </div>
+
+<!-- Include Chart.js Library via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // 1. Trend Line Chart
+    const trendLabels = {{ trend_labels_json|safe }};
+    const trendData = {{ trend_counts_json|safe }};
+    
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctxTrend, {
+      type: 'line',
+      data: {
+        labels: trendLabels.length ? trendLabels : ['No Data'],
+        datasets: [{
+          label: 'Pickup Requests',
+          data: trendData.length ? trendData : [0],
+          borderColor: '#0d6efd',
+          backgroundColor: 'rgba(13, 110, 253, 0.1)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointBackgroundColor: '#0d6efd'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
+        }
+      }
+    });
+
+    // 2. Category Distribution Doughnut Chart
+    const catLabels = {{ cat_labels_json|safe }};
+    const catWeights = {{ cat_weights_json|safe }};
+
+    const ctxCat = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels.length ? catLabels : ['No Categories'],
+        datasets: [{
+          data: catWeights.length ? catWeights : [1],
+          backgroundColor: [
+            '#0d6efd',
+            '#198754',
+            '#ffc107',
+            '#0dcaf0',
+            '#6f42c1',
+            '#fd7e14'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 12 }
+          }
+        }
+      }
+    });
+  });
+</script>
 {% endblock %}

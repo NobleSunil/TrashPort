@@ -31,7 +31,7 @@
               <td><strong>#{{ cat.id }}</strong></td>
               <td>{{ cat.name }}</td>
               <td class="text-muted">{{ cat.description|default:"-" }}</td>
-              <td>${{ cat.fee_per_kg }}</td>
+              <td>Rs. {{ cat.fee_per_kg }}</td>
               <td>{{ cat.points_per_kg }} pts</td>
               <td>
                 <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-outline-primary">Edit</a>

@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest, Complaint
@@ -55,6 +57,12 @@ class PickupRequestSerializer(serializers.ModelSerializer):
             "schedule_date", "status", "feedback_rating", "feedback_comments",
             "created_at", "updated_at"
         ]
+
+    def validate_schedule_date(self, value):
+        min_allowed_time = timezone.now() + timedelta(hours=3)
+        if value < min_allowed_time:
+            raise serializers.ValidationError("Pickup must be scheduled at least 3 hours in advance from the current time.")
+        return value
 
 
 class ComplaintSerializer(serializers.ModelSerializer):

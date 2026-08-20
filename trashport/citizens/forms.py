@@ -1,4 +1,6 @@
+from datetime import timedelta
 from django import forms
+from django.utils import timezone
 from waste_management.models import Address, PickupRequest, Complaint
 
 
@@ -34,6 +36,22 @@ class PickupRequestForm(forms.ModelForm):
         if user:
             # Only display addresses belonging to the logged-in citizen
             self.fields["address"].queryset = Address.objects.filter(user=user)
+
+        # Enforce minimum schedule date: at least 3 hours from current time
+        min_datetime = timezone.localtime(timezone.now() + timedelta(hours=3))
+        min_datetime_str = min_datetime.strftime("%Y-%m-%dT%H:%M")
+        self.fields["schedule_date"].widget.attrs["min"] = min_datetime_str
+        self.fields["schedule_date"].help_text = "Pickups must be scheduled at least 3 hours in advance."
+        if not self.initial.get("schedule_date"):
+            self.initial["schedule_date"] = min_datetime_str
+
+    def clean_schedule_date(self):
+        schedule_date = self.cleaned_data.get("schedule_date")
+        if schedule_date:
+            min_allowed_time = timezone.now() + timedelta(hours=3)
+            if schedule_date < min_allowed_time:
+                raise forms.ValidationError("Pickup must be scheduled at least 3 hours in advance from the current time.")
+        return schedule_date
 
 
 class ComplaintForm(forms.ModelForm):
