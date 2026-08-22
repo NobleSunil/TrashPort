@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Out | TrashPort</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 500: '#22c55e', 600: '#16a34a' },
+                        dark: '#0f172a'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-sm w-full bg-white rounded-2xl border border-gray-100 shadow-2xl p-8 text-center relative overflow-hidden">
+
+        <div class="h-2 bg-gradient-to-r from-brand-500 to-green-400 absolute top-0 left-0 right-0"></div>
+
+        <div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+        </div>
+
+        <h1 class="text-xl font-bold text-dark mb-2">Sign Out?</h1>
+        <p class="text-sm text-gray-500 mb-8">Are you sure you want to sign out of TrashPort?</p>
+
+        <div id="status" class="hidden mb-4 p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 text-sm rounded-r-lg">
+            Signing out…
+        </div>
+
+        <!-- POST form to Django — Firebase signOut() is called FIRST via JS below -->
+        <form id="logout-form" method="POST" action="{% url 'account_logout' %}">
+            {% csrf_token %}
+            <button id="signout-btn" type="button" onclick="doSignOut()"
+                class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] mb-3">
+                Yes, Sign Out
+            </button>
+        </form>
+
+        <a href="{% url 'home' %}"
+            class="block w-full py-3 border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold rounded-xl transition-all">
+            Cancel
+        </a>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+        const app = initializeApp({
+            apiKey:            "REDACTED_FIREBASE_KEY",
+            authDomain:        "trashport-fcb21.firebaseapp.com",
+            projectId:         "trashport-fcb21",
+            storageBucket:     "trashport-fcb21.firebasestorage.app",
+            messagingSenderId: "892775193863",
+            appId:             "1:892775193863:web:6954b9f49b74805824b9a2",
+            measurementId:     "G-5W1SP2Q05Z"
+        });
+
+        const auth = getAuth(app);
+
+        window.doSignOut = async () => {
+            const btn    = document.getElementById('signout-btn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            btn.textContent = 'Signing out…';
+            status.classList.remove('hidden');
+
+            try {
+                // 1. Sign out of Firebase (clears client-side auth state)
+                //    Without this, onAuthStateChanged on the login page
+                //    would immediately re-authenticate the user.
+                await signOut(auth);
+            } catch (e) {
+                // Firebase sign-out failed (e.g. already signed out) — continue anyway
+                console.warn('Firebase signOut:', e.message);
+            }
+
+            // 2. Submit the form to sign out of Django session
+            document.getElementById('logout-form').submit();
+        };
+    </script>
+</body>
+</html>

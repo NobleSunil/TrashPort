@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="py-4 row justify-content-center">
-  <div class="col-md-10 col-lg-8">
+  <div class="col-md-10 col-lg-9">
     
     <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
       ← Back to Dashboard
@@ -12,64 +12,74 @@
 
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.id }}</h2>
-          <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3">
+          <div>
+            <h2 class="mb-1 text-success fw-bold">Pickup Request #{{ pickup.id }}</h2>
+            <span class="fs-6 text-muted">Booked on {{ pickup.created_at|date:"M d, Y" }} | Distance: <strong>{{ pickup.distance_km }} km</strong></span>
+          </div>
+          <div class="mt-2 mt-md-0">
+            {% if pickup.status == 'AWAITING_PAYMENT' %}
+              <span class="badge bg-danger p-2 fs-6">Awaiting Payment</span>
+            {% elif pickup.status == 'PENDING' %}
+              <span class="badge bg-warning text-dark p-2 fs-6">Pending Assignment</span>
+            {% elif pickup.status == 'ASSIGNED' %}
+              <span class="badge bg-primary p-2 fs-6">Assigned</span>
+            {% elif pickup.status == 'IN_TRANSIT' %}
+              <span class="badge bg-info p-2 fs-6">In Transit</span>
+            {% elif pickup.status == 'COMPLETED' %}
+              <span class="badge bg-success p-2 fs-6"><i class="fas fa-check-circle me-1"></i> Completed</span>
+            {% elif pickup.status == 'CANCELLED' %}
+              <span class="badge bg-danger p-2 fs-6">Cancelled</span>
+            {% endif %}
+          </div>
         </div>
 
         <div class="row g-4">
           <div class="col-md-6 border-end">
-            <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
-            <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }} (Fee: Rs. {{ pickup.category.fee_per_kg }}/kg, Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
-            <p class="mb-2"><strong>Estimated Weight:</strong> {{ pickup.weight_kg }} kg</p>
-            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
-            <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
-            <p class="mb-2">
-              <strong>Status:</strong>
-              {% if pickup.status == 'AWAITING_PAYMENT' %}
-                <span class="badge bg-danger">Awaiting Payment</span>
-              {% elif pickup.status == 'PENDING' %}
-                <span class="badge bg-warning text-dark">Pending Assignment</span>
-              {% elif pickup.status == 'ASSIGNED' %}
-                <span class="badge bg-primary">Assigned</span>
-              {% elif pickup.status == 'IN_TRANSIT' %}
-                <span class="badge bg-info">In Transit</span>
-              {% elif pickup.status == 'COMPLETED' %}
-                <span class="badge bg-success">Completed</span>
-              {% elif pickup.status == 'CANCELLED' %}
-                <span class="badge bg-danger">Cancelled</span>
-              {% endif %}
-            </p>
-            <p class="mb-2">
-              <strong>Collection Fee:</strong>
-              {% if pickup.fee > 0 %}
-                Rs. {{ pickup.fee }}
-              {% else %}
-                <span class="text-success fw-bold">Free</span>
-              {% endif %}
-            </p>
-            <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
-            <p class="mb-2">
-              <strong>Payment Status:</strong>
-              {% if pickup.is_paid %}
-                <span class="badge bg-success">Paid</span>
-              {% else %}
-                <span class="badge bg-danger">Unpaid</span>
-              {% endif %}
+            <h5 class="text-uppercase text-muted small fw-bold mb-3">Collection Specifications</h5>
+            <p class="mb-2"><strong>Waste Category:</strong> <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span></p>
+            <p class="mb-2"><strong>Category Base Rate:</strong> Rs. {{ pickup.category.fee_per_kg }}/kg (Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
+            <p class="mb-2"><strong>Estimated Weight (Customer):</strong> <span class="badge bg-secondary">{{ pickup.weight_kg }} kg</span></p>
+            
+            {% if pickup.is_weight_verified %}
+              <div class="p-3 bg-success-subtle border border-success-subtle rounded-3 my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-success"><i class="fas fa-balance-scale me-1"></i> Verified Actual Weight:</span>
+                  <span class="fs-5 fw-bold text-success">{{ pickup.actual_weight_kg }} kg</span>
+                </div>
+                {% if pickup.extra_fee > 0 %}
+                  <div class="text-danger small mt-1">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Extra Weight Surcharge (2x rate): <strong>+Rs. {{ pickup.extra_fee }}</strong>
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"Standard" }}</p>
+            <p class="mb-2"><strong>Scheduled Slot:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <hr>
+            <p class="mb-2"><strong>Total Customer Fee:</strong> <span class="fs-5 fw-bold text-dark">Rs. {{ pickup.fee }}</span></p>
+            <p class="mb-2"><strong>Collector Earning Payout:</strong> 
+              <span class="fs-5 fw-bold text-success">
+                Rs. {{ pickup.collector_earnings|default:preview_earnings }}
+              </span>
+              <small class="text-muted d-block">(Formula: 35% of Fee + Rs. 0.25/km for {{ pickup.distance_km }} km)</small>
             </p>
           </div>
 
           <div class="col-md-6">
-            <h5 class="text-uppercase text-muted small fw-bold">Location & Collector</h5>
-            <p class="mb-2"><strong>Customer:</strong> {{ pickup.citizen.name|default:pickup.citizen.email }} ({{ pickup.citizen.email }})</p>
-            <p class="mb-2"><strong>Address:</strong><br>
+            <h5 class="text-uppercase text-muted small fw-bold mb-3">Location & Customer</h5>
+            <p class="mb-2"><strong>Customer:</strong> {{ pickup.citizen.name|default:pickup.citizen.email }}</p>
+            <p class="mb-2"><strong>Customer Email:</strong> {{ pickup.citizen.email }}</p>
+            <p class="mb-2"><strong>Pickup Address:</strong><br>
               {{ pickup.address.address_line1 }}<br>
               {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
               {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
             </p>
+            <hr>
             <p class="mb-0"><strong>Assigned Collector:</strong><br>
               {% if pickup.collector %}
-                {{ pickup.collector.name|default:pickup.collector.email }} ({{ pickup.collector.email }})
+                <span class="fw-bold text-primary">{{ pickup.collector.name|default:pickup.collector.email }}</span> ({{ pickup.collector.email }})
               {% else %}
                 <span class="text-muted italic">Waiting for collector assignment</span>
               {% endif %}
@@ -79,18 +89,27 @@
       </div>
     </div>
 
-    <!-- Collector Actions -->
+    <!-- Collector Actions & Waste Verification Section -->
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-        <h5 class="card-title">Collector Actions</h5>
+      <div class="card-body p-4">
+        <h5 class="card-title fw-bold text-dark mb-3">Collector Action Panel</h5>
         
         {% if pickup.status == 'PENDING' %}
           <p class="text-muted small">This job is pending. Claim it to assign it to yourself.</p>
-          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="claim">
-            <button type="submit" class="btn btn-primary">Claim Job</button>
-          </form>
+          {% if is_verified %}
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="claim">
+              <button type="submit" class="btn btn-success px-4 py-2 fw-bold">
+                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
+              </button>
+            </form>
+          {% else %}
+            <div class="alert alert-warning py-2 px-3 small mb-0 d-inline-flex align-items-center gap-2">
+              <i class="fas fa-lock"></i>
+              <span>Account pending administrator verification. You cannot claim jobs until verified.</span>
+            </div>
+          {% endif %}
         
         {% elif pickup.status == 'ASSIGNED' and pickup.collector == request.user %}
           <p class="text-muted small">Update status when you begin transit to customer location.</p>
@@ -98,25 +117,62 @@
             <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
               {% csrf_token %}
               <input type="hidden" name="action" value="transit">
-              <button type="submit" class="btn btn-info text-white">Start Transit</button>
+              <button type="submit" class="btn btn-warning text-dark fw-bold px-3">
+                <i class="fas fa-truck me-1"></i> Start Transit
+              </button>
             </form>
             <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
               {% csrf_token %}
               <input type="hidden" name="action" value="cancel">
-              <button type="submit" class="btn btn-outline-danger">Release Job</button>
+              <button type="submit" class="btn btn-outline-danger">
+                Release Job
+              </button>
             </form>
           </div>
 
         {% elif pickup.status == 'IN_TRANSIT' and pickup.collector == request.user %}
-          <p class="text-muted small">Proceed with collection. The customer fee was calculated upfront based on estimated weight.</p>
-          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="complete">
-            <button type="submit" class="btn btn-success btn-lg">Complete Collection</button>
-          </form>
+          <!-- Waste Weight Verification & 2x Surcharge Form -->
+          <div class="p-3 bg-light rounded-3 border">
+            <h6 class="fw-bold text-dark mb-1">
+              <i class="fas fa-balance-scale text-success me-1"></i> Step 2: Measure & Verify Waste Weight
+            </h6>
+            <p class="text-muted small mb-3">
+              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} × 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg).
+            </p>
+
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" id="verificationForm">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="complete">
+              
+              <div class="row g-3 align-items-end mb-3">
+                <div class="col-md-5">
+                  <label class="form-label fw-bold small text-dark">Measured Actual Weight (kg):</label>
+                  <div class="input-group">
+                    <input type="number" step="0.01" min="0.1" name="actual_weight_kg" id="actualWeightInput" 
+                           class="form-control form-control-lg fw-bold text-success" 
+                           value="{{ pickup.weight_kg }}" required>
+                    <span class="input-group-text fw-bold">kg</span>
+                  </div>
+                </div>
+                <div class="col-md-7">
+                  <div class="p-2 bg-white rounded border small">
+                    <div>Estimated: <strong>{{ pickup.weight_kg }} kg</strong> | Distance: <strong>{{ pickup.distance_km }} km</strong></div>
+                    <div id="extraWeightNotice" class="text-muted">No excess weight.</div>
+                    <div id="earningCalcNotice" class="fw-bold text-success mt-1">
+                      Estimated Collector Earning: Rs. {{ preview_earnings }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
+                <i class="fas fa-check-circle me-1"></i> Verify Weight &amp; Complete Collection
+              </button>
+            </form>
+          </div>
           
         {% else %}
-          <p class="text-muted mb-0 small">No actions available. Job status is: <strong>{{ pickup.status }}</strong></p>
+          <p class="text-muted mb-0 small">Job status is: <strong>{{ pickup.status }}</strong></p>
         {% endif %}
       </div>
     </div>
@@ -124,3 +180,42 @@
   </div>
 </div>
 {% endblock %}
+
+{% block inline_javascript %}
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('actualWeightInput');
+    const extraNotice = document.getElementById('extraWeightNotice');
+    const earningNotice = document.getElementById('earningCalcNotice');
+
+    const estimatedWeight = parseFloat("{{ pickup.weight_kg }}") || 0;
+    const ratePerKg = parseFloat("{{ pickup.category.fee_per_kg }}") || 0;
+    const distanceKm = parseFloat("{{ pickup.distance_km }}") || 5.0;
+
+    function recalculate() {
+      if (!input) return;
+      const actualWeight = parseFloat(input.value) || estimatedWeight;
+      let extraWeight = Math.max(0, actualWeight - estimatedWeight);
+      let extraFee = extraWeight * ratePerKg * 2.0;
+      let baseFee = estimatedWeight * ratePerKg;
+      let totalFee = baseFee + extraFee;
+      
+      // Collector Formula: 35% of total fee + Rs. 0.25 per km
+      let collectorEarning = (totalFee * 0.35) + (distanceKm * 0.25);
+
+      if (extraWeight > 0) {
+        extraNotice.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> +${extraWeight.toFixed(2)} kg excess weight (+Rs. ${extraFee.toFixed(2)} at 2x rate)</span>`;
+      } else {
+        extraNotice.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> Standard weight (No excess surcharge)</span>`;
+      }
+
+      earningNotice.innerHTML = `Your Earnings (35% Fee + Rs. 0.25/km): <span class="fs-6 text-success fw-bold">Rs. ${collectorEarning.toFixed(2)}</span>`;
+    }
+
+    if (input) {
+      input.addEventListener('input', recalculate);
+      recalculate();
+    }
+  });
+</script>
+{% endblock inline_javascript %}

@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+    <h3>Complaint Status Update</h3>
+    <p>Hello {{ user_name }},</p>
+    <p>Your complaint <strong>#{{ complaint_id }}</strong> has been updated.</p>
+    <p>New Status: <strong>{{ status }}</strong></p>
+    {% if response_notes %}
+        <p>Admin Remarks: {{ response_notes }}</p>
+    {% endif %}
+{% endblock %}

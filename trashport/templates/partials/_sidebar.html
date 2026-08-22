@@ -1,0 +1,31 @@
+<aside class="w-64 bg-white border-r border-gray-100 p-6 flex flex-col justify-between hidden lg:flex">
+  <div class="space-y-6">
+    <div class="text-xs uppercase font-bold text-gray-400 tracking-wider">Navigation</div>
+    <nav class="space-y-2">
+      <a href="{% url 'waste_management:dashboard' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl bg-brand-50 text-brand-700">
+        📊 Dashboard
+      </a>
+      {% if user.role == 'CITIZEN' %}
+        <a href="{% url 'waste_management:pickup_create' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          📦 Book Pickup
+        </a>
+        <a href="{% url 'waste_management:address_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          📍 Addresses
+        </a>
+        <a href="{% url 'waste_management:complaint_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          ⚠️ Complaints
+        </a>
+      {% elif user.role == 'ADMIN' or user.is_superuser %}
+        <a href="{% url 'waste_management:user_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          👥 Users
+        </a>
+        <a href="{% url 'waste_management:category_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          🏷️ Categories
+        </a>
+        <a href="{% url 'waste_management:tier_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
+          💎 Tiers
+        </a>
+      {% endif %}
+    </nav>
+  </div>
+</aside>

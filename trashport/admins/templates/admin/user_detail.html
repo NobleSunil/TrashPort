@@ -6,7 +6,24 @@
 <div class="py-4">
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
     <div>
-      <h1 class="h2 mb-1 text-dark fw-bold">{{ target_user.name|default:target_user.email }}</h1>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h1 class="h2 mb-0 text-dark fw-bold">{{ target_user.name|default:target_user.email }}</h1>
+        {% if target_user.role == 'COLLECTOR' %}
+          {% if target_user.verification_status == 'APPROVED' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1">
+              <i class="bi bi-patch-check-fill"></i> Verified Collector
+            </span>
+          {% elif target_user.verification_status == 'REJECTED' %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1">
+              <i class="bi bi-x-circle-fill"></i> Verification Rejected
+            </span>
+          {% else %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle d-inline-flex align-items-center gap-1">
+              <i class="bi bi-clock-history"></i> Pending Verification
+            </span>
+          {% endif %}
+        {% endif %}
+      </div>
       <p class="text-muted mb-0">Role: <strong>{{ target_user.role }}</strong> | Joined: {{ target_user.date_joined|date:"M d, Y" }}</p>
     </div>
     <div class="mt-3 mt-md-0 d-flex gap-2">
@@ -26,8 +43,52 @@
     </div>
   </div>
 
+  <!-- Collector Verification Action Banner (if Collector) -->
+  {% if target_user.role == 'COLLECTOR' %}
+    <div class="card border-0 shadow-sm mb-4 {% if target_user.verification_status == 'PENDING' %}border-start border-warning border-4{% elif target_user.verification_status == 'APPROVED' %}border-start border-success border-4{% else %}border-start border-danger border-4{% endif %}">
+      <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+          <h5 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-shield-check me-1 text-primary"></i> Collector Verification Status
+          </h5>
+          <p class="text-muted mb-0">
+            {% if target_user.verification_status == 'APPROVED' %}
+              This collector account is <strong>verified and approved</strong>. They can view, claim, and fulfill pickup requests.
+            {% elif target_user.verification_status == 'REJECTED' %}
+              This collector account has been <strong>rejected</strong>. They cannot claim pickup jobs.
+            {% else %}
+              This collector account is <strong>awaiting administrator verification</strong>. Review details and approve to allow job claiming.
+            {% endif %}
+          </p>
+        </div>
+        <div class="d-flex gap-2">
+          {% if target_user.verification_status != 'APPROVED' %}
+            <form method="post" action="{% url 'waste_management:collector_verify' target_user.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-success px-3 shadow-sm">
+                <i class="bi bi-check-circle me-1"></i> Approve Collector
+              </button>
+            </form>
+          {% endif %}
+          {% if target_user.verification_status != 'REJECTED' %}
+            <form method="post" action="{% url 'waste_management:collector_verify' target_user.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-outline-danger px-3" onclick="return confirm('Are you sure you want to reject/revoke this collector?')">
+                <i class="bi bi-x-circle me-1"></i> Reject / Revoke
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
   <div class="row g-4 mb-4">
-    <!-- Account Information & Wallet Points -->
+    <!-- Account Information & Wallet -->
     <div class="col-md-5">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 py-3">
@@ -36,33 +97,63 @@
         <div class="card-body">
           <p class="mb-2"><strong>Email:</strong> {{ target_user.email }}</p>
           <p class="mb-2"><strong>Role:</strong> <span class="badge bg-primary">{{ target_user.role }}</span></p>
-          <p class="mb-3"><strong>Status:</strong> 
+          <p class="mb-2"><strong>Status:</strong> 
             {% if target_user.is_active %}
               <span class="badge bg-success">Active</span>
             {% else %}
               <span class="badge bg-danger">Suspended</span>
             {% endif %}
           </p>
+          {% if target_user.role == 'COLLECTOR' %}
+            <p class="mb-2"><strong>Vehicle Number:</strong> {{ target_user.vehicle_number|default:"Not specified" }}</p>
+            <p class="mb-3"><strong>License Number:</strong> {{ target_user.license_number|default:"Not specified" }}</p>
+          {% endif %}
 
           <hr>
 
-          <div class="p-3 bg-light rounded mb-3">
-            <h6 class="fw-bold mb-1">Recycling Wallet Points</h6>
-            <h3 class="text-warning fw-bold mb-0"><i class="bi bi-star-fill me-1"></i>{{ target_user.wallet_points }} pts</h3>
-          </div>
+          {% if target_user.role == 'COLLECTOR' %}
+            <!-- Collector Cash Wallet -->
+            <div class="p-3 bg-success-subtle rounded-3 mb-3 border border-success-subtle">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="fw-bold mb-1 text-success-emphasis">Collector Cash Wallet</h6>
+                  <small class="text-muted">Earnings balance from collection jobs</small>
+                </div>
+                <h3 class="text-success fw-bold mb-0">Rs. {{ target_user.wallet_balance|default:"0.00" }}</h3>
+              </div>
+            </div>
 
-          <!-- Adjust Points Form -->
-          <h6 class="fw-bold mb-2">Adjust Recycling Wallet Points</h6>
-          <form method="post" action="{% url 'waste_management:user_wallet_adjust' target_user.id %}">
-            {% csrf_token %}
-            <div class="mb-2">
-              {{ wallet_form.points }}
+            <!-- Adjust Collector Wallet Cash Form -->
+            <h6 class="fw-bold mb-2">Adjust Collector Wallet Balance</h6>
+            <form method="post" action="{% url 'waste_management:user_wallet_adjust' target_user.id %}" class="space-y-2">
+              {% csrf_token %}
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text">Rs.</span>
+                <input type="number" step="0.01" name="cash_amount" class="form-control" placeholder="Amount (+/- e.g. 100 or -50)" required>
+                <button type="submit" class="btn btn-outline-success">Update Balance</button>
+              </div>
+              <small class="text-muted d-block mb-3">Positive numbers credit earnings, negative numbers record payouts.</small>
+            </form>
+          {% else %}
+            <!-- Citizen Recycling Points -->
+            <div class="p-3 bg-light rounded-3 mb-3 border">
+              <h6 class="fw-bold mb-1">Recycling Wallet Points</h6>
+              <h3 class="text-warning fw-bold mb-0"><i class="bi bi-star-fill me-1"></i>{{ target_user.wallet_points }} pts</h3>
             </div>
-            <div class="mb-2">
-              {{ wallet_form.reason }}
-            </div>
-            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Submit Point Adjustment</button>
-          </form>
+
+            <!-- Adjust Points Form -->
+            <h6 class="fw-bold mb-2">Adjust Recycling Wallet Points</h6>
+            <form method="post" action="{% url 'waste_management:user_wallet_adjust' target_user.id %}">
+              {% csrf_token %}
+              <div class="mb-2">
+                {{ wallet_form.points }}
+              </div>
+              <div class="mb-2">
+                {{ wallet_form.reason }}
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100">Submit Point Adjustment</button>
+            </form>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -90,7 +181,7 @@
   </div>
 
   <!-- Pickup History Table -->
-  <div class="card border-0 shadow-sm">
+  <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 py-3">
       <h5 class="card-title mb-0 fw-bold">Associated Pickup History</h5>
     </div>
@@ -102,6 +193,9 @@
             <th>Waste Category</th>
             <th>Weight (kg)</th>
             <th>Fee</th>
+            {% if target_user.role == 'COLLECTOR' %}
+              <th>Collector Payout</th>
+            {% endif %}
             <th>Status</th>
             <th>Scheduled Date</th>
             <th class="pe-3 text-end">Action</th>
@@ -112,8 +206,16 @@
             <tr>
               <td class="ps-3"><strong>#{{ p.id }}</strong></td>
               <td>{{ p.category.name }}</td>
-              <td>{{ p.weight_kg }} kg</td>
+              <td>
+                {{ p.weight_kg }} kg
+                {% if p.is_weight_verified and p.actual_weight_kg != p.weight_kg %}
+                  <span class="text-success small d-block">(Verified: {{ p.actual_weight_kg }}kg)</span>
+                {% endif %}
+              </td>
               <td>Rs. {{ p.fee }}</td>
+              {% if target_user.role == 'COLLECTOR' %}
+                <td><span class="fw-bold text-success">Rs. {{ p.collector_earnings }}</span></td>
+              {% endif %}
               <td><span class="badge bg-secondary">{{ p.status }}</span></td>
               <td>{{ p.schedule_date|date:"M d, Y" }}</td>
               <td class="pe-3 text-end">
@@ -122,12 +224,51 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="text-center py-4 text-muted">No associated pickups found.</td>
+              <td colspan="8" class="text-center py-4 text-muted">No associated pickups found.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
+  <!-- Collector UPI Payout & Redemption Log (if Collector) -->
+  {% if target_user.role == 'COLLECTOR' and upi_payouts %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0 fw-bold">
+        <i class="bi bi-send-check text-success me-1"></i> UPI Payouts &amp; Redemptions History
+      </h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Transaction Ref</th>
+            <th>UPI ID</th>
+            <th>Amount Sent</th>
+            <th>Date &amp; Time</th>
+            <th class="pe-3 text-end">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in upi_payouts %}
+            <tr>
+              <td class="ps-3 fw-bold text-dark">{{ p.transaction_ref }}</td>
+              <td><span class="badge bg-light text-dark border">{{ p.upi_id }}</span></td>
+              <td><span class="fw-bold text-success">Rs. {{ p.amount }}</span></td>
+              <td>{{ p.created_at|date:"M d, Y H:i" }}</td>
+              <td class="pe-3 text-end">
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="bi bi-check-circle-fill me-1"></i> {{ p.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

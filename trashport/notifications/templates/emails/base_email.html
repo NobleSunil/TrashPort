@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #16a34a, #22c55e); padding: 24px; text-align: center; color: white; }
+        .content { padding: 32px 24px; }
+        .footer { padding: 16px; text-align: center; font-size: 12px; color: #64748b; background: #f1f5f9; }
+        .btn { display: inline-block; padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h2>TrashPort Notifications</h2>
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 TrashPort Intelligent Waste Logistics. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+Hello {{ user_name }},
+
+Your pickup request #{{ pickup_id }} has been cancelled.
+Reason: {{ reason|default:"Cancelled by user or administrator" }}
+
+TrashPort Team

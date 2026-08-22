@@ -2,6 +2,8 @@
 
 TrashPort is a Django-based on-demand smart waste collection application featuring distinct interfaces for **Citizens**, **Collectors**, and **Administrators**.
 
+> 📄 **Detailed Status & Roadmap:** See [docs/project_summary.md](docs/project_summary.md) for a full breakdown of completed features and the future web development roadmap.
+
 ---
 
 ## 📁 Repository Folder Structure

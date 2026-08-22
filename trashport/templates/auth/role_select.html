@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Select Account Role | TrashPort{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Choose Your Account Type</h2>
+        <p class="text-sm text-gray-500 mb-6">Select how you want to use the TrashPort platform</p>
+        <div class="space-y-4">
+            <a href="{% url 'account_signup' %}" class="block p-4 border-2 border-brand-500 rounded-xl hover:bg-brand-50 transition text-left">
+                <h3 class="font-bold text-brand-700">Citizen</h3>
+                <p class="text-xs text-gray-600">Schedule pickups, track collections, and earn rewards.</p>
+            </a>
+            <a href="{% url 'account_signup' %}" class="block p-4 border border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition text-left">
+                <h3 class="font-bold text-gray-800">Collector</h3>
+                <p class="text-xs text-gray-600">Accept waste collection requests and navigate routes.</p>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

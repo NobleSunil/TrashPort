@@ -1,0 +1,6 @@
+Extract relevant parameters from user query:
+- category: Type of waste (e.g., Plastic, E-waste, Organic, Paper)
+- date_time: Desired date or time
+- pickup_id: Numeric pickup identifier if mentioned
+- address: Address or landmark
+- complaint_text: Description of complaint

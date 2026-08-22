@@ -1,0 +1,7 @@
+Hello {{ user_name }},
+
+Your waste collection request #{{ pickup_id }} has been booked successfully.
+Scheduled Time: {{ scheduled_time }}
+Address: {{ address }}
+
+TrashPort Team

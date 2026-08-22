@@ -99,9 +99,15 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "trashport.users",
+    "trashport.firebase",
     "trashport.citizens",
     "trashport.collectors",
     "trashport.admins",
+    "trashport.payments",
+    "trashport.maps",
+    "trashport.notifications",
+    "trashport.dispatch",
+    "trashport.chatbot",
     "waste_management",
     # Your stuff: custom apps go here
 ]
@@ -248,8 +254,18 @@ EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.smtp.EmailBackend",
 )
+EMAIL_HOST = env("DJANGO_EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = env.int("DJANGO_EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("DJANGO_EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="albertcyriac443@gmail.com")
+EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="REDACTED_EMAIL_KEY")
+DEFAULT_FROM_EMAIL = env(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    default="TrashPort <albertcyriac443@gmail.com>",
+)
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <albertcyriac443@gmail.com>")
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
-EMAIL_TIMEOUT = 5
+EMAIL_TIMEOUT = 10
 
 # ADMIN
 # ------------------------------------------------------------------------------
@@ -300,7 +316,8 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_EMAIL_VERIFICATION = env("DJANGO_ACCOUNT_EMAIL_VERIFICATION", default="none")
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "[TrashPort] "
 ACCOUNT_UNIQUE_EMAIL = True
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_ADAPTER = "trashport.users.adapters.AccountAdapter"

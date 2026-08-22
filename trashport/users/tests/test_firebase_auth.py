@@ -113,17 +113,68 @@ class TestFirebaseSessionLoginView:
     def test_post_valid_mock_token_logs_in(self):
         client = Client()
         url = reverse("users:firebase_login")
-        
+
         uid = "mock-citizen"
         response = client.post(
-            url, 
-            data={"token": f"mock-token-{uid}", "role": "CITIZEN"}, 
+            url,
+            data={"token": f"mock-token-{uid}", "role": "CITIZEN"},
+            content_type="application/json"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        # New users are redirected to profile setup
+        assert data["redirect_url"] == "/users/~update/"
+        assert data["is_new_user"] is True
+
+        # Check that user is logged in
+        assert int(client.session["_auth_user_id"]) > 0
+
+        # Second login with same token → existing user → dashboard
+        response2 = client.post(
+            url,
+            data={"token": f"mock-token-{uid}"},
+            content_type="application/json"
+        )
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert data2["redirect_url"] == "/dashboard/"
+        assert data2["is_new_user"] is False
+
+
+class TestPasswordSessionAuthView:
+    def test_signup_creates_and_logs_in_user(self):
+        client = Client()
+        url = reverse("users:password_signup")
+        email = "newcitizen@example.com"
+        password = "SecurePassword123!"
+
+        response = client.post(
+            url,
+            data={"email": email, "password": password, "role": "CITIZEN"},
             content_type="application/json"
         )
         assert response.status_code == 200
         assert response.json()["status"] == "success"
-        assert response.json()["redirect_url"] == "/dashboard/"
 
-        # Check that user is logged in
+        user = User.objects.get(email=email)
+        assert user.role == User.Roles.CITIZEN
+        assert user.check_password(password)
+        assert int(client.session["_auth_user_id"]) == user.pk
+
+    def test_login_authenticates_existing_user(self):
+        client = Client()
+        email = "existingcitizen@example.com"
+        password = "SecurePassword123!"
+        User.objects.create_user(email=email, password=password, role=User.Roles.CITIZEN)
+
+        url = reverse("users:password_login")
+        response = client.post(
+            url,
+            data={"email": email, "password": password},
+            content_type="application/json"
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
         assert int(client.session["_auth_user_id"]) > 0
 
