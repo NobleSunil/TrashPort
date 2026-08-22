@@ -281,5 +281,9 @@ trashport/media/
 
 # Firebase credentials
 serviceAccountKey.json
+serviceAccountKey.*.json
+!serviceAccountKey.example.json
+keys/*.json
+!keys/serviceAccountKey.example.json
 
 
