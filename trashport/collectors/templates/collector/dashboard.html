@@ -11,16 +11,16 @@
 <style>
   /* ── Dashboard Root Variables ── */
   :root {
-    --brand-primary: #4f46e5;
-    --surface-bg: #f0f2f8;
+    --brand-primary: #16a34a;
+    --surface-bg: #f0fdf4;
     --card-bg: #ffffff;
-    --card-border: rgba(79,70,229,0.08);
-    --text-primary: #1e1b4b;
-    --text-secondary: #6b7280;
-    --text-muted: #9ca3af;
-    --shadow-sm: 0 2px 8px rgba(79,70,229,0.07);
-    --shadow-md: 0 8px 32px rgba(79,70,229,0.13);
-    --shadow-lg: 0 20px 60px rgba(79,70,229,0.18);
+    --card-border: rgba(22,163,74,0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --shadow-sm: 0 2px 8px rgba(22,163,74,0.06);
+    --shadow-md: 0 8px 32px rgba(22,163,74,0.12);
+    --shadow-lg: 0 20px 60px rgba(22,163,74,0.16);
     --radius-md: 16px;
     --radius-lg: 24px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -29,13 +29,13 @@
   /* ── Page Layout ── */
   .collector-dashboard {
     min-height: 100vh;
-    background: var(--surface-bg);
+    background: #f8fafc;
     padding: 2rem 0 4rem;
   }
 
   /* ── Hero Header ── */
   .dashboard-hero {
-    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 60%, #10b981 100%);
+    background: linear-gradient(135deg, #15803d 0%, #16a34a 50%, #059669 100%);
     border-radius: var(--radius-lg);
     padding: 2.5rem 2.5rem 5rem;
     position: relative;
@@ -97,7 +97,7 @@
     background: var(--card-bg);
     border-radius: var(--radius-md);
     padding: 1.6rem 1.75rem;
-    border: 1px solid var(--card-border);
+    border: 1px solid rgba(0,0,0,0.06);
     box-shadow: var(--shadow-md);
     transition: var(--transition);
     display: flex;
@@ -111,17 +111,18 @@
   }
   .stat-icon-wrap {
     width: 58px; height: 58px;
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.4rem;
     flex-shrink: 0;
   }
-  .stat-icon-blue   { background: linear-gradient(135deg, #ede9fe, #c7d2fe); color: #4f46e5; }
+  .stat-icon-wallet { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
+  .stat-icon-blue   { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; }
   .stat-icon-green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
   .stat-icon-amber  { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
-  .stat-icon-cyan   { background: linear-gradient(135deg, #cffafe, #a5f3fc); color: #0891b2; }
+  
   .stat-text-label {
     font-size: 0.73rem;
     font-weight: 700;
@@ -131,7 +132,7 @@
     margin-bottom: 0.3rem;
   }
   .stat-text-value {
-    font-size: 2rem;
+    font-size: 1.85rem;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1;
@@ -147,7 +148,7 @@
   .section-card {
     background: var(--card-bg);
     border-radius: var(--radius-md);
-    border: 1px solid var(--card-border);
+    border: 1px solid rgba(0,0,0,0.06);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
     margin-bottom: 1.75rem;
@@ -175,7 +176,7 @@
     justify-content: center;
     font-size: 0.95rem;
   }
-  .icon-primary { background: linear-gradient(135deg, #ede9fe, #c7d2fe); color: #4f46e5; }
+  .icon-primary { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
   .icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
   .icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
   .section-title {
@@ -190,7 +191,7 @@
     margin: 0;
   }
   .section-count-badge {
-    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    background: linear-gradient(135deg, #16a34a, #059669);
     color: white;
     font-size: 0.72rem;
     font-weight: 700;
@@ -204,7 +205,7 @@
     border-collapse: collapse;
   }
   .data-table thead th {
-    background: #f8f9ff;
+    background: #f8fafc;
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -219,7 +220,7 @@
     border-bottom: 1px solid rgba(0,0,0,0.04);
   }
   .data-table tbody tr:last-child { border-bottom: none; }
-  .data-table tbody tr:hover { background: #f8f9ff; }
+  .data-table tbody tr:hover { background: #f8fafc; }
   .data-table tbody td {
     padding: 1rem 1.2rem;
     font-size: 0.875rem;
@@ -228,9 +229,9 @@
   }
   .pickup-id {
     font-weight: 700;
-    color: var(--brand-primary);
+    color: #16a34a;
     font-size: 0.875rem;
-    background: #ede9fe;
+    background: #dcfce7;
     padding: 0.2rem 0.55rem;
     border-radius: 6px;
     white-space: nowrap;
@@ -246,101 +247,62 @@
     display: block;
   }
   .category-pill {
-    background: #f0f4ff;
-    color: #4f46e5;
-    border: 1px solid #c7d2fe;
-    border-radius: 50px;
-    padding: 0.2rem 0.65rem;
+    background: #f1f5f9;
+    color: #334155;
     font-size: 0.75rem;
     font-weight: 600;
-    white-space: nowrap;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    display: inline-block;
   }
-  .weight-text { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
-  .schedule-text { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; }
+  .weight-text { font-weight: 700; color: var(--text-primary); }
+  .schedule-text { font-size: 0.8rem; color: var(--text-secondary); }
 
   /* ── Status Badges ── */
   .status-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 50px;
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
     text-transform: uppercase;
-    white-space: nowrap;
+    letter-spacing: 0.05em;
+    padding: 0.28rem 0.75rem;
+    border-radius: 50px;
   }
-  .status-badge::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    flex-shrink: 0;
-  }
-  .status-assigned  { background: #ede9fe; color: #5b21b6; }
-  .status-transit   { background: #cffafe; color: #0e7490; }
-  .status-completed { background: #d1fae5; color: #047857; }
-  .status-pending   { background: #fef3c7; color: #92400e; }
-  .status-default   { background: #f3f4f6; color: #374151; }
+  .status-assigned { background: #dbeafe; color: #1d4ed8; }
+  .status-transit  { background: #fef3c7; color: #b45309; }
+  .status-completed{ background: #d1fae5; color: #047857; }
+  .status-default  { background: #f1f5f9; color: #475569; }
 
   /* ── Action Buttons ── */
-  .action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.9rem;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    transition: var(--transition);
-    white-space: nowrap;
-  }
-  .btn-view {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #e5e7eb;
-  }
-  .btn-view:hover { background: #e5e7eb; color: #111827; text-decoration: none; }
-  .btn-transit {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-    color: white;
-  }
-  .btn-transit:hover {
-    background: linear-gradient(135deg, #0891b2, #0e7490);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(6,182,212,0.35);
-    color: white;
-  }
-  .btn-complete {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-  }
-  .btn-complete:hover {
-    background: linear-gradient(135deg, #059669, #047857);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16,185,129,0.35);
-    color: white;
-  }
-  .btn-claim {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white;
-  }
-  .btn-claim:hover {
-    background: linear-gradient(135deg, #4338ca, #6d28d9);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79,70,229,0.4);
-    color: white;
-  }
   .actions-wrap {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+  }
+  .btn-view     { background: #f1f5f9; color: #334155; }
+  .btn-view:hover { background: #e2e8f0; color: #0f172a; }
+  .btn-transit  { background: #f59e0b; color: white; }
+  .btn-transit:hover { background: #d97706; color: white; }
+  .btn-complete { background: #16a34a; color: white; }
+  .btn-complete:hover { background: #15803d; color: white; }
+  .btn-claim    { background: #16a34a; color: white; }
+  .btn-claim:hover { background: #15803d; color: white; }
 
   /* ── Empty State ── */
   .empty-state {
@@ -363,16 +325,16 @@
     align-items: center;
     gap: 0.5rem;
     background: none;
-    border: 1.5px solid var(--card-border);
+    border: 1.5px solid rgba(0,0,0,0.1);
     border-radius: 8px;
     padding: 0.35rem 0.9rem;
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--brand-primary);
+    color: #16a34a;
     cursor: pointer;
     transition: var(--transition);
   }
-  .history-toggle-btn:hover { background: #ede9fe; border-color: var(--brand-primary); }
+  .history-toggle-btn:hover { background: #dcfce7; border-color: #16a34a; }
 
   /* ── Animations ── */
   @keyframes fadeInUp {
@@ -390,7 +352,7 @@
     .dashboard-hero { padding: 2rem 1.5rem 4.5rem; }
     .hero-title { font-size: 1.55rem; }
     .stat-card { padding: 1.25rem; }
-    .stat-text-value { font-size: 1.65rem; }
+    .stat-text-value { font-size: 1.5rem; }
     .data-table thead { display: none; }
     .data-table tbody tr { display: block; padding: 1rem; border-bottom: 1px solid #f0f0f0; }
     .data-table tbody td { display: block; padding: 0.3rem 0; border: none; }
@@ -411,21 +373,75 @@
 <div class="collector-dashboard">
   <div class="container-xl px-3 px-md-4">
 
+    <!-- ── Collector Verification Notice (if pending or rejected) ── -->
+    {% if not is_verified %}
+      {% if verification_status == 'REJECTED' %}
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-4 d-flex align-items-center gap-3">
+          <div class="p-3 bg-danger-subtle text-danger rounded-circle">
+            <i class="fas fa-times-circle fs-3"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1 text-danger">Collector Verification Rejected</h5>
+            <p class="mb-0 text-muted small">Your collector account verification was not approved by an administrator. You cannot claim or execute collection jobs. Please contact admin support.</p>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-warning border-0 shadow-sm rounded-4 p-4 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 bg-warning-subtle text-warning-emphasis rounded-circle">
+              <i class="fas fa-clock fs-3"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-1 text-dark">Account Pending Admin Verification</h5>
+              <p class="mb-0 text-muted small">Your collector registration has been submitted and is awaiting administrator verification. Once verified, you can immediately claim and collect waste pickups.</p>
+            </div>
+          </div>
+          <span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase">Under Review</span>
+        </div>
+      {% endif %}
+    {% endif %}
+
     <!-- ── Hero Header ── -->
     <div class="dashboard-hero anim-fade-up">
       <div class="hero-badge">
-        <i class="fas fa-truck"></i>
-        Collector Portal
+        {% if is_verified %}
+          <i class="fas fa-check-circle" style="color: #86efac;"></i>
+          Verified Collector
+        {% else %}
+          <i class="fas fa-shield-alt"></i>
+          Collector Portal
+        {% endif %}
       </div>
       <h1 class="hero-title">
         Welcome back, {{ request.user.name|default:request.user.email }}!
       </h1>
-      <p class="hero-subtitle">Manage your pickups, claim new jobs, and track your collection history.</p>
+      <p class="hero-subtitle">Earn 35% of collection fees + Rs. 0.25/km distance payout, verify waste on-site, and instantly redeem earnings to UPI.</p>
     </div>
 
     <!-- ── Stat Cards ── -->
     <div class="row g-3 stats-row">
-      <div class="col-6 col-md-3 anim-fade-up anim-delay-1">
+      <!-- Collector Cash Wallet Card with Redeem Button -->
+      <div class="col-12 col-md-4 anim-fade-up anim-delay-1">
+        <div class="stat-card flex-column align-items-stretch justify-content-between">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="stat-icon-wrap stat-icon-wallet">
+              <i class="fas fa-wallet"></i>
+            </div>
+            <div>
+              <div class="stat-text-label">Wallet Balance</div>
+              <div class="stat-text-value text-success">Rs. {{ wallet_balance|default:"0.00" }}</div>
+              <div class="stat-text-sub">Collection Earnings</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                  data-bs-toggle="modal" data-bs-target="#redeemUpiModal" {% if not is_verified %}disabled title="Account must be verified to redeem"{% endif %}>
+            <i class="fas fa-arrow-circle-up"></i> Redeem to UPI
+          </button>
+        </div>
+      </div>
+      
+      <!-- Active Assigned Jobs -->
+      <div class="col-6 col-md-2 anim-fade-up anim-delay-2">
         <div class="stat-card">
           <div class="stat-icon-wrap stat-icon-blue">
             <i class="fas fa-clipboard-list"></i>
@@ -433,23 +449,25 @@
           <div>
             <div class="stat-text-label">Active Jobs</div>
             <div class="stat-text-value">{{ assigned_pickups.count }}</div>
-            <div class="stat-text-sub">Assigned to you</div>
+            <div class="stat-text-sub">In progress</div>
           </div>
         </div>
       </div>
-      <div class="col-6 col-md-3 anim-fade-up anim-delay-2">
+      <!-- Completed Jobs -->
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-3">
         <div class="stat-card">
           <div class="stat-icon-wrap stat-icon-green">
             <i class="fas fa-check-circle"></i>
           </div>
           <div>
             <div class="stat-text-label">Completed</div>
-            <div class="stat-text-value">{{ completed_pickups.count }}</div>
+            <div class="stat-text-value">{{ completed_count|default:completed_pickups.count }}</div>
             <div class="stat-text-sub">Total collections</div>
           </div>
         </div>
       </div>
-      <div class="col-6 col-md-3 anim-fade-up anim-delay-3">
+      <!-- Available Jobs -->
+      <div class="col-12 col-md-3 anim-fade-up anim-delay-4">
         <div class="stat-card">
           <div class="stat-icon-wrap stat-icon-amber">
             <i class="fas fa-hourglass-half"></i>
@@ -461,16 +479,59 @@
           </div>
         </div>
       </div>
-      <div class="col-6 col-md-3 anim-fade-up anim-delay-4">
-        <div class="stat-card">
-          <div class="stat-icon-wrap stat-icon-cyan">
-            <i class="fas fa-id-badge"></i>
+    </div>
+
+    <!-- ── Redeem to UPI Modal ── -->
+    <div class="modal fade" id="redeemUpiModal" tabindex="-1" aria-labelledby="redeemUpiModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+          <div class="modal-header bg-success text-white p-4">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-mobile-alt fs-4"></i>
+              <div>
+                <h5 class="modal-title fw-bold mb-0" id="redeemUpiModalLabel">Redeem Earnings to UPI</h5>
+                <small class="opacity-75">Instant payout to your bank account / UPI VPA</small>
+              </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div>
-            <div class="stat-text-label">Role</div>
-            <div class="stat-text-value" style="font-size:1.1rem;letter-spacing:0;margin-top:0.25rem;">Collector</div>
-            <div class="stat-text-sub">{{ request.user.email }}</div>
-          </div>
+          <form method="post" action="{% url 'waste_management:collector_redeem_upi' %}">
+            {% csrf_token %}
+            <div class="modal-body p-4">
+              <div class="p-3 bg-light rounded-3 mb-3 border d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Available Balance:</span>
+                <span class="fs-5 fw-bold text-success">Rs. {{ wallet_balance|default:"0.00" }}</span>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold small text-dark">UPI ID / VPA Address:</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-at text-muted"></i></span>
+                  <input type="text" name="upi_id" class="form-control" placeholder="e.g. yourname@okhdfcbank or 9876543210@paytm" required>
+                </div>
+                <small class="text-muted">Enter any valid UPI handle (Google Pay, PhonePe, Paytm, BHIM, etc.).</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold small text-dark">Withdrawal Amount (Rs.):</label>
+                <div class="input-group">
+                  <span class="input-group-text fw-bold">Rs.</span>
+                  <input type="number" step="0.01" min="1" max="{{ wallet_balance|default:'0.00' }}" name="amount" class="form-control fw-bold" placeholder="Amount to withdraw" required>
+                </div>
+              </div>
+
+              <div class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-0">
+                <i class="fas fa-shield-alt text-primary fs-5"></i>
+                <span>Zero transaction fees. Funds are credited directly to your connected bank via UPI.</span>
+              </div>
+            </div>
+            <div class="modal-footer bg-light p-3">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-success fw-bold px-4">
+                <i class="fas fa-check-circle me-1"></i> Confirm &amp; Redeem
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -501,7 +562,8 @@
               <th>Address</th>
               <th>Category</th>
               <th>Weight</th>
-              <th>Qty</th>
+              <th>Distance</th>
+              <th>Est. Earning</th>
               <th>Scheduled</th>
               <th>Status</th>
               <th>Actions</th>
@@ -519,7 +581,13 @@
                 </td>
                 <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
                 <td data-label="Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
-                <td data-label="Qty"><span class="schedule-text">{{ pickup.quantity_estimate|default:"—" }}</span></td>
+                <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
+                <td data-label="Est. Earning">
+                  <span class="fw-bold text-success">
+                    Rs. {{ pickup.collector_earnings|default:"50.00" }}
+                  </span>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">35% fee + 0.25/km</small>
+                </td>
                 <td data-label="Scheduled">
                   <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
                 </td>
@@ -535,7 +603,7 @@
                 <td data-label="Actions">
                   <div class="actions-wrap">
                     <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-view">
-                      <i class="fas fa-eye"></i> View
+                      <i class="fas fa-eye"></i> View &amp; Verify
                     </a>
                     {% if pickup.status == 'ASSIGNED' %}
                       <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
@@ -546,20 +614,16 @@
                         </button>
                       </form>
                     {% elif pickup.status == 'IN_TRANSIT' %}
-                      <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="complete">
-                        <button type="submit" class="action-btn btn-complete">
-                          <i class="fas fa-check"></i> Complete Job
-                        </button>
-                      </form>
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-complete">
+                        <i class="fas fa-balance-scale"></i> Measure &amp; Complete
+                      </a>
                     {% endif %}
                   </div>
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="9">
+                <td colspan="10">
                   <div class="empty-state">
                     <div class="empty-state-icon"><i class="fas fa-clipboard"></i></div>
                     <p class="empty-state-title">No active pickups assigned to you</p>
@@ -598,7 +662,8 @@
               <th>City</th>
               <th>Category</th>
               <th>Est. Weight</th>
-              <th>Qty Estimate</th>
+              <th>Distance</th>
+              <th>Est. Earning</th>
               <th>Scheduled</th>
               <th>Action</th>
             </tr>
@@ -610,23 +675,30 @@
                 <td data-label="City"><span class="customer-name">{{ pickup.address.city }}</span></td>
                 <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
                 <td data-label="Est. Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
-                <td data-label="Qty Estimate"><span class="schedule-text">{{ pickup.quantity_estimate|default:"—" }}</span></td>
+                <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
+                <td data-label="Est. Earning"><span class="fw-bold text-success">Rs. {{ pickup.collector_earnings|default:"50.00" }}</span></td>
                 <td data-label="Scheduled">
                   <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
                 </td>
                 <td data-label="Action">
-                  <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="claim">
-                    <button type="submit" class="action-btn btn-claim">
-                      <i class="fas fa-hand-pointer"></i> Claim Job
+                  {% if is_verified %}
+                    <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="claim">
+                      <button type="submit" class="action-btn btn-claim">
+                        <i class="fas fa-hand-pointer"></i> Claim Job
+                      </button>
+                    </form>
+                  {% else %}
+                    <button type="button" class="action-btn btn-view" disabled style="opacity:0.6;cursor:not-allowed;" title="Admin verification required to claim jobs">
+                      <i class="fas fa-lock"></i> Verification Required
                     </button>
-                  </form>
+                  {% endif %}
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="7">
+                <td colspan="8">
                   <div class="empty-state">
                     <div class="empty-state-icon"><i class="fas fa-box-open"></i></div>
                     <p class="empty-state-title">No pending jobs available</p>
@@ -649,8 +721,8 @@
             <i class="fas fa-history"></i>
           </div>
           <div>
-            <p class="section-title">Completed Collections</p>
-            <p class="section-subtitle">Your pickup history</p>
+            <p class="section-title">Completed Collections &amp; Earnings</p>
+            <p class="section-subtitle">Your fulfilled collection history and wallet earnings</p>
           </div>
         </div>
         <button id="historyToggleBtn" class="history-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#completedHistoryTable" aria-expanded="false">
@@ -666,9 +738,11 @@
               <tr>
                 <th>ID</th>
                 <th>Customer</th>
-                <th>Address</th>
                 <th>Category</th>
-                <th>Weight</th>
+                <th>Measured Weight</th>
+                <th>Extra Charge</th>
+                <th>Distance</th>
+                <th>Your Payout</th>
                 <th>Scheduled</th>
                 <th>Status</th>
                 <th>Details</th>
@@ -679,13 +753,22 @@
                 <tr>
                   <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
                   <td data-label="Customer"><span class="customer-name">{{ pickup.citizen.name|default:pickup.citizen.email }}</span></td>
-                  <td data-label="Address">
-                    <span class="address-text" title="{{ pickup.address.address_line1 }}, {{ pickup.address.city }}">
-                      {{ pickup.address.address_line1 }}, {{ pickup.address.city }}
-                    </span>
-                  </td>
                   <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
-                  <td data-label="Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                  <td data-label="Measured Weight">
+                    <span class="weight-text">{{ pickup.actual_weight_kg|default:pickup.weight_kg }} kg</span>
+                    {% if pickup.actual_weight_kg > pickup.weight_kg %}
+                      <small class="text-danger d-block">(+{{ pickup.actual_weight_kg|add:"-"|add:pickup.weight_kg }}kg excess)</small>
+                    {% endif %}
+                  </td>
+                  <td data-label="Extra Charge">
+                    {% if pickup.extra_fee > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">+Rs. {{ pickup.extra_fee }} (2x)</span>
+                    {% else %}
+                      <span class="text-muted small">Rs. 0.00</span>
+                    {% endif %}
+                  </td>
+                  <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
+                  <td data-label="Your Payout"><span class="fw-bold text-success">+Rs. {{ pickup.collector_earnings }}</span></td>
                   <td data-label="Scheduled">
                     <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
                   </td>
@@ -700,6 +783,51 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── UPI Redemption History Table ── -->
+    {% if upi_payouts %}
+    <div class="section-card anim-fade-up anim-delay-4">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon" style="background:#e0f2fe;color:#0284c7;">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <div>
+            <p class="section-title">UPI Redemption &amp; Payout History</p>
+            <p class="section-subtitle">Total redeemed: Rs. {{ total_redeemed_upi|default:"0.00" }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Reference ID</th>
+              <th>UPI ID</th>
+              <th>Amount (Rs.)</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in upi_payouts %}
+              <tr>
+                <td data-label="Reference ID"><span class="badge bg-light text-dark border fw-bold">{{ p.transaction_ref }}</span></td>
+                <td data-label="UPI ID"><span class="fw-semibold text-dark">{{ p.upi_id }}</span></td>
+                <td data-label="Amount"><span class="fw-bold text-success">Rs. {{ p.amount }}</span></td>
+                <td data-label="Date">{{ p.created_at|date:"M d, Y h:i A" }}</td>
+                <td data-label="Status">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="fas fa-check-circle me-1"></i> {{ p.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% endif %}

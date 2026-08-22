@@ -1,0 +1,6 @@
+Hello {{ user_name }},
+
+Payment of ${{ amount }} {{ currency }} received.
+Transaction ID: {{ transaction_id }}
+
+TrashPort Team

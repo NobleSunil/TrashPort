@@ -1,0 +1,7 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+    <h3>Pickup Request Cancelled</h3>
+    <p>Hello {{ user_name }},</p>
+    <p>Your pickup request <strong>#{{ pickup_id }}</strong> has been cancelled.</p>
+    <p>Reason: {{ reason|default:"Cancelled by user or administrator" }}</p>
+{% endblock %}

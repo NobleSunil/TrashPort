@@ -105,3 +105,29 @@ class TestUserDetailView:
         assert isinstance(response, HttpResponseRedirect)
         assert response.status_code == HTTPStatus.FOUND
         assert response.url == f"{login_url}?next=/fake-url/"
+
+
+class TestPasswordResetAndEmailViews:
+    def test_password_reset_page_loads(self, client):
+        response = client.get(reverse("account_reset_password"))
+        assert response.status_code == HTTPStatus.OK
+        assert "Forgot Password?" in response.content.decode()
+
+    def test_password_reset_submission_sends_email(self, client, user: User):
+        response = client.post(
+            reverse("account_reset_password"),
+            data={"email": user.email},
+            follow=True,
+        )
+        assert response.status_code == HTTPStatus.OK
+        assert "Check Your Email" in response.content.decode()
+
+    def test_login_page_loads_with_forgot_password_link(self, client):
+        response = client.get(reverse("account_login"))
+        assert response.status_code == HTTPStatus.OK
+        assert reverse("account_reset_password") in response.content.decode()
+
+    def test_signup_page_loads_clean_form(self, client):
+        response = client.get(reverse("account_signup"))
+        assert response.status_code == HTTPStatus.OK
+        assert "Create Account" in response.content.decode()

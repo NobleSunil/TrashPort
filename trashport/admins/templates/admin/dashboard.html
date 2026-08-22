@@ -58,30 +58,46 @@
   <!-- Key Performance Indicators (KPIs) -->
   <div class="row g-3 mb-4">
     <!-- Total Revenue -->
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl col-md-4">
       <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #0d6efd !important;">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Total Revenue</span>
             <span class="badge bg-primary-subtle text-primary rounded-pill">Paid</span>
           </div>
-          <h2 class="h3 fw-bold mb-1">Rs. {{ total_revenue|floatformat:2 }}</h2>
+          <h3 class="fw-bold mb-1">Rs. {{ total_revenue|floatformat:2 }}</h3>
           <div class="text-muted small">
-            <i class="bi bi-wallet2 text-primary me-1"></i> Collected from fees
+            <i class="bi bi-wallet2 text-primary me-1"></i> Customer Fees
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Money Sent to Collectors -->
+    <div class="col-xl col-md-4">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #16a34a !important;">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small text-uppercase fw-semibold">Collector Payouts</span>
+            <span class="badge bg-success-subtle text-success rounded-pill">35% + 0.25/km</span>
+          </div>
+          <h3 class="fw-bold mb-1 text-success">Rs. {{ total_collector_payouts|floatformat:2 }}</h3>
+          <div class="text-muted small">
+            <i class="bi bi-arrow-up-right-circle text-success me-1"></i> UPI Redeemed: Rs. {{ total_upi_redeemed|floatformat:2 }}
           </div>
         </div>
       </div>
     </div>
 
     <!-- Total Recycled Waste -->
-    <div class="col-xl-3 col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #198754 !important;">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="col-xl col-md-4">
+      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #059669 !important;">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Recycled Volume</span>
             <span class="badge bg-success-subtle text-success rounded-pill">Completed</span>
           </div>
-          <h2 class="h3 fw-bold mb-1">{{ total_weight_kg|floatformat:1 }} <span class="fs-6 text-muted">kg</span></h2>
+          <h3 class="fw-bold mb-1">{{ total_weight_kg|floatformat:1 }} <span class="fs-6 text-muted">kg</span></h3>
           <div class="text-muted small">
             <i class="bi bi-star-fill text-warning me-1"></i> {{ total_points_earned }} pts rewarded
           </div>
@@ -90,14 +106,14 @@
     </div>
 
     <!-- Pickups & Completion Rate -->
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl col-md-6">
       <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid #0dcaf0 !important;">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Pickups Processed</span>
-            <span class="badge bg-info-subtle text-dark rounded-pill">{{ completion_rate }}% Completed</span>
+            <span class="badge bg-info-subtle text-dark rounded-pill">{{ completion_rate }}% Done</span>
           </div>
-          <h2 class="h3 fw-bold mb-1">{{ total_pickups }}</h2>
+          <h3 class="fw-bold mb-1">{{ total_pickups }}</h3>
           <div class="text-muted small">
             <span class="text-warning fw-semibold">{{ pending_pickups }}</span> pending requests
           </div>
@@ -106,10 +122,10 @@
     </div>
 
     <!-- Active Complaints & Users -->
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl col-md-6">
       <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid {% if active_complaints > 0 %}#dc3545{% else %}#6c757d{% endif %} !important;">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Active Issues</span>
             {% if active_complaints > 0 %}
               <span class="badge bg-danger rounded-pill">{{ active_complaints }} Urgent</span>
@@ -117,7 +133,7 @@
               <span class="badge bg-secondary rounded-pill">All Clear</span>
             {% endif %}
           </div>
-          <h2 class="h3 fw-bold mb-1">{{ active_complaints }} <span class="fs-6 text-muted">Complaints</span></h2>
+          <h3 class="fw-bold mb-1">{{ active_complaints }} <span class="fs-6 text-muted">Issues</span></h3>
           <div class="text-muted small">
             <span>{{ total_citizens }} Citizens</span> • <span>{{ total_collectors }} Collectors</span>
           </div>
@@ -331,8 +347,56 @@
           {% endfor %}
         </tbody>
       </table>
+  </div>
+
+  <!-- Recent UPI Payouts / Money Sent to Collectors -->
+  {% if recent_upi_payouts %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="card-title mb-0 fw-bold">
+          <i class="bi bi-send-check text-success me-1"></i> Money Sent to Collectors (UPI Payouts)
+        </h5>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Total: Rs. {{ total_upi_redeemed|floatformat:2 }}</span>
+      </div>
+      <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR" class="btn btn-sm btn-outline-secondary">Manage Collectors</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 table-hover">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Transaction Ref</th>
+            <th>Collector Name / Email</th>
+            <th>UPI ID</th>
+            <th>Amount Sent</th>
+            <th>Date &amp; Time</th>
+            <th class="pe-3 text-end">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent_upi_payouts %}
+            <tr>
+              <td class="ps-3 fw-bold text-dark">{{ p.transaction_ref }}</td>
+              <td>
+                <div class="fw-semibold text-dark">{{ p.collector.name|default:p.collector.email }}</div>
+                <div class="text-muted small">{{ p.collector.email }}</div>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ p.upi_id }}</span></td>
+              <td><span class="fw-bold text-success">Rs. {{ p.amount }}</span></td>
+              <td>{{ p.created_at|date:"M d, Y H:i" }}</td>
+              <td class="pe-3 text-end">
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="bi bi-check-circle-fill me-1"></i> {{ p.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
+  {% endif %}
 </div>
 
 <!-- Include Chart.js Library via CDN -->

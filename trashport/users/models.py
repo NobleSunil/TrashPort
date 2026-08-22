@@ -19,6 +19,11 @@ class User(AbstractUser):
         COLLECTOR = "COLLECTOR", "Collector"
         ADMIN = "ADMIN", "Admin"
 
+    class VerificationStatus(models.TextChoices):
+        PENDING = "PENDING", _("Pending Verification")
+        APPROVED = "APPROVED", _("Approved / Verified")
+        REJECTED = "REJECTED", _("Rejected")
+
     role = CharField(
         _("Role"),
         max_length=20,
@@ -26,10 +31,44 @@ class User(AbstractUser):
         default=Roles.CITIZEN,
     )
 
+    is_verified = models.BooleanField(
+        _("Is Verified"),
+        default=False,
+        help_text=_("Designates whether this collector is verified and approved by an administrator."),
+    )
+    verification_status = CharField(
+        _("Verification Status"),
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.PENDING,
+    )
+
     wallet_points = models.IntegerField(
         _("Wallet Points"),
         default=0,
+        help_text=_("Recycling reward points for citizens."),
     )
+    wallet_balance = models.DecimalField(
+        _("Wallet Balance (Rs.)"),
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text=_("Cash earnings balance for collectors from completed waste pickups."),
+    )
+
+    vehicle_number = CharField(
+        _("Vehicle Number"),
+        max_length=50,
+        blank=True,
+        null=True,
+    )
+    license_number = CharField(
+        _("Driver / Collector License"),
+        max_length=50,
+        blank=True,
+        null=True,
+    )
+
     firebase_uid = CharField(
         _("Firebase UID"),
         max_length=255,
@@ -47,6 +86,24 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects: ClassVar[UserManager] = UserManager()
+
+    def save(self, *args, **kwargs):
+        is_new = not self.pk
+        if is_new:
+            if self.role in [self.Roles.CITIZEN, self.Roles.ADMIN]:
+                self.is_verified = True
+                self.verification_status = self.VerificationStatus.APPROVED
+            elif self.role == self.Roles.COLLECTOR:
+                if not self.verification_status:
+                    self.verification_status = self.VerificationStatus.PENDING
+                self.is_verified = (self.verification_status == self.VerificationStatus.APPROVED)
+        else:
+            if self.verification_status == self.VerificationStatus.APPROVED:
+                self.is_verified = True
+            elif self.verification_status in [self.VerificationStatus.PENDING, self.VerificationStatus.REJECTED]:
+                if self.role == self.Roles.COLLECTOR:
+                    self.is_verified = False
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
         return reverse("users:detail", kwargs={"pk": self.id})

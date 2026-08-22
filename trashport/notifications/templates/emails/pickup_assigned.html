@@ -1,0 +1,7 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+    <h3>Collector Assigned</h3>
+    <p>Hello {{ user_name }},</p>
+    <p>Collector <strong>{{ collector_name }}</strong> has been assigned to your pickup request <strong>#{{ pickup_id }}</strong>.</p>
+    <p>Estimated arrival time is soon. Thank you for choosing TrashPort!</p>
+{% endblock %}

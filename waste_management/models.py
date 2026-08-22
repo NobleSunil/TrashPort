@@ -116,6 +116,36 @@ class PickupRequest(models.Model):
         null=True,
         help_text="Additional quantity estimate (e.g. 2 bags, 3 boxes)"
     )
+    actual_weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual measured weight verified by collector"
+    )
+    extra_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Additional surcharge for excess weight (2x rate)"
+    )
+    distance_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=5.00,
+        help_text="Estimated collection distance in kilometers"
+    )
+    collector_earnings = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Earnings calculated for collector: 35% fee + Rs. 0.25/km"
+    )
+    is_weight_verified = models.BooleanField(
+        default=False,
+        help_text="Set to True once collector measures and verifies waste weight"
+    )
+
     fee = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -144,6 +174,14 @@ class PickupRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def calculate_collector_earnings(self) -> Decimal:
+        """
+        Calculates collector earnings: 35% of total charge fee + Rs. 0.25 per km.
+        """
+        fee_part = Decimal(str(self.fee or 0)) * Decimal("0.35")
+        distance_part = Decimal(str(self.distance_km or 0)) * Decimal("0.25")
+        return round(fee_part + distance_part, 2)
+
     def save(self, *args, **kwargs):
         is_new = not self.pk
         if is_new:
@@ -162,12 +200,32 @@ class PickupRequest(models.Model):
             else:
                 self.status = self.StatusChoices.PENDING
                 self.is_paid = True
+            
+            self.collector_earnings = self.calculate_collector_earnings()
         else:
+            # If actual weight was provided and verified, calculate extra weight penalty (2x rate)
+            if self.actual_weight_kg is not None and self.actual_weight_kg > self.weight_kg:
+                extra_weight = Decimal(str(self.actual_weight_kg)) - Decimal(str(self.weight_kg))
+                # 2x of regular category rate per kg for extra weight
+                self.extra_fee = extra_weight * Decimal(str(self.category.fee_per_kg)) * Decimal("2.00")
+                base_fee = Decimal(str(self.weight_kg)) * Decimal(str(self.category.fee_per_kg))
+                self.fee = base_fee + self.extra_fee
+            
+            # Recalculate collector earnings based on final total fee and distance
+            self.collector_earnings = self.calculate_collector_earnings()
+
             # Check if status has transitioned to COMPLETED
             orig = PickupRequest.objects.get(pk=self.pk)
             if orig.status != self.StatusChoices.COMPLETED and self.status == self.StatusChoices.COMPLETED:
+                # 1. Credit Citizen Recycling Points
                 self.citizen.wallet_points += self.points_earned
                 self.citizen.save()
+
+                # 2. Credit Collector Wallet Earnings: 35% fee + Rs. 0.25/km
+                if self.collector:
+                    current_balance = Decimal(str(self.collector.wallet_balance or "0.00"))
+                    self.collector.wallet_balance = current_balance + self.collector_earnings
+                    self.collector.save()
 
         super().save(*args, **kwargs)
 

@@ -1,0 +1,6 @@
+Hello {{ user_name }},
+
+Your complaint #{{ complaint_id }} has been updated to {{ status }}.
+{% if response_notes %}Remarks: {{ response_notes }}{% endif %}
+
+TrashPort Team

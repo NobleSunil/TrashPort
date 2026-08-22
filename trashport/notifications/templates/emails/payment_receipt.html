@@ -1,0 +1,9 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+    <h3>Payment Receipt</h3>
+    <p>Hello {{ user_name }},</p>
+    <p>We received your payment of <strong>${{ amount }} {{ currency }}</strong>.</p>
+    <p>Transaction ID: <code>{{ transaction_id }}</code></p>
+    <p>Description: {{ description }}</p>
+    <p>Thank you for supporting sustainable waste logistics.</p>
+{% endblock %}

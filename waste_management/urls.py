@@ -7,15 +7,16 @@ from .views import (
     WasteCategoryListView, WasteCategoryCreateView, WasteCategoryUpdateView,
     SubscribeView,
     SubscriptionTierListView, SubscriptionTierCreateView, SubscriptionTierUpdateView,
-    UserListView, CollectorCreateView, UserDetailView, UserToggleActiveView, WalletAdjustView,
+    UserListView, CollectorCreateView, UserDetailView, UserToggleActiveView, CollectorVerificationView, WalletAdjustView, CollectorRedeemUPIView,
     AutoAssignPickupsView, SubscriptionOverviewView, ExportPickupsCSVView, ExportRevenueCSVView,
 )
 
 app_name = "waste_management"
 
 urlpatterns = [
-    # Dashboard
+    # Dashboard & Wallet Payouts
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    path("wallet/redeem-upi/", CollectorRedeemUPIView.as_view(), name="collector_redeem_upi"),
     
     # Subscriptions
     path("subscriptions/<int:pk>/subscribe/", SubscribeView.as_view(), name="subscribe"),
@@ -52,6 +53,7 @@ urlpatterns = [
     path("manage/users/collectors/new/", CollectorCreateView.as_view(), name="collector_create"),
     path("manage/users/<int:pk>/", UserDetailView.as_view(), name="user_detail"),
     path("manage/users/<int:pk>/toggle/", UserToggleActiveView.as_view(), name="user_toggle_active"),
+    path("manage/users/<int:pk>/verify/", CollectorVerificationView.as_view(), name="collector_verify"),
     path("manage/users/<int:pk>/wallet/", WalletAdjustView.as_view(), name="user_wallet_adjust"),
 
     # Admin Subscriptions, Auto-Assign & Exports

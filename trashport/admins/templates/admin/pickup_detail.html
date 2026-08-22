@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Pickup Request Details | TrashPort{% endblock %}
+{% block title %}Pickup Request Details | TrashPort Admin{% endblock %}
 
 {% block content %}
 <div class="py-4 row justify-content-center">
@@ -13,50 +13,59 @@
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.id }}</h2>
-          <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
+          <div>
+            <h2 class="mb-0 text-primary fw-bold">Pickup Request #{{ pickup.id }}</h2>
+            <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }} | Distance: <strong>{{ pickup.distance_km }} km</strong></span>
+          </div>
+          <div>
+            {% if pickup.status == 'AWAITING_PAYMENT' %}
+              <span class="badge bg-danger p-2 fs-6">Awaiting Payment</span>
+            {% elif pickup.status == 'PENDING' %}
+              <span class="badge bg-warning text-dark p-2 fs-6">Pending Assignment</span>
+            {% elif pickup.status == 'ASSIGNED' %}
+              <span class="badge bg-primary p-2 fs-6">Assigned</span>
+            {% elif pickup.status == 'IN_TRANSIT' %}
+              <span class="badge bg-info p-2 fs-6">In Transit</span>
+            {% elif pickup.status == 'COMPLETED' %}
+              <span class="badge bg-success p-2 fs-6">Completed</span>
+            {% elif pickup.status == 'CANCELLED' %}
+              <span class="badge bg-danger p-2 fs-6">Cancelled</span>
+            {% endif %}
+          </div>
         </div>
 
         <div class="row g-4">
           <div class="col-md-6 border-end">
             <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
             <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }} (Fee: Rs. {{ pickup.category.fee_per_kg }}/kg, Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
-            <p class="mb-2"><strong>Estimated Weight:</strong> {{ pickup.weight_kg }} kg</p>
+            <p class="mb-2"><strong>Estimated Weight (Customer):</strong> {{ pickup.weight_kg }} kg</p>
+            
+            {% if pickup.is_weight_verified %}
+              <div class="p-2 bg-success-subtle border border-success-subtle rounded my-2">
+                <div class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i> Verified Actual Weight: {{ pickup.actual_weight_kg }} kg</div>
+                {% if pickup.extra_fee > 0 %}
+                  <div class="text-danger small mt-1">Extra Weight Surcharge (2x rate): +Rs. {{ pickup.extra_fee }}</div>
+                {% endif %}
+              </div>
+            {% endif %}
+
             <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
             <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
             <p class="mb-2">
-              <strong>Status:</strong>
-              {% if pickup.status == 'AWAITING_PAYMENT' %}
-                <span class="badge bg-danger">Awaiting Payment</span>
-              {% elif pickup.status == 'PENDING' %}
-                <span class="badge bg-warning text-dark">Pending Assignment</span>
-              {% elif pickup.status == 'ASSIGNED' %}
-                <span class="badge bg-primary">Assigned</span>
-              {% elif pickup.status == 'IN_TRANSIT' %}
-                <span class="badge bg-info">In Transit</span>
-              {% elif pickup.status == 'COMPLETED' %}
-                <span class="badge bg-success">Completed</span>
-              {% elif pickup.status == 'CANCELLED' %}
-                <span class="badge bg-danger">Cancelled</span>
-              {% endif %}
-            </p>
-            <p class="mb-2">
-              <strong>Collection Fee:</strong>
+              <strong>Total Customer Fee:</strong>
               {% if pickup.fee > 0 %}
-                Rs. {{ pickup.fee }}
+                <span class="fw-bold text-dark fs-5">Rs. {{ pickup.fee }}</span>
               {% else %}
-                <span class="text-success fw-bold">Free</span>
+                <span class="text-success fw-bold">Free (Subscribed)</span>
               {% endif %}
             </p>
             <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
-            <p class="mb-2">
-              <strong>Payment Status:</strong>
-              {% if pickup.is_paid %}
-                <span class="badge bg-success">Paid</span>
-              {% else %}
-                <span class="badge bg-danger">Unpaid</span>
-              {% endif %}
-            </p>
+            
+            <div class="p-3 bg-light rounded-3 mt-3 border">
+              <h6 class="fw-bold text-success mb-1"><i class="bi bi-cash-stack me-1"></i> Collector Money Sent / Payout</h6>
+              <div class="fs-5 fw-bold text-success">Rs. {{ pickup.collector_earnings }}</div>
+              <small class="text-muted d-block">Formula: 35% of Fee (Rs. {{ pickup.fee }}) + Rs. 0.25/km for {{ pickup.distance_km }} km</small>
+            </div>
           </div>
 
           <div class="col-md-6">
@@ -69,7 +78,7 @@
             </p>
             <p class="mb-0"><strong>Assigned Collector:</strong><br>
               {% if pickup.collector %}
-                {{ pickup.collector.name|default:pickup.collector.email }} ({{ pickup.collector.email }})
+                <span class="fw-bold text-primary">{{ pickup.collector.name|default:pickup.collector.email }}</span> ({{ pickup.collector.email }})
               {% else %}
                 <span class="text-muted italic">Waiting for collector assignment</span>
               {% endif %}

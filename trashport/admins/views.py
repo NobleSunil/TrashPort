@@ -42,6 +42,14 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         total_revenue = PickupRequest.objects.filter(is_paid=True).aggregate(total=Sum("fee"))["total"] or 0
         total_weight_kg = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("weight_kg"))["total"] or 0
         total_points_earned = PickupRequest.objects.aggregate(total=Sum("points_earned"))["total"] or 0
+        total_collector_payouts = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("collector_earnings"))["total"] or 0
+        total_extra_charges = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("extra_fee"))["total"] or 0
+        
+        from trashport.payments.models import UPIPayoutRequest
+        total_upi_redeemed = UPIPayoutRequest.objects.filter(status=UPIPayoutRequest.Statuses.COMPLETED).aggregate(total=Sum("amount"))["total"] or 0
+        context["recent_upi_payouts"] = UPIPayoutRequest.objects.select_related("collector").order_by("-created_at")[:8]
+        context["total_upi_redeemed"] = total_upi_redeemed
+
         completion_rate = round((completed_pickups / total_pickups * 100), 1) if total_pickups > 0 else 0
 
         context["total_pickups"] = total_pickups
@@ -53,6 +61,8 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["total_revenue"] = total_revenue
         context["total_weight_kg"] = total_weight_kg
         context["total_points_earned"] = total_points_earned
+        context["total_collector_payouts"] = total_collector_payouts
+        context["total_extra_charges"] = total_extra_charges
         context["completion_rate"] = completion_rate
 
         # Waste Category distribution for Doughnut Chart
@@ -276,7 +286,7 @@ class AdminSubscriptionTierUpdateView(LoginRequiredMixin, UpdateView):
 
 class AdminUserListView(LoginRequiredMixin, ListView):
     """
-    Lists all users (Citizens, Collectors, Admins) with role filtering and search.
+    Lists all users (Citizens, Collectors, Admins) with role filtering, verification status filtering, and search.
     """
     model = User
     template_name = "admin/user_list.html"
@@ -285,10 +295,13 @@ class AdminUserListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = User.objects.all().order_by("-date_joined")
         role_filter = self.request.GET.get("role", "").strip()
+        verification_filter = self.request.GET.get("verification", "").strip()
         search_query = self.request.GET.get("q", "").strip()
 
         if role_filter:
             qs = qs.filter(role=role_filter)
+        if verification_filter:
+            qs = qs.filter(verification_status=verification_filter)
         if search_query:
             qs = qs.filter(
                 Q(email__icontains=search_query) | Q(name__icontains=search_query)
@@ -298,8 +311,14 @@ class AdminUserListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["selected_role"] = self.request.GET.get("role", "")
+        context["selected_verification"] = self.request.GET.get("verification", "")
         context["search_query"] = self.request.GET.get("q", "")
         context["role_choices"] = User.Roles.choices
+        context["verification_choices"] = User.VerificationStatus.choices
+        context["pending_collectors_count"] = User.objects.filter(
+            role=User.Roles.COLLECTOR,
+            verification_status=User.VerificationStatus.PENDING
+        ).count()
         return context
 
 
@@ -313,13 +332,18 @@ class AdminCollectorCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("waste_management:user_list")
 
     def form_valid(self, form):
-        messages.success(self.request, f"Collector account '{form.instance.email}' created successfully!")
-        return super().form_valid(form)
+        collector = form.save(commit=False)
+        collector.role = User.Roles.COLLECTOR
+        collector.is_verified = True
+        collector.verification_status = User.VerificationStatus.APPROVED
+        collector.save()
+        messages.success(self.request, f"Verified Collector account '{collector.email}' created successfully!")
+        return redirect(self.success_url)
 
 
 class AdminUserDetailView(LoginRequiredMixin, DetailView):
     """
-    Displays full details of a user including addresses, wallet points, and pickup history.
+    Displays full details of a user including addresses, wallet points, collector earnings, UPI payouts, and pickup history.
     """
     model = User
     template_name = "admin/user_detail.html"
@@ -333,6 +357,13 @@ class AdminUserDetailView(LoginRequiredMixin, DetailView):
         ).select_related("category", "address").order_by("-created_at")[:20]
         context["addresses"] = target.addresses.all() if hasattr(target, "addresses") else []
         context["wallet_form"] = WalletPointAdjustmentForm()
+        if target.role == User.Roles.COLLECTOR:
+            from trashport.payments.models import UPIPayoutRequest
+            completed_qs = PickupRequest.objects.filter(collector=target, status=PickupRequest.StatusChoices.COMPLETED)
+            context["collector_completed_count"] = completed_qs.count()
+            context["collector_total_weight"] = completed_qs.aggregate(total=Sum("weight_kg"))["total"] or 0
+            context["collector_total_earnings"] = completed_qs.aggregate(total=Sum("collector_earnings"))["total"] or 0
+            context["upi_payouts"] = UPIPayoutRequest.objects.filter(collector=target).order_by("-created_at")
         return context
 
 
@@ -353,12 +384,52 @@ class AdminUserToggleActiveView(LoginRequiredMixin, View):
         return redirect("waste_management:user_detail", pk=pk)
 
 
-class AdminWalletAdjustView(LoginRequiredMixin, View):
+class AdminCollectorVerificationView(LoginRequiredMixin, View):
     """
-    POST action to credit or debit recycling wallet points for a citizen.
+    POST action for Admins to Approve or Reject a Collector's account verification.
     """
     def post(self, request, pk, *args, **kwargs):
+        collector = get_object_or_404(User, pk=pk, role=User.Roles.COLLECTOR)
+        action = request.POST.get("action")  # "approve" or "reject"
+        
+        if action == "approve":
+            collector.is_verified = True
+            collector.verification_status = User.VerificationStatus.APPROVED
+            collector.save()
+            messages.success(request, f"Collector '{collector.name or collector.email}' has been approved and verified!")
+        elif action == "reject":
+            collector.is_verified = False
+            collector.verification_status = User.VerificationStatus.REJECTED
+            collector.save()
+            messages.warning(request, f"Collector '{collector.name or collector.email}' verification has been rejected.")
+
+        next_url = request.POST.get("next") or reverse_lazy("waste_management:user_list")
+        return redirect(next_url)
+
+
+class AdminWalletAdjustView(LoginRequiredMixin, View):
+    """
+    POST action to credit or debit recycling wallet points for a citizen,
+    or cash balance for a collector.
+    """
+    def post(self, request, pk, *args, **kwargs):
+        from decimal import Decimal
         target = get_object_or_404(User, pk=pk)
+        
+        # Check if collector cash adjustment or citizen point adjustment
+        cash_amount = request.POST.get("cash_amount")
+        if cash_amount and target.role == User.Roles.COLLECTOR:
+            try:
+                amt = Decimal(cash_amount)
+                target.wallet_balance += amt
+                if target.wallet_balance < 0:
+                    target.wallet_balance = Decimal("0.00")
+                target.save()
+                messages.success(request, f"Adjusted collector wallet balance by Rs. {amt:+.2f} for {target.email}.")
+            except Exception as e:
+                messages.error(request, f"Invalid cash amount: {e}")
+            return redirect("waste_management:user_detail", pk=pk)
+
         form = WalletPointAdjustmentForm(request.POST)
         if form.is_valid():
             points = form.cleaned_data["points"]

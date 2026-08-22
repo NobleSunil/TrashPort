@@ -1,0 +1,9 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+    <h3>Pickup Request Confirmed</h3>
+    <p>Hello {{ user_name }},</p>
+    <p>Your waste collection request <strong>#{{ pickup_id }}</strong> has been booked successfully.</p>
+    <p><strong>Scheduled Time:</strong> {{ scheduled_time }}</p>
+    <p><strong>Address:</strong> {{ address }}</p>
+    <p>You can track the status of your collection anytime from your dashboard.</p>
+{% endblock %}

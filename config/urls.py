@@ -32,6 +32,15 @@ urlpatterns = [
 urlpatterns += [
     # API base url
     path("api/", include("config.api_router")),
+    path("api/firebase/", include("trashport.firebase.urls", namespace="api_firebase")),
+    path("api/citizens/", include("trashport.citizens.urls", namespace="api_citizens")),
+    path("api/collectors/", include("trashport.collectors.urls", namespace="api_collectors")),
+    path("api/admins/", include("trashport.admins.urls", namespace="api_admins")),
+    path("api/payments/", include("trashport.payments.urls", namespace="api_payments")),
+    path("api/maps/", include("trashport.maps.urls", namespace="api_maps")),
+    path("api/notifications/", include("trashport.notifications.urls", namespace="api_notifications")),
+    path("api/dispatch/", include("trashport.dispatch.urls", namespace="api_dispatch")),
+    path("api/chatbot/", include("trashport.chatbot.urls", namespace="api_chatbot")),
     # DRF auth token
     path("api/auth-token/", obtain_auth_token, name="obtain_auth_token"),
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),

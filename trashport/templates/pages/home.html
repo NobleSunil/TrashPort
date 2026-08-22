@@ -81,7 +81,10 @@
                     <a href="#how-it-works" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">How it Works</a>
                     {% if request.user.is_authenticated %}
                         <a href="{% url 'waste_management:dashboard' %}" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Dashboard</a>
-                        <a href="{% url 'account_logout' %}" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Sign Out</a>
+                        <form method="POST" action="{% url 'account_logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-600 hover:text-brand-600 font-medium transition-colors bg-transparent border-none cursor-pointer p-0">Sign Out</button>
+                        </form>
                     {% else %}
                         <a href="{% url 'account_login' %}" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Sign In</a>
                         <a href="{% url 'account_signup' %}" class="px-6 py-2.5 bg-dark text-white rounded-full font-medium hover:bg-gray-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">Get Started</a>
@@ -106,7 +109,10 @@
                 <a href="#how-it-works" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">How it Works</a>
                 {% if request.user.is_authenticated %}
                     <a href="{% url 'waste_management:dashboard' %}" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Dashboard</a>
-                    <a href="{% url 'account_logout' %}" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Sign Out</a>
+                    <form method="POST" action="{% url 'account_logout' %}" class="block">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full text-left block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg bg-transparent border-none cursor-pointer">Sign Out</button>
+                    </form>
                 {% else %}
                     <a href="{% url 'account_login' %}" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Sign In</a>
                     <a href="{% url 'account_signup' %}" class="block px-3 py-3 text-base font-medium text-brand-600 bg-brand-50 rounded-lg mt-4 text-center">Get Started</a>

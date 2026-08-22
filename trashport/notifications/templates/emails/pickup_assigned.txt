@@ -1,0 +1,5 @@
+Hello {{ user_name }},
+
+Collector {{ collector_name }} has been assigned to your pickup request #{{ pickup_id }}.
+
+TrashPort Team

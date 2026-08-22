@@ -1,0 +1,9 @@
+Classify user messages into one of the supported intents:
+- SCHEDULE_PICKUP: User wants to book a new waste collection.
+- CHANGE_SCHEDULE: User wants to reschedule an existing pickup.
+- CANCEL_PICKUP: User wants to cancel a pickup.
+- TRACK_COLLECTOR: User wants to see collector location or ETA.
+- FILE_COMPLAINT: User wants to submit a complaint.
+- CHECK_PAYMENT: User asks about points, balance, or payments.
+- NAVIGATE: User wants to visit a specific dashboard or page.
+- GENERAL_ANSWER: General recycling/waste management Q&A or greetings.
