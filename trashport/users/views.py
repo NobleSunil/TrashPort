@@ -16,8 +16,10 @@ class UserDetailView(LoginRequiredMixin, DetailView):
     Renders detail page for a user profile.
     """
     model = User
-    slug_field = "id"
-    slug_url_kwarg = "id"
+
+    def get_object(self, queryset: QuerySet | None = None) -> User:
+        assert self.request.user.is_authenticated  # type guard
+        return self.request.user
 
 
 user_detail_view = UserDetailView.as_view()
@@ -50,7 +52,7 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
     permanent = False
 
     def get_redirect_url(self) -> str:
-        return reverse("users:detail", kwargs={"pk": self.request.user.pk})
+        return reverse("users:detail")
 
 
 user_redirect_view = UserRedirectView.as_view()

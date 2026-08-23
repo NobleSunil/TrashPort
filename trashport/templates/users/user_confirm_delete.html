@@ -20,7 +20,7 @@
           {% csrf_token %}
           <div class="d-flex justify-content-center gap-3">
             <button type="submit" class="btn btn-danger px-4">Delete My Account</button>
-            <a href="{% url 'users:detail' request.user.pk %}" class="btn btn-outline-secondary px-4">Cancel</a>
+            <a href="{% url 'users:detail' %}" class="btn btn-outline-secondary px-4">Cancel</a>
           </div>
         </form>
       </div>

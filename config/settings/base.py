@@ -70,10 +70,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ROOT_URLCONF = "config.urls"
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
+    "daphne",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -362,4 +364,12 @@ SPECTACULAR_SETTINGS = {
 FIREBASE_CREDENTIALS_PATH = env("DJANGO_FIREBASE_CREDENTIALS", default=str(BASE_DIR / "serviceAccountKey.json"))
 FIREBASE_CREDENTIALS = Path(FIREBASE_CREDENTIALS_PATH)
 FIREBASE_WEB_API_KEY = env("DJANGO_FIREBASE_WEB_API_KEY", default="YOUR_API_KEY")
+
+GROQ_API_KEY = env("GROQ_API_KEY")
+CHATBOT_MODEL = env("CHATBOT_MODEL", default="llama-3.1-8b-instant")
+CHATBOT_MAX_TOKENS = env.int("CHATBOT_MAX_TOKENS", default=400)
+CHATBOT_MAX_HISTORY = env.int("CHATBOT_MAX_HISTORY", default=10)
+
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+
 

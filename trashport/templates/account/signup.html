@@ -161,6 +161,25 @@
             </button>
         </form>
 
+        <div class="relative flex py-3 items-center">
+            <div class="flex-grow border-t border-gray-200"></div>
+            <span class="flex-shrink mx-4 text-gray-400 text-xs uppercase font-semibold">Or continue with</span>
+            <div class="flex-grow border-t border-gray-200"></div>
+        </div>
+
+        <a id="google-signup-btn" href="{% url 'users:google_oauth_start' %}"
+            class="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all shadow-sm">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.97,2.37 -2.06,3.1v2.58h3.33c1.95,-1.8 3.07,-4.45 3.07,-7.48c0,-0.64 -0.06,-1.25 -0.17,-1.9z" fill="#4285F4" />
+                    <path d="M12,20.6c2.32,0 4.27,-0.77 5.7,-2.09l-3.33,-2.58c-0.92,0.62 -2.1,0.99 -3.37,0.99c-2.59,0 -4.79,-1.75 -5.57,-4.1H2.03v2.67c1.47,2.93 4.51,4.92 8.07,4.92z" fill="#34A853" />
+                    <path d="M6.43,12.82c-0.2,-0.6 -0.31,-1.24 -0.31,-1.9c0,-0.66 0.11,-1.3 0.31,-1.9V6.35H2.03c-0.69,1.38 -1.08,2.94 -1.08,4.57c0,1.63 0.39,3.19 1.08,4.57l4.4,-3.42z" fill="#FBBC05" />
+                    <path d="M12,6.1c1.26,0 2.39,0.43 3.28,1.28l2.46,-2.46c-1.48,-1.38 -3.42,-2.22 -5.74,-2.22C8.44,2.7 5.4,4.69 3.93,7.62l4.4,3.42c0.78,-2.35 2.98,-4.1 5.57,-4.1z" fill="#EA4335" />
+                </g>
+            </svg>
+            Sign up with Google
+        </a>
+
         <p class="text-center text-sm text-gray-500 mt-8">
             Already have an account?
             <a href="{% url 'account_login' %}" class="text-brand-600 font-semibold hover:underline">Sign In</a>
@@ -182,6 +201,17 @@
                 eyeOpen.classList.remove('hidden');
                 eyeClosed.classList.add('hidden');
             }
+        }
+
+        const roleSelect = document.getElementById("id_role");
+        const googleSignupBtn = document.getElementById("google-signup-btn");
+        if (roleSelect && googleSignupBtn) {
+            const updateGoogleHref = () => {
+                const baseHref = "{% url 'users:google_oauth_start' %}";
+                googleSignupBtn.href = `${baseHref}?role=${roleSelect.value}`;
+            };
+            roleSelect.addEventListener("change", updateGoogleHref);
+            updateGoogleHref();
         }
     </script>
 </body>

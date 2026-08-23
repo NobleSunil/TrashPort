@@ -29,7 +29,7 @@
             <span class="hidden sm:inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-200">
               {{ user.role }}
             </span>
-            <a href="{% url 'users:detail' user.pk %}" class="text-sm font-semibold text-gray-800 hover:text-brand-600">
+            <a href="{% url 'users:detail' %}" class="text-sm font-semibold text-gray-800 hover:text-brand-600">
               {{ user.name|default:user.email }}
             </a>
             <form method="POST" action="{% url 'account_logout' %}" class="inline">

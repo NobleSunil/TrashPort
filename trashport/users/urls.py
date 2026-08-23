@@ -18,5 +18,5 @@ urlpatterns = [
     # Server-side Google OAuth (no popup, no origin_mismatch)
     path("google/login/", view=google_oauth_start, name="google_oauth_start"),
     path("google/callback/", view=google_oauth_callback, name="google_oauth_callback"),
-    path("<int:pk>/", view=user_detail_view, name="detail"),
+    path("profile/", view=user_detail_view, name="detail"),
 ]
