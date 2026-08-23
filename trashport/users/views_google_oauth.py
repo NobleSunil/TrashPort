@@ -28,7 +28,13 @@ logger = logging.getLogger(__name__)
 
 # ─── Google OAuth 2.0 settings ────────────────────────────────────────────────
 # These match your Firebase project's auto-created OAuth 2.0 Web Client.
-GOOGLE_CLIENT_ID = "892775193863-5gtmd43tbtg4ds623kkr6ds3dm768or3.apps.googleusercontent.com"
+from django.conf import settings
+import os
+
+GOOGLE_CLIENT_ID = getattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "")
+if not GOOGLE_CLIENT_ID:
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "892775193863-5gtmd43tbtg4ds623kkr6ds3dm768or3.apps.googleusercontent.com")
+
 GOOGLE_CLIENT_SECRET_KEY = "GOCSPX-"  # We use token verification, not client secret
 
 SCOPES = [
@@ -37,25 +43,27 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.profile",
 ]
 
-# The callback URL registered in Google Cloud Console → Authorized redirect URIs
-REDIRECT_URI = "http://localhost:8000/users/google/callback/"
+def _get_redirect_uri(request) -> str:
+    """Build the callback URI dynamically based on the current host."""
+    return request.build_absolute_uri("/users/google/callback/")
 
 
-def _get_flow() -> Flow:
+def _get_flow(request) -> Flow:
     """Create an OAuth flow using the Google client ID."""
+    redirect_uri = _get_redirect_uri(request)
     client_config = {
         "web": {
             "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": "",  # Not needed for token verification
+            "client_secret": _get_client_secret(request),  # Use the actual client secret
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [REDIRECT_URI],
+            "redirect_uris": [redirect_uri],
         }
     }
     flow = Flow.from_client_config(
         client_config=client_config,
         scopes=SCOPES,
-        redirect_uri=REDIRECT_URI,
+        redirect_uri=redirect_uri,
     )
     return flow
 
@@ -69,17 +77,19 @@ def google_oauth_start(request):
     role = request.GET.get("role", User.Roles.CITIZEN)
     state = secrets.token_urlsafe(32)
 
-    request.session["google_oauth_state"] = state
-    request.session["google_oauth_role"] = role
-    request.session.modified = True
-
-    flow = _get_flow()
+    flow = _get_flow(request)
     auth_url, _ = flow.authorization_url(
         state=state,
         access_type="offline",
         include_granted_scopes="true",
         prompt="select_account",
     )
+
+    request.session["google_oauth_state"] = state
+    request.session["google_oauth_role"] = role
+    request.session["google_oauth_code_verifier"] = flow.code_verifier
+    request.session.modified = True
+
     return redirect(auth_url)
 
 
@@ -98,6 +108,7 @@ def google_oauth_callback(request):
     state = request.GET.get("state")
     session_state = request.session.get("google_oauth_state")
     role = request.session.get("google_oauth_role", User.Roles.CITIZEN)
+    code_verifier = request.session.get("google_oauth_code_verifier")
 
     if not code:
         return redirect("/accounts/signup/?google_error=no_code")
@@ -113,11 +124,14 @@ def google_oauth_callback(request):
                 "code": code,
                 "client_id": GOOGLE_CLIENT_ID,
                 "client_secret": _get_client_secret(request),
-                "redirect_uri": REDIRECT_URI,
+                "redirect_uri": _get_redirect_uri(request),
                 "grant_type": "authorization_code",
+                "code_verifier": code_verifier,
             },
             timeout=10,
         )
+        if token_response.status_code != 200:
+            logger.error(f"Google Token Exchange Error: {token_response.status_code} - {token_response.text}")
         token_response.raise_for_status()
         token_data = token_response.json()
     except Exception as exc:
@@ -190,6 +204,7 @@ def google_oauth_callback(request):
     # Clean up session
     request.session.pop("google_oauth_state", None)
     request.session.pop("google_oauth_role", None)
+    request.session.pop("google_oauth_code_verifier", None)
 
     return redirect("/dashboard/")
 

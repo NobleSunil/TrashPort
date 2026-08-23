@@ -9,12 +9,13 @@ TrashPortFirebase.init = function(apiKey, projectId) {
     return false;
   }
   const config = {
-    apiKey: apiKey || "YOUR_API_KEY",
-    authDomain: `${projectId || "trashport-fcb21"}.firebaseapp.com`,
-    projectId: projectId || "trashport-fcb21",
-    storageBucket: `${projectId || "trashport-fcb21"}.firebasestorage.app`,
-    messagingSenderId: "892775193863",
-    appId: "1:892775193863:web:6954b9f49b74805824b9a2",
+    apiKey: apiKey || "REDACTED_FIREBASE_KEY",
+    authDomain: `${projectId || "trashport-956d8"}.firebaseapp.com`,
+    projectId: projectId || "trashport-956d8",
+    storageBucket: `${projectId || "trashport-956d8"}.firebasestorage.app`,
+    messagingSenderId: "670978162800",
+    appId: "1:670978162800:web:981107db4f2fe0e32134b5",
+    measurementId: "G-JD1JK493W5"
   };
   if (!firebase.apps.length) {
     firebase.initializeApp(config);

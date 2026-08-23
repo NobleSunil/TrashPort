@@ -9,9 +9,9 @@ if TYPE_CHECKING:
     from trashport.users.models import User
 
 
-def test_detail(user: User):
-    assert reverse("users:detail", kwargs={"pk": user.pk}) == f"/users/{user.pk}/"
-    assert resolve(f"/users/{user.pk}/").view_name == "users:detail"
+def test_detail():
+    assert reverse("users:detail") == "/users/profile/"
+    assert resolve("/users/profile/").view_name == "users:detail"
 
 
 def test_update():
