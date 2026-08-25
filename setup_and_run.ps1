@@ -19,12 +19,21 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 
 # 2. Sync dependencies
-Write-Host "`n[2/4] Syncing virtual environment and installing dependencies..." -ForegroundColor Cyan
+Write-Host "`n[2/5] Syncing virtual environment and installing dependencies..." -ForegroundColor Cyan
 uv sync --frozen
 Write-Host "Dependencies synchronized successfully." -ForegroundColor Green
 
-# 3. Database setup (local SQLite database)
-Write-Host "`n[3/4] Running database migrations on local SQLite..." -ForegroundColor Cyan
+# 3. Start Redis container via Docker
+Write-Host "`n[3/5] Starting Redis container via Docker Compose..." -ForegroundColor Cyan
+if (Get-Command docker -ErrorAction SilentlyContinue) {
+    docker compose -f docker-compose.local.yml up -d redis
+    Write-Host "Redis service started." -ForegroundColor Green
+} else {
+    Write-Warning "Docker command not found. Please ensure Docker Desktop is running and run 'docker compose -f docker-compose.local.yml up -d redis' manually."
+}
+
+# 4. Database setup (local SQLite database)
+Write-Host "`n[4/5] Running database migrations on local SQLite..." -ForegroundColor Cyan
 # Temporarily export env variables for the migration run
 $env:DATABASE_URL = "sqlite:///db.sqlite3"
 $env:DJANGO_READ_DOT_ENV_FILE = "True"
@@ -33,8 +42,8 @@ $env:DJANGO_DEBUG = "True"
 uv run python manage.py migrate
 Write-Host "Migrations completed." -ForegroundColor Green
 
-# 4. Superuser creation
-Write-Host "`n[4/4] Prompting for Django Superuser..." -ForegroundColor Cyan
+# 5. Superuser creation
+Write-Host "`n[5/5] Prompting for Django Superuser..." -ForegroundColor Cyan
 Write-Host "Do you want to create a superuser account now? (y/n): " -NoNewline -ForegroundColor Yellow
 $response = Read-Host
 if ($response -eq 'y' -or $response -eq 'Y') {
@@ -46,7 +55,8 @@ Write-Host "`n=========================================" -ForegroundColor Green
 Write-Host "             SETUP COMPLETED             " -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host "To run the project with SQLite database:" -ForegroundColor Cyan
-Write-Host "  uv run python manage.py runserver" -ForegroundColor White
+Write-Host "  1. Ensure Redis is running (started automatically above via Docker)" -ForegroundColor Gray
+Write-Host "  2. Run: uv run python manage.py runserver 8001" -ForegroundColor White
 Write-Host "`nTo run pytest:" -ForegroundColor Cyan
 Write-Host "  `$env:DATABASE_URL='sqlite:///db.sqlite3'; `$env:DJANGO_READ_DOT_ENV_FILE='True'; uv run pytest" -ForegroundColor White
 Write-Host "`nFor VS Code Debugging:" -ForegroundColor Cyan

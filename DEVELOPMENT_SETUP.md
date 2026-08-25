@@ -10,6 +10,7 @@ Ensure you have the following installed on your system:
 1. **Python 3.11 or 3.12**
 2. **Git**
 3. **uv** (Recommended - Astral's fast Python package manager)
+4. **Docker Desktop** (Required for local services like Redis)
 
 ---
 
@@ -59,7 +60,7 @@ Run the built-in setup script in PowerShell:
 Set-ExecutionPolicy Bypass -Scope Process -Force
 ./setup_and_run.ps1
 ```
-*This script will check for/install `uv`, synchronize virtual environment dependencies, run SQLite migrations, and prompt you to create a superuser.*
+*This script will check for/install `uv`, synchronize virtual environment dependencies, start the local Redis container using Docker Compose, run SQLite migrations, and prompt you to create a superuser.*
 
 ---
 
@@ -108,7 +109,13 @@ python manage.py createsuperuser
 
 ## 🏃 Running the Application
 
-To support websockets (for the AI Chatbot) and standard HTTP requests, run the development server via ASGI/Daphne on port `8001`:
+Before launching the development server, you must start the local Redis service container using Docker:
+
+```bash
+docker compose -f docker-compose.local.yml up -d redis
+```
+
+Once Redis is running, start the development server via ASGI/Daphne on port `8001` to support websockets (for the AI Chatbot) and standard HTTP requests:
 
 ```bash
 # Windows

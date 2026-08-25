@@ -60,3 +60,28 @@ async def chat(messages: list[dict]) -> str:
     except openai.APIError as e:
         logger.error(f"Groq APIError: {e}")
         return '{"type": "text", "message": "Service unavailable. Please try again."}'
+
+
+async def log_interaction(user, user_message, raw, parsed, was_valid=True, action_taken="", error=""):
+    """
+    Logs a chatbot interaction to the ChatLog model for monitoring and debugging.
+    Import is inside the function to avoid circular imports.
+    """
+    from trashport.chatbot.models import ChatLog
+
+    @sync_to_async
+    def _create_log():
+        ChatLog.objects.create(
+            user=user,
+            user_message=user_message,
+            raw_llm_output=raw,
+            parsed_output=parsed,
+            was_valid=was_valid,
+            action_taken=action_taken,
+            error_message=error,
+        )
+
+    try:
+        await _create_log()
+    except Exception as e:
+        logger.error(f"Failed to log chat interaction: {e}", exc_info=True)

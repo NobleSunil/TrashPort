@@ -1,8 +1,8 @@
 from waste_management.models import Address
 
-def build_system_prompt(user, pickups) -> str:
+def build_system_prompt(user, pickups, faqs=None) -> str:
     """
-    Builds the system prompt for the Groq chatbot, incorporating user context, active pickups, and saved addresses.
+    Builds the system prompt for the Groq chatbot, incorporating user context, active pickups, saved addresses, and FAQs.
     """
     if not pickups:
         pickups_str = "No active pickups."
@@ -27,7 +27,7 @@ def build_system_prompt(user, pickups) -> str:
             addr_lines.append(f"- ID: {a.id} | {a.address_line1}, {a.city}, {a.state}, {a.postal_code}{default_marker}")
         addresses_str = "\n".join(addr_lines)
 
-    return f"""You are the TrashPort AI Chatbot.
+    prompt = f"""You are the TrashPort AI Chatbot.
 
 STRICT RULES:
 1. ONLY answer TrashPort-related questions.
@@ -91,3 +91,13 @@ Response Format Templates (use exactly one of these for every response depending
 4. {{"type": "action_done", "message": "Done message here"}}
 5. {{"type": "action", "action": "book_pickup|edit_pickup|cancel_pickup|check_status", "payload": {{}}, "message": "Initiating action message"}}
 """
+
+    # Append FAQ knowledge base if available
+    if faqs:
+        faq_lines = []
+        for faq in faqs:
+            faq_lines.append(f"Q: {faq.question}\nA: {faq.answer}")
+        prompt += "\nKNOWLEDGE BASE (use these to answer FAQ questions):\n"
+        prompt += "\n".join(faq_lines) + "\n"
+
+    return prompt
