@@ -304,8 +304,49 @@ LOGGING = {
     "root": {"level": "INFO", "handlers": ["console"]},
 }
 
-REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
+REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379")
 REDIS_SSL = REDIS_URL.startswith("rediss://")
+
+# 2a. Cache backend
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"{REDIS_URL}/0",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,  # don't crash on Redis unavailability
+        },
+        "KEY_PREFIX": "trashport",
+        "TIMEOUT": 300,  # 5 minutes default TTL
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
+# 2b. Celery broker + result backend
+CELERY_BROKER_URL = f"{REDIS_URL}/1"
+CELERY_RESULT_BACKEND = f"{REDIS_URL}/1"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# 2c. Django Channels layer
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"{REDIS_URL}/2"],
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    }
+}
+
+# 2d. Chatbot + dispatch Redis DB
+REDIS_DISPATCH_DB = f"{REDIS_URL}/3"
+
+# Chatbot rate limiting
+CHATBOT_RATE_LIMIT_MAX = 20       # max messages
+CHATBOT_RATE_LIMIT_WINDOW = 60    # seconds (sliding window)
 
 
 # django-allauth
