@@ -155,6 +155,21 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.citizen = self.request.user
+        
+        # If no saved address was selected, create a new Address from inline inputs
+        if not form.cleaned_data.get("address"):
+            addr = Address.objects.create(
+                user=self.request.user,
+                address_line1=form.cleaned_data.get("new_address_line1") or "Specified Map Location",
+                city=form.cleaned_data.get("new_city") or "Kochi",
+                state="Kerala",
+                postal_code=form.cleaned_data.get("new_postal_code") or "682001",
+                latitude=form.cleaned_data.get("latitude"),
+                longitude=form.cleaned_data.get("longitude"),
+                is_default=not Address.objects.filter(user=self.request.user).exists(),
+            )
+            form.instance.address = addr
+
         messages.success(self.request, "Pickup request booked successfully!")
         return super().form_valid(form)
 

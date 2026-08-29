@@ -1,4 +1,5 @@
 from django.urls import path
+from trashport.admins.views import AdminLiveMapView
 from .views import (
     DashboardView,
     AddressListView, AddressCreateView, AddressUpdateView, AddressDeleteView,
@@ -57,6 +58,7 @@ urlpatterns = [
     path("manage/users/<int:pk>/wallet/", WalletAdjustView.as_view(), name="user_wallet_adjust"),
 
     # Admin Subscriptions, Auto-Assign & Exports
+    path("manage/live-map/", AdminLiveMapView.as_view(), name="live_map"),
     path("manage/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
     path("manage/subscriptions/", SubscriptionOverviewView.as_view(), name="subscription_overview"),
     path("manage/export/pickups/", ExportPickupsCSVView.as_view(), name="export_pickups_csv"),
