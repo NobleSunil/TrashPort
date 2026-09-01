@@ -60,6 +60,9 @@ async def chat(messages: list[dict]) -> str:
     except openai.APIError as e:
         logger.error(f"Groq APIError: {e}")
         return '{"type": "text", "message": "Service unavailable. Please try again."}'
+    except Exception as e:
+        logger.error(f"Unexpected Groq chat completion error: {e}", exc_info=True)
+        return '{"type": "text", "message": "Service unavailable. Please try again."}'
 
 
 async def log_interaction(user, user_message, raw, parsed, was_valid=True, action_taken="", error=""):

@@ -23,7 +23,13 @@
               </button>
             </div>
             <!-- Explicit height so Leaflet container never collapses -->
-            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
+            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;">
+              <div id="mapLoader" class="d-none justify-content-center align-items-center" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); z-index: 1000; border-radius: 10px;">
+                <div class="spinner-border text-success" role="status">
+                  <span class="visually-hidden">Loading location...</span>
+                </div>
+              </div>
+            </div>
             <div class="text-muted small mb-3">
               Selected Coordinates: <strong id="coordsDisplay" class="text-dark">12.971600, 77.594600</strong>
             </div>
@@ -92,7 +98,20 @@
       </div>
     </div>
   </div>
-</div>
+<script id="saved-addresses-json" type="application/json">
+  [
+    {% for addr in addresses %}
+      {
+        "id": "{{ addr.id }}",
+        "address_line1": "{{ addr.address_line1|escapejs }}",
+        "city": "{{ addr.city|escapejs }}",
+        "postal_code": "{{ addr.postal_code|escapejs }}",
+        "latitude": "{{ addr.latitude|default_if_none:'' }}",
+        "longitude": "{{ addr.longitude|default_if_none:'' }}"
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+</script>
 {% endblock %}
 
 {% block inline_javascript %}
@@ -144,34 +163,52 @@
 
       let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
-      function reverseGeocode(lat, lng) {
+      function showMapLoading(show) {
+        let loader = document.getElementById("mapLoader");
+        if (loader) {
+          if (show) {
+            loader.classList.remove("d-none");
+            loader.classList.add("d-flex");
+          } else {
+            loader.classList.remove("d-flex");
+            loader.classList.add("d-none");
+          }
+        }
+      }
+
+      function reverseGeocode(lat, lng, forceOverwrite = false) {
+        showMapLoading(true);
         fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
           .then(res => res.json())
           .then(data => {
+            showMapLoading(false);
             if (data && data.address) {
               let addr = data.address;
               let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
               let city = addr.city || addr.town || addr.village || addr.county || "";
               let postcode = addr.postcode || "";
 
-              if (road && addressLineInput && !addressLineInput.value) {
+              if (road && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
                 addressLineInput.value = road;
-              } else if (data.display_name && addressLineInput && !addressLineInput.value) {
+              } else if (data.display_name && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
                 addressLineInput.value = data.display_name.split(',')[0];
               }
 
-              if (city && cityInput && !cityInput.value) {
+              if (city && cityInput && (forceOverwrite || !cityInput.value)) {
                 cityInput.value = city;
               }
-              if (postcode && postalInput && !postalInput.value) {
+              if (postcode && postalInput && (forceOverwrite || !postalInput.value)) {
                 postalInput.value = postcode;
               }
             }
           })
-          .catch(err => console.log("Geocoding notice:", err));
+          .catch(err => {
+            console.log("Geocoding notice:", err);
+            showMapLoading(false);
+          });
       }
 
-      function updateCoords(lat, lng, fetchAddress = true) {
+      function updateCoords(lat, lng, fetchAddress = true, forceOverwrite = false) {
         let formattedLat = lat.toFixed(6);
         let formattedLng = lng.toFixed(6);
         if (latInput) latInput.value = formattedLat;
@@ -179,39 +216,126 @@
         if (coordsDisplay) coordsDisplay.textContent = `${formattedLat}, ${formattedLng}`;
 
         if (fetchAddress) {
-          reverseGeocode(lat, lng);
+          reverseGeocode(lat, lng, forceOverwrite);
         }
       }
 
       marker.on('dragend', function (e) {
         let position = marker.getLatLng();
-        updateCoords(position.lat, position.lng, true);
+        updateCoords(position.lat, position.lng, true, true);
       });
 
       map.on('click', function (e) {
         marker.setLatLng(e.latlng);
-        updateCoords(e.latlng.lat, e.latlng.lng, true);
+        updateCoords(e.latlng.lat, e.latlng.lng, true, true);
       });
 
-      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+      // Parse Saved Addresses JSON Data
+      let savedAddresses = [];
+      try {
+        let jsonEl = document.getElementById("saved-addresses-json");
+        if (jsonEl) {
+          savedAddresses = JSON.parse(jsonEl.textContent);
+        }
+      } catch (e) {
+        console.error("Error parsing saved addresses JSON:", e);
+      }
+
+      // Sync map/coordinates with Saved Address selection
+      let addressSelect = document.getElementById("id_address");
+      if (addressSelect) {
+        addressSelect.addEventListener("change", function () {
+          let selectedId = addressSelect.value;
+          if (selectedId) {
+            let selectedAddr = savedAddresses.find(a => a.id == selectedId);
+            if (selectedAddr && selectedAddr.latitude && selectedAddr.longitude) {
+              let lat = parseFloat(selectedAddr.latitude);
+              let lng = parseFloat(selectedAddr.longitude);
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+              updateCoords(lat, lng, false);
+              
+              // Pre-fill the new address inputs and make them read-only
+              if (addressLineInput) {
+                addressLineInput.value = selectedAddr.address_line1;
+                addressLineInput.readOnly = true;
+              }
+              if (cityInput) {
+                cityInput.value = selectedAddr.city;
+                cityInput.readOnly = true;
+              }
+              if (postalInput) {
+                postalInput.value = selectedAddr.postal_code;
+                postalInput.readOnly = true;
+              }
+            }
+          } else {
+            // Re-enable and clear if selection reset
+            if (addressLineInput) {
+              addressLineInput.readOnly = false;
+              addressLineInput.value = "";
+            }
+            if (cityInput) {
+              cityInput.readOnly = false;
+              cityInput.value = "";
+            }
+            if (postalInput) {
+              postalInput.readOnly = false;
+              postalInput.value = "";
+            }
+          }
+        });
+        
+        // Trigger once on load if an address is already pre-selected
+        if (addressSelect.value) {
+          addressSelect.dispatchEvent(new Event("change"));
+        }
+      }
+
+      // Geolocation button function
+      function geolocateUser(forceOverwrite = true) {
         if (navigator.geolocation) {
+          showMapLoading(true);
           navigator.geolocation.getCurrentPosition(function (pos) {
+            showMapLoading(false);
             let lat = pos.coords.latitude;
             let lng = pos.coords.longitude;
             map.setView([lat, lng], 17);
             marker.setLatLng([lat, lng]);
-            updateCoords(lat, lng, true);
-          }, function () {
-            alert("Unable to fetch current GPS location. Please select manually on the map.");
+            updateCoords(lat, lng, true, forceOverwrite);
+          }, function (err) {
+            showMapLoading(false);
+            if (forceOverwrite) {
+              setTimeout(function () {
+                alert("Unable to fetch current GPS location. Please select manually on the map.");
+              }, 50);
+            } else {
+              console.log("Auto-geolocation declined or failed on page load.", err);
+            }
           });
         }
+      }
+
+      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+        geolocateUser(true);
       });
+
+      // Auto-locate on load if no saved address is selected and coordinates are default
+      if (!addressSelect || !addressSelect.value) {
+        if (latInput && (!latInput.value || parseFloat(latInput.value) === 12.9716)) {
+          // Attempt silent auto-locate
+          geolocateUser(false);
+        }
+      }
 
       setTimeout(function () {
         map.invalidateSize();
       }, 300);
 
-      updateCoords(defaultLat, defaultLng, false);
+      // If there is no pre-existing value, trigger map initialization coords
+      if (!latInput?.value) {
+        updateCoords(defaultLat, defaultLng, false);
+      }
     });
   </script>
 {% endblock inline_javascript %}

@@ -16,7 +16,7 @@ install:
 	uv sync
 
 run:
-	uv run python manage.py runserver 0.0.0.0:8000
+	uv run python manage.py runserver 0.0.0.0:8001
 
 migrate:
 	uv run python manage.py migrate

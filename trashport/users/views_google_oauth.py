@@ -6,7 +6,8 @@ the server initiates the OAuth redirect and handles the callback.
 This avoids ALL origin_mismatch errors entirely.
 
 Required Google Cloud Console setting:
-  Authorized redirect URIs → add:  http://localhost:8000/users/google/callback/
+  Authorized redirect URIs → add:  http://localhost:8001/users/google/callback/
+                                   http://127.0.0.1:8001/users/google/callback/
 """
 
 import json
