@@ -11,7 +11,10 @@
       <span class="text-muted">Real-time monitoring of active citizen pickup locations and live collector vehicle movement.</span>
     </div>
     <div class="mt-3 mt-md-0 d-flex gap-2 align-items-center">
-      <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary">
+      <button id="resetMapBtn" class="btn btn-outline-primary btn-sm shadow-sm" style="display: none;">
+        <i class="fas fa-compress-arrows-alt me-1"></i> Reset View / Show All Fleet
+      </button>
+      <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-sm">
         ← Back to Dashboard
       </a>
       <span class="badge bg-success p-2 fs-6" id="adminMapStatus">
@@ -29,39 +32,67 @@
     </div>
     <div class="col-md-3">
       <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 12px;">
-        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-truck me-1"></i> Active Collectors</div>
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-truck me-1"></i> Active Fleet</div>
         <div class="fs-2 fw-bold mt-1" id="statActiveCollectors">0</div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%); border-radius: 12px;">
-        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-spinner me-1"></i> Pending Assignments</div>
-        <div class="fs-2 fw-bold mt-1" id="statPendingPickups">0</div>
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-user-check me-1"></i> Collectors Assigned</div>
+        <div class="fs-2 fw-bold mt-1" id="statAssignedCollectors">0</div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #4776e6 0%, #8e54e9 100%); border-radius: 12px;">
-        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-shipping-fast me-1"></i> Pickups In Transit</div>
-        <div class="fs-2 fw-bold mt-1" id="statInTransitPickups">0</div>
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-couch me-1"></i> Collectors Free / Available</div>
+        <div class="fs-2 fw-bold mt-1" id="statFreeCollectors">0</div>
       </div>
     </div>
   </div>
 
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-      <div class="d-flex justify-content-between align-items-center mb-3 px-2">
-        <div class="d-flex gap-3 small fw-bold">
-          <span class="text-warning"><i class="fas fa-circle me-1"></i> Pending Pickup</span>
-          <span class="text-primary"><i class="fas fa-circle me-1"></i> Assigned</span>
-          <span class="text-info"><i class="fas fa-circle me-1"></i> In Transit</span>
-          <span class="text-success"><i class="fas fa-truck me-1"></i> Collector Vehicle</span>
-        </div>
-        <button id="refreshMapBtn" class="btn btn-sm btn-outline-primary">
-          <i class="fas fa-sync-alt me-1"></i> Refresh Stream
-        </button>
-      </div>
+  <div class="row g-4">
+    <!-- Map Column -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <div class="d-flex flex-wrap gap-3 small fw-bold">
+              <span class="badge bg-success p-2"><i class="fas fa-truck me-1"></i> 🟢 Collector Assigned</span>
+              <span class="badge bg-danger p-2"><i class="fas fa-truck me-1"></i> 🔴 Collector Free / Idle</span>
+              <span class="text-warning"><i class="fas fa-circle me-1"></i> Pending Pickup</span>
+              <span class="text-primary"><i class="fas fa-circle me-1"></i> Assigned</span>
+            </div>
+            <button id="refreshMapBtn" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+          </div>
 
-      <div id="adminLiveMap" class="shadow-sm" style="height: 580px; width: 100%; border-radius: 12px; border: 2px solid #0d6efd; position: relative; z-index: 1;"></div>
+          <div id="adminLiveMap" class="shadow-sm" style="height: 600px; width: 100%; border-radius: 12px; border: 2px solid #0d6efd; position: relative; z-index: 1;">
+            <!-- On-Map Floating Reset Control -->
+            <div id="onMapResetControl" style="position: absolute; top: 12px; right: 60px; z-index: 1000; display: none;">
+              <button id="onMapResetBtn" class="btn btn-sm btn-dark shadow-lg border-light rounded-pill px-3 py-1 fw-bold">
+                <i class="fas fa-compress-arrows-alt me-1 text-warning"></i> Reset Fleet / Show All
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fleet Operations Sidebar Column -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 pt-3 px-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-list-ul text-primary me-2"></i>Fleet Operations</h5>
+            <span class="badge bg-light text-dark border small" id="sidebarFocusStatus">Overview Mode</span>
+          </div>
+          <p class="text-muted small mb-0 mt-1">Select any collector below to inspect their road route &amp; customer location.</p>
+        </div>
+        <div class="card-body p-3 overflow-auto" style="max-height: 560px;" id="fleetSidebar">
+          <div class="text-center text-muted py-4 small">Loading fleet stream...</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -72,12 +103,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      // Fix default Leaflet icon CDN URLs
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
       });
 
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -91,14 +120,17 @@
       });
 
       let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
         "🛰️ Satellite View": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        "📍 Street Map": streetLayer
       };
 
       let map = L.map('adminLiveMap', {
         center: [12.9716, 77.5946],
         zoom: 13,
-        layers: [satelliteLayer]
+        minZoom: 2,
+        maxZoom: 19,
+        layers: [positronLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);
@@ -109,75 +141,275 @@
 
       let pickupMarkers = {};
       let collectorMarkers = {};
+      let routePolylines = {};
+      let routeCache = {};
+      let cachedOverviewData = null;
+      let selectedCollectorId = null;
+      let shouldFitBounds = true; // Only fit bounds on explicit user action / selection!
+
+      function createCustomIcon(iconClass, bgClass) {
+        return L.divIcon({
+          className: 'custom-map-icon',
+          html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white ${bgClass}" style="width: 34px; height: 34px; font-size: 15px; border: 2px solid white;">
+                  <i class="fas ${iconClass}"></i>
+                 </div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -17]
+        });
+      }
+
+      function selectCollector(collectorId) {
+        selectedCollectorId = collectorId;
+        shouldFitBounds = true; // Trigger zoom to focused collector once
+        document.getElementById('resetMapBtn').style.display = 'inline-block';
+        document.getElementById('onMapResetControl').style.display = 'block';
+        document.getElementById('sidebarFocusStatus').textContent = "Collector Focus Mode";
+        document.getElementById('sidebarFocusStatus').className = "badge bg-warning text-dark border small";
+        
+        if (cachedOverviewData) {
+          renderOverview(cachedOverviewData);
+        }
+      }
+
+      function resetSelection() {
+        selectedCollectorId = null;
+        shouldFitBounds = true; // Trigger zoom to full overview once
+        document.getElementById('resetMapBtn').style.display = 'none';
+        document.getElementById('onMapResetControl').style.display = 'none';
+        document.getElementById('sidebarFocusStatus').textContent = "Overview Mode";
+        document.getElementById('sidebarFocusStatus').className = "badge bg-light text-dark border small";
+        
+        // Remove all route polylines when resetting selection
+        Object.keys(routePolylines).forEach(key => {
+          if (routePolylines[key]) {
+            map.removeLayer(routePolylines[key]);
+          }
+        });
+        routePolylines = {};
+
+        if (cachedOverviewData) {
+          renderOverview(cachedOverviewData);
+        }
+      }
+
+      function renderOverview(data) {
+        cachedOverviewData = data;
+        let activePickups = data.pickups || [];
+        let activeCollectors = data.collectors || [];
+
+        // Stats updates
+        let assignedCollectorsCount = activeCollectors.filter(c => c.is_assigned).length;
+        let freeCollectorsCount = activeCollectors.filter(c => !c.is_assigned).length;
+
+        document.getElementById('statActivePickups').textContent = activePickups.length;
+        document.getElementById('statActiveCollectors').textContent = activeCollectors.length;
+        document.getElementById('statAssignedCollectors').textContent = assignedCollectorsCount;
+        document.getElementById('statFreeCollectors').textContent = freeCollectorsCount;
+
+        let bounds = [];
+        let collectorLocMap = {};
+        activeCollectors.forEach(c => {
+          collectorLocMap[c.collector_id] = c;
+        });
+
+        // 1. Render/Update Pickups
+        activePickups.forEach(p => {
+          let lat = p.latitude;
+          let lng = p.longitude;
+
+          // If a collector is selected, only include bounds for their assigned pickup
+          if (!selectedCollectorId || p.collector_id === selectedCollectorId) {
+            bounds.push([lat, lng]);
+          }
+
+          let bgClass = "bg-warning";
+          if (p.status === "ASSIGNED") bgClass = "bg-primary";
+          if (p.status === "IN_TRANSIT") bgClass = "bg-info";
+
+          let customIcon = createCustomIcon("fa-map-pin", bgClass);
+
+          let popupHtml = `
+            <div class="p-1">
+              <h6 class="mb-1 fw-bold text-primary">Pickup #${p.id} (${p.category})</h6>
+              <div><strong>Customer:</strong> ${p.citizen_name}</div>
+              <div><strong>Address:</strong> ${p.address}</div>
+              <div><strong>Weight:</strong> ${p.weight_kg} kg</div>
+              <div><strong>Status:</strong> <span class="badge ${bgClass}">${p.status}</span></div>
+              <div><strong>Collector:</strong> ${p.collector_name || 'Unassigned'}</div>
+            </div>
+          `;
+
+          if (pickupMarkers[p.id]) {
+            pickupMarkers[p.id].setLatLng([lat, lng]).setIcon(customIcon).setPopupContent(popupHtml);
+          } else {
+            pickupMarkers[p.id] = L.marker([lat, lng], { icon: customIcon }).addTo(map).bindPopup(popupHtml);
+          }
+
+          // Dim/Hide pickup markers if another collector is selected
+          if (selectedCollectorId && p.collector_id !== selectedCollectorId) {
+            pickupMarkers[p.id].setOpacity(0.2);
+          } else {
+            pickupMarkers[p.id].setOpacity(1.0);
+          }
+        });
+
+        // 2. Render/Update Collector Markers (Green = Assigned, Red = Free)
+        activeCollectors.forEach(c => {
+          let lat = c.latitude;
+          let lng = c.longitude;
+
+          if (!selectedCollectorId || c.collector_id === selectedCollectorId) {
+            bounds.push([lat, lng]);
+          }
+
+          // GREEN if assigned, RED if free/idle!
+          let bgClass = c.is_assigned ? "bg-success" : "bg-danger";
+          let truckIcon = createCustomIcon("fa-truck", bgClass);
+
+          let popupHtml = `
+            <div class="p-1">
+              <h6 class="mb-1 fw-bold ${c.is_assigned ? 'text-success' : 'text-danger'}">
+                🚛 Collector ${c.name} (${c.is_assigned ? 'ASSIGNED' : 'FREE'})
+              </h6>
+              <div><strong>Status:</strong> ${c.is_assigned ? '🟢 Active Tasks (' + c.active_task_count + ')' : '🔴 Free / Idle'}</div>
+              <div><strong>Speed:</strong> ${c.speed} km/h</div>
+              <div><strong>Last Updated:</strong> ${c.updated_at}</div>
+            </div>
+          `;
+
+          if (collectorMarkers[c.collector_id]) {
+            collectorMarkers[c.collector_id].setLatLng([lat, lng]).setIcon(truckIcon).setPopupContent(popupHtml);
+          } else {
+            collectorMarkers[c.collector_id] = L.marker([lat, lng], {
+              icon: truckIcon,
+              title: `Collector: ${c.name}`
+            }).addTo(map).bindPopup(popupHtml);
+
+            // Click collector marker to focus!
+            collectorMarkers[c.collector_id].on('click', function () {
+              selectCollector(c.collector_id);
+            });
+          }
+
+          if (selectedCollectorId && c.collector_id !== selectedCollectorId) {
+            collectorMarkers[c.collector_id].setOpacity(0.3);
+          } else {
+            collectorMarkers[c.collector_id].setOpacity(1.0);
+          }
+        });
+
+        // 3. Render Route Polylines INSTANTLY when a specific collector is selected!
+        activePickups.forEach(p => {
+          if (p.collector_id && collectorLocMap[p.collector_id]) {
+            let colLoc = collectorLocMap[p.collector_id];
+            let routeKey = `${p.id}_${p.collector_id}_${colLoc.latitude}_${colLoc.longitude}`;
+
+            if (selectedCollectorId && p.collector_id === selectedCollectorId) {
+              let directWaypoints = [[colLoc.latitude, colLoc.longitude], [p.latitude, p.longitude]];
+              
+              // 1) INSTANT RESPONSE: Draw direct line immediately with 0ms delay!
+              if (!routePolylines[p.id]) {
+                routePolylines[p.id] = L.polyline(directWaypoints, {
+                  color: '#16a34a',
+                  weight: 6,
+                  opacity: 0.95
+                }).addTo(map);
+              } else {
+                routePolylines[p.id].setLatLngs(directWaypoints);
+              }
+
+              // 2) Use cached OSRM route if available, or fetch in background
+              if (routeCache[routeKey]) {
+                routePolylines[p.id].setLatLngs(routeCache[routeKey]);
+              } else {
+                fetch(`/api/maps/route/?start_lat=${colLoc.latitude}&start_lng=${colLoc.longitude}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
+                  .then(res => res.json())
+                  .then(routeData => {
+                    if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
+                      routeCache[routeKey] = routeData.coordinates;
+                      if (selectedCollectorId === p.collector_id && routePolylines[p.id]) {
+                        routePolylines[p.id].setLatLngs(routeData.coordinates);
+                      }
+                    }
+                  })
+                  .catch(err => {});
+              }
+            } else if (routePolylines[p.id]) {
+              map.removeLayer(routePolylines[p.id]);
+              delete routePolylines[p.id];
+            }
+          }
+        });
+
+        // 4. Render Fleet Sidebar Panel
+        let sidebarHtml = "";
+        if (activeCollectors.length === 0) {
+          sidebarHtml = '<div class="text-center text-muted py-4 small">No active collectors on duty.</div>';
+        } else {
+          activeCollectors.forEach(c => {
+            let isSelected = (c.collector_id === selectedCollectorId);
+            let badgeBg = c.is_assigned ? "bg-success" : "bg-danger";
+            let badgeText = c.is_assigned ? `🟢 Assigned (${c.active_task_count} Job)` : "🔴 Free / Available";
+
+            sidebarHtml += `
+              <div class="card mb-3 border ${isSelected ? 'border-primary shadow-sm bg-primary-subtle' : 'border-gray-200'}">
+                <div class="card-body p-3">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="fw-bold text-dark mb-0"><i class="fas fa-truck me-1 text-primary"></i> ${c.name}</h6>
+                      <span class="badge ${badgeBg} text-white small mt-1">${badgeText}</span>
+                    </div>
+                    <button onclick="window.selectCollectorFromSidebar(${c.collector_id})" class="btn btn-xs ${isSelected ? 'btn-primary' : 'btn-outline-primary'}">
+                      <i class="fas fa-crosshairs me-1"></i> ${isSelected ? 'Focusing' : 'Inspect Route'}
+                    </button>
+                  </div>
+                  <div class="small text-muted mb-2">
+                    <i class="fas fa-envelope me-1"></i> ${c.email} | Speed: <strong>${c.speed} km/h</strong>
+                  </div>
+            `;
+
+            if (c.is_assigned && c.assigned_pickups && c.assigned_pickups.length > 0) {
+              sidebarHtml += `<div class="p-2 bg-white rounded border small mt-2">
+                <div class="fw-bold text-success mb-1"><i class="fas fa-map-pin me-1"></i> Assigned Customer Task:</div>`;
+              c.assigned_pickups.forEach(job => {
+                sidebarHtml += `
+                  <div><strong>Customer:</strong> ${job.citizen_name}</div>
+                  <div><strong>Address:</strong> ${job.address}</div>
+                  <div><strong>Category:</strong> ${job.category} (${job.weight_kg} kg)</div>
+                  <div class="mt-1"><span class="badge bg-info">${job.status}</span></div>
+                `;
+              });
+              sidebarHtml += `</div>`;
+            } else {
+              sidebarHtml += `<div class="small text-muted italic mt-1"><i class="fas fa-check-circle text-success me-1"></i> Collector is free and ready for new task assignments.</div>`;
+            }
+
+            sidebarHtml += `
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        document.getElementById('fleetSidebar').innerHTML = sidebarHtml;
+
+        // Auto-fit map bounds ONLY on explicit selection or reset action (comfortable city zoom 13 when focused!)
+        if (shouldFitBounds && bounds.length > 0) {
+          const targetMaxZoom = selectedCollectorId ? 13 : 15;
+          map.fitBounds(L.latLngBounds(bounds), { padding: [60, 60], maxZoom: targetMaxZoom });
+          shouldFitBounds = false; // Disable until next selection or reset!
+        }
+      }
+
+      window.selectCollectorFromSidebar = function (collectorId) {
+        selectCollector(collectorId);
+      };
 
       function loadLiveOverview() {
         fetch('/api/maps/live-overview/')
           .then(res => res.json())
-          .then(data => {
-            let activePickups = data.pickups || [];
-            let activeCollectors = data.collectors || [];
-
-            // Update stats
-            document.getElementById('statActivePickups').textContent = activePickups.length;
-            document.getElementById('statActiveCollectors').textContent = activeCollectors.length;
-            document.getElementById('statPendingPickups').textContent = activePickups.filter(p => p.status === 'PENDING').length;
-            document.getElementById('statInTransitPickups').textContent = activePickups.filter(p => p.status === 'IN_TRANSIT').length;
-
-            let bounds = [];
-
-            // Render/Update Pickups
-            activePickups.forEach(p => {
-              let lat = p.latitude;
-              let lng = p.longitude;
-              bounds.push([lat, lng]);
-
-              let popupHtml = `
-                <div class="p-1">
-                  <h6 class="mb-1 fw-bold text-primary">Pickup #${p.id} (${p.category})</h6>
-                  <div><strong>Customer:</strong> ${p.citizen_name}</div>
-                  <div><strong>Address:</strong> ${p.address}</div>
-                  <div><strong>Weight:</strong> ${p.weight_kg} kg</div>
-                  <div><strong>Status:</strong> <span class="badge bg-secondary">${p.status}</span></div>
-                  <div><strong>Collector:</strong> ${p.collector_name || 'Unassigned'}</div>
-                  <div class="mt-2"><a href="/waste-management/pickups/${p.id}/" class="btn btn-xs btn-primary text-white py-1 px-2" style="font-size: 11px;">View Request Details</a></div>
-                </div>
-              `;
-
-              if (pickupMarkers[p.id]) {
-                pickupMarkers[p.id].setLatLng([lat, lng]).setPopupContent(popupHtml);
-              } else {
-                pickupMarkers[p.id] = L.marker([lat, lng]).addTo(map).bindPopup(popupHtml);
-              }
-            });
-
-            // Render/Update Collectors
-            activeCollectors.forEach(c => {
-              let lat = c.latitude;
-              let lng = c.longitude;
-              bounds.push([lat, lng]);
-
-              let popupHtml = `
-                <div class="p-1">
-                  <h6 class="mb-1 fw-bold text-success">🚛 Collector ${c.name}</h6>
-                  <div><strong>Email:</strong> ${c.email}</div>
-                  <div><strong>Speed:</strong> ${c.speed} km/h</div>
-                  <div><strong>Last Updated:</strong> ${c.updated_at}</div>
-                </div>
-              `;
-
-              if (collectorMarkers[c.collector_id]) {
-                collectorMarkers[c.collector_id].setLatLng([lat, lng]).setPopupContent(popupHtml);
-              } else {
-                collectorMarkers[c.collector_id] = L.marker([lat, lng], {
-                  title: `Collector: ${c.name}`
-                }).addTo(map).bindPopup(popupHtml);
-              }
-            });
-
-            if (bounds.length > 0) {
-              map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
-            }
-          })
+          .then(data => renderOverview(data))
           .catch(err => console.error("Admin Live Overview API Error:", err));
       }
 
@@ -185,6 +417,8 @@
       setInterval(loadLiveOverview, 3000);
 
       document.getElementById('refreshMapBtn')?.addEventListener('click', loadLiveOverview);
+      document.getElementById('resetMapBtn')?.addEventListener('click', resetSelection);
+      document.getElementById('onMapResetBtn')?.addEventListener('click', resetSelection);
     });
   </script>
 {% endblock inline_javascript %}

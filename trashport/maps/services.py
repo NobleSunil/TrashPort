@@ -47,3 +47,44 @@ class GeoService:
             unvisited.remove(nearest)
 
         return route
+
+    @staticmethod
+    def get_road_route_osrm(start_lat: float, start_lng: float, end_lat: float, end_lng: float) -> Dict:
+        """
+        Queries OSRM public demo routing service to get actual road coordinates, 
+        distance, and travel duration following real turn-by-turn driving paths.
+        Falls back to straight line if service is unavailable.
+        """
+        import requests
+        url = f"https://router.project-osrm.org/route/v1/driving/{start_lng},{start_lat};{end_lng},{end_lat}?overview=full&geometries=geojson"
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("routes") and len(data["routes"]) > 0:
+                    first_route = data["routes"][0]
+                    geojson_geometry = first_route.get("geometry", {})
+                    raw_coords = geojson_geometry.get("coordinates", [])
+                    # GeoJSON is [lon, lat] -> convert to Leaflet [lat, lon]
+                    leaflet_coords = [[pt[1], pt[0]] for pt in raw_coords]
+                    distance_km = round(first_route.get("distance", 0) / 1000.0, 2)
+                    duration_mins = max(1, round(first_route.get("duration", 0) / 60.0))
+                    
+                    return {
+                        "coordinates": leaflet_coords,
+                        "distance_km": distance_km,
+                        "duration_mins": duration_mins,
+                        "provider": "osrm",
+                    }
+        except Exception as exc:
+            pass
+
+        # Fallback to straight line
+        dist = GeoService.haversine_distance(start_lat, start_lng, end_lat, end_lng)
+        duration = max(1, round((dist / 25.0) * 60))
+        return {
+            "coordinates": [[start_lat, start_lng], [end_lat, end_lng]],
+            "distance_km": dist,
+            "duration_mins": duration,
+            "provider": "haversine_fallback",
+        }

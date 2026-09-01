@@ -99,6 +99,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      // Saved addresses JSON mapping
+      const savedAddresses = {{ addresses_json|safe|default:"{}" }};
+      const addressSelect = document.getElementById("id_address");
+
       // Fix default Leaflet icon CDN URLs
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -119,6 +123,12 @@
       let defaultLng = parseFloat(lngInput?.value) || 77.5946;
 
       // Define Base Map Tile Layers
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
+
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
@@ -130,14 +140,15 @@
       });
 
       let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
         "🛰️ Satellite View": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        "📍 Street Map": streetLayer
       };
 
       let map = L.map('mapPicker', {
         center: [defaultLat, defaultLng],
         zoom: 15,
-        layers: [satelliteLayer] // Default to Satellite View!
+        layers: [positronLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);
@@ -150,22 +161,18 @@
           .then(data => {
             if (data && data.address) {
               let addr = data.address;
-              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
-              let city = addr.city || addr.town || addr.village || addr.county || "";
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.subdistrict || addr.amenity || "";
+              let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.city_district || "";
               let postcode = addr.postcode || "";
 
-              if (road && addressLineInput && !addressLineInput.value) {
-                addressLineInput.value = road;
-              } else if (data.display_name && addressLineInput && !addressLineInput.value) {
-                addressLineInput.value = data.display_name.split(',')[0];
+              // AUTOMATICALLY fill/overwrite fields dynamically from pinned map location!
+              if (addressLineInput) {
+                if (road) addressLineInput.value = road;
+                else if (data.display_name) addressLineInput.value = data.display_name.split(',')[0];
               }
 
-              if (city && cityInput && !cityInput.value) {
-                cityInput.value = city;
-              }
-              if (postcode && postalInput && !postalInput.value) {
-                postalInput.value = postcode;
-              }
+              if (cityInput && city) cityInput.value = city;
+              if (postalInput && postcode) postalInput.value = postcode;
             }
           })
           .catch(err => console.log("Geocoding notice:", err));
@@ -180,6 +187,26 @@
 
         if (fetchAddress) {
           reverseGeocode(lat, lng);
+        }
+      }
+
+      function syncMapWithSelectedAddress() {
+        if (!addressSelect) return;
+        const selectedId = addressSelect.value;
+        if (selectedId && savedAddresses[selectedId]) {
+          const addrObj = savedAddresses[selectedId];
+          const lat = addrObj.lat;
+          const lng = addrObj.lng;
+          map.setView([lat, lng], 16);
+          marker.setLatLng([lat, lng]);
+          updateCoords(lat, lng, false);
+        }
+      }
+
+      if (addressSelect) {
+        addressSelect.addEventListener("change", syncMapWithSelectedAddress);
+        if (addressSelect.value) {
+          syncMapWithSelectedAddress();
         }
       }
 

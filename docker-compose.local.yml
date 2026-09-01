@@ -18,8 +18,11 @@ services:
     env_file:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
     ports:
-      - '8000:8000'
+      - '8001:8000'
     command: /start
 
   redis:

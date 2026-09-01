@@ -637,32 +637,54 @@
       </div>
     </div>
 
-    <!-- ── Available Jobs to Claim ── -->
+    <!-- ── Available Jobs to Claim (With Proximity Priority & Opportunity Map) ── -->
     <div class="section-card anim-fade-up anim-delay-3">
-      <div class="section-header">
+      <div class="section-header flex-column flex-md-row align-items-start align-items-md-center gap-2">
         <div class="section-header-left">
           <div class="section-header-icon icon-warning">
-            <i class="fas fa-hand-pointer"></i>
+            <i class="fas fa-crosshairs"></i>
           </div>
           <div>
-            <p class="section-title">Available Jobs to Claim</p>
-            <p class="section-subtitle">Unassigned pending pickups</p>
+            <p class="section-title">Nearby Pickup Opportunities (Nearest-First)</p>
+            <p class="section-subtitle">Prioritized by distance from your current live GPS position</p>
           </div>
         </div>
-        {% if unassigned_pickups.count > 0 %}
-          <span class="section-count-badge">{{ unassigned_pickups.count }} pending</span>
-        {% endif %}
+        
+        <!-- Radius Expansion Toolbar -->
+        <div class="d-flex flex-wrap gap-1" id="radiusToolbar">
+          <button type="button" class="btn btn-sm btn-success radius-btn active" data-max-dist="9999">
+            <i class="fas fa-globe me-1"></i> All Pickups ({{ unassigned_pickups|length }})
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-success radius-btn" data-max-dist="5">
+            <i class="fas fa-circle text-success me-1"></i> &lt; 5 km (Nearest)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-warning radius-btn" data-max-dist="15">
+            <i class="fas fa-circle text-warning me-1"></i> &lt; 15 km (Nearby)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary radius-btn" data-max-dist="30">
+            <i class="fas fa-circle text-primary me-1"></i> &lt; 30 km (District)
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Opportunity Map -->
+      <div class="p-3 bg-light border-bottom">
+        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+          <span class="small fw-bold text-dark"><i class="fas fa-map-marked-alt text-success me-1"></i> Interactive Pickup Map &amp; Route Previewer</span>
+          <small class="text-muted">Click any pickup pin to preview turn-by-turn road route and claim job</small>
+        </div>
+        <div id="collectorOpportunityMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #16a34a; position: relative; z-index: 1;"></div>
       </div>
 
       <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table" id="availableJobsTable">
           <thead>
             <tr>
               <th>ID</th>
-              <th>City</th>
+              <th>Proximity</th>
+              <th>City &amp; Address</th>
               <th>Category</th>
               <th>Est. Weight</th>
-              <th>Distance</th>
               <th>Est. Earning</th>
               <th>Scheduled</th>
               <th>Action</th>
@@ -670,13 +692,35 @@
           </thead>
           <tbody>
             {% for pickup in unassigned_pickups %}
-              <tr>
+              <tr class="pickup-job-row" data-distance="{{ pickup.calculated_distance_km }}" id="pickup-row-{{ pickup.id }}">
                 <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
-                <td data-label="City"><span class="customer-name">{{ pickup.address.city }}</span></td>
+                <td data-label="Proximity">
+                  {% if pickup.calculated_distance_km <= 5.0 %}
+                    <span class="badge bg-success text-white p-2" title="Immediate priority (< 5km)">
+                      <i class="fas fa-bolt me-1"></i> {{ pickup.calculated_distance_km }} km (Near)
+                    </span>
+                  {% elif pickup.calculated_distance_km <= 15.0 %}
+                    <span class="badge bg-warning text-dark p-2" title="Nearby pickup (< 15km)">
+                      <i class="fas fa-map-marker-alt me-1"></i> {{ pickup.calculated_distance_km }} km
+                    </span>
+                  {% else %}
+                    <span class="badge bg-primary text-white p-2" title="District pickup">
+                      <i class="fas fa-route me-1"></i> {{ pickup.calculated_distance_km }} km
+                    </span>
+                  {% endif %}
+                </td>
+                <td data-label="City & Address">
+                  <span class="customer-name d-block">{{ pickup.address.city }}</span>
+                  <span class="address-text" title="{{ pickup.address.address_line1 }}">{{ pickup.address.address_line1 }}</span>
+                </td>
                 <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
                 <td data-label="Est. Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
-                <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
-                <td data-label="Est. Earning"><span class="fw-bold text-success">Rs. {{ pickup.collector_earnings|default:"50.00" }}</span></td>
+                <td data-label="Est. Earning">
+                  <span class="fw-bold text-success">
+                    Rs. {{ pickup.calculated_earnings|default:pickup.collector_earnings }}
+                  </span>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">35% fee + 0.25/km</small>
+                </td>
                 <td data-label="Scheduled">
                   <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
                 </td>
@@ -685,7 +729,7 @@
                     <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
                       {% csrf_token %}
                       <input type="hidden" name="action" value="claim">
-                      <button type="submit" class="action-btn btn-claim">
+                      <button type="submit" class="action-btn btn-claim shadow-sm">
                         <i class="fas fa-hand-pointer"></i> Claim Job
                       </button>
                     </form>
@@ -837,8 +881,10 @@
 {% endblock %}
 
 {% block inline_javascript %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
+    // 1. History Table Toggle
     const historyCollapse = document.getElementById('completedHistoryTable');
     const historyBtn = document.getElementById('historyToggleBtn');
     if (historyCollapse && historyBtn) {
@@ -849,6 +895,169 @@
         historyBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show History';
       });
     }
+
+    // 2. Interactive Pickup Opportunity Map
+    const mapElem = document.getElementById('collectorOpportunityMap');
+    if (!mapElem) return;
+
+    const collectorLat = parseFloat("{{ collector_lat|default:'12.9716' }}");
+    const collectorLng = parseFloat("{{ collector_lng|default:'77.5946' }}");
+    const unassignedPickups = {{ unassigned_pickups_json|safe|default:"[]" }};
+    const isVerified = {{ is_verified|yesno:"true,false" }};
+    const csrfToken = "{{ csrf_token }}";
+
+    let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '&copy; CartoDB &copy; OpenStreetMap'
+    });
+
+    let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    });
+
+    let map = L.map('collectorOpportunityMap', {
+      center: [collectorLat, collectorLng],
+      zoom: 12,
+      minZoom: 2,
+      maxZoom: 19,
+      layers: [positronLayer]
+    });
+
+    L.control.layers({
+      "🗺️ Carto Clean Vector": positronLayer,
+      "🛰️ Satellite View": satelliteLayer
+    }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 300);
+
+    // Custom Icons
+    function createIcon(iconClass, bgClass) {
+      return L.divIcon({
+        className: 'custom-map-icon',
+        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white ${bgClass}" style="width: 34px; height: 34px; font-size: 15px; border: 2px solid white;">
+                <i class="fas ${iconClass}"></i>
+               </div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -17]
+      });
+    }
+
+    // Collector Truck Marker
+    let colMarker = L.marker([collectorLat, collectorLng], {
+      icon: createIcon("fa-truck", "bg-success")
+    }).addTo(map).bindPopup("<b>🚛 Your Live Location</b><br>Collector Vehicle Position");
+
+    let pickupMarkers = [];
+    let previewPolyline = null;
+
+    function renderOpportunityMarkers(maxDist = 9999) {
+      // Clear existing pickup markers
+      pickupMarkers.forEach(m => map.removeLayer(m));
+      pickupMarkers = [];
+
+      let bounds = [[collectorLat, collectorLng]];
+
+      unassignedPickups.forEach(p => {
+        if (p.distance_km <= maxDist) {
+          bounds.push([p.latitude, p.longitude]);
+
+          let pinBg = "bg-success";
+          if (p.distance_km > 5 && p.distance_km <= 15) pinBg = "bg-warning";
+          if (p.distance_km > 15) pinBg = "bg-primary";
+
+          let pinIcon = createIcon("fa-map-pin", pinBg);
+
+          let claimButtonHtml = isVerified ? `
+            <form method="post" action="/waste-management/pickups/${p.id}/status/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+              <input type="hidden" name="action" value="claim">
+              <button type="submit" class="btn btn-sm btn-success w-100 fw-bold mt-2 shadow-sm">
+                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
+              </button>
+            </form>
+          ` : `
+            <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>
+              <i class="fas fa-lock me-1"></i> Admin Verification Required
+            </button>
+          `;
+
+          let popupHtml = `
+            <div class="p-1" style="min-width: 220px;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-success mb-0">Pickup #${p.id}</h6>
+                <span class="badge ${pinBg} text-white">${p.distance_km} km</span>
+              </div>
+              <div class="small mb-1"><strong>Customer:</strong> ${p.citizen_name}</div>
+              <div class="small mb-1"><strong>Address:</strong> ${p.address}</div>
+              <div class="small mb-1"><strong>Category:</strong> <span class="badge bg-light text-dark border">${p.category} (${p.weight_kg}kg)</span></div>
+              <div class="small fw-bold text-success mb-1">Est. Earning: Rs. ${p.earnings.toFixed(2)}</div>
+              ${claimButtonHtml}
+            </div>
+          `;
+
+          let marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(map).bindPopup(popupHtml);
+
+          // Click marker to preview OSRM turn-by-turn road route!
+          marker.on('click', () => {
+            let directWaypoints = [[collectorLat, collectorLng], [p.latitude, p.longitude]];
+            if (previewPolyline) map.removeLayer(previewPolyline);
+            previewPolyline = L.polyline(directWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
+
+            fetch(`/api/maps/route/?start_lat=${collectorLat}&start_lng=${collectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
+              .then(res => res.json())
+              .then(routeData => {
+                if (routeData && routeData.coordinates && routeData.coordinates.length > 0 && previewPolyline) {
+                  previewPolyline.setLatLngs(routeData.coordinates);
+                }
+              })
+              .catch(err => {});
+          });
+
+          pickupMarkers.push(marker);
+        }
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+
+    renderOpportunityMarkers(9999);
+
+    // 3. Radius Expansion Toolbar Event Handlers
+    const radiusBtns = document.querySelectorAll('#radiusToolbar .radius-btn');
+    const tableRows = document.querySelectorAll('#availableJobsTable .pickup-job-row');
+
+    radiusBtns.forEach(btn => {
+      btn.addEventListener('click', function () {
+        radiusBtns.forEach(b => {
+          b.classList.remove('active', 'btn-success', 'btn-warning', 'btn-primary');
+          b.classList.add('btn-outline-success');
+        });
+
+        this.classList.add('active');
+        this.classList.remove('btn-outline-success');
+        this.classList.add('btn-success');
+
+        const maxDist = parseFloat(this.getAttribute('data-max-dist')) || 9999;
+        
+        // Filter Leaflet Map Markers
+        renderOpportunityMarkers(maxDist);
+
+        // Filter Table Rows
+        tableRows.forEach(row => {
+          const rowDist = parseFloat(row.getAttribute('data-distance')) || 0;
+          if (rowDist <= maxDist) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    });
   });
 </script>
 {% endblock inline_javascript %}

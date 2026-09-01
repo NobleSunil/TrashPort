@@ -9,14 +9,14 @@ class AddressForm(forms.ModelForm):
         model = Address
         fields = ["address_line1", "address_line2", "city", "state", "postal_code", "latitude", "longitude", "is_default"]
         widgets = {
-            "address_line1": forms.TextInput(attrs={"class": "form-control", "placeholder": "123 Main St"}),
-            "address_line2": forms.TextInput(attrs={"class": "form-control", "placeholder": "Apartment, suite, unit etc."}),
-            "city": forms.TextInput(attrs={"class": "form-control", "placeholder": "Kochi"}),
-            "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "Kerala"}),
-            "postal_code": forms.TextInput(attrs={"class": "form-control", "placeholder": "682001"}),
+            "address_line1": forms.TextInput(attrs={"class": "form-control", "id": "id_address_line1", "placeholder": "e.g., 42 MG Road, Indiranagar"}),
+            "address_line2": forms.TextInput(attrs={"class": "form-control", "id": "id_address_line2", "placeholder": "Apartment, suite, unit etc. (Optional)"}),
+            "city": forms.TextInput(attrs={"class": "form-control", "id": "id_city", "placeholder": "e.g., Bengaluru / Kochi"}),
+            "state": forms.TextInput(attrs={"class": "form-control", "id": "id_state", "placeholder": "e.g., Karnataka / Kerala"}),
+            "postal_code": forms.TextInput(attrs={"class": "form-control", "id": "id_postal_code", "placeholder": "e.g., 560038 / 682001"}),
             "latitude": forms.HiddenInput(attrs={"id": "id_latitude"}),
             "longitude": forms.HiddenInput(attrs={"id": "id_longitude"}),
-            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input", "id": "id_is_default"}),
         }
 
 

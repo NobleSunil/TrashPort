@@ -178,6 +178,22 @@ class PickupRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def effective_latitude(self) -> float:
+        if self.latitude is not None and abs(float(self.latitude) - 12.9716) > 0.0001:
+            return float(self.latitude)
+        if self.address and self.address.latitude is not None:
+            return float(self.address.latitude)
+        return float(self.latitude) if self.latitude is not None else 12.9716
+
+    @property
+    def effective_longitude(self) -> float:
+        if self.longitude is not None and abs(float(self.longitude) - 77.5946) > 0.0001:
+            return float(self.longitude)
+        if self.address and self.address.longitude is not None:
+            return float(self.address.longitude)
+        return float(self.longitude) if self.longitude is not None else 77.5946
+
     def calculate_collector_earnings(self) -> Decimal:
         """
         Calculates collector earnings: 35% of total charge fee + Rs. 0.25 per km.
@@ -189,10 +205,20 @@ class PickupRequest(models.Model):
     def save(self, *args, **kwargs):
         is_new = not self.pk
         if self.address:
-            if self.latitude is None and self.address.latitude is not None:
+            # Sync coordinates: prioritize exact address coordinates if self.latitude is missing or default
+            address_has_coords = self.address.latitude is not None and self.address.longitude is not None
+            self_has_default_coords = (
+                self.latitude is None or 
+                abs(float(self.latitude or 0) - 12.9716) < 0.0001
+            )
+            if address_has_coords and self_has_default_coords:
                 self.latitude = self.address.latitude
-            if self.longitude is None and self.address.longitude is not None:
                 self.longitude = self.address.longitude
+            elif not address_has_coords and self.latitude is not None and abs(float(self.latitude) - 12.9716) > 0.0001:
+                # Update saved address record if it lacked coordinates
+                self.address.latitude = self.latitude
+                self.address.longitude = self.longitude
+                self.address.save(update_fields=["latitude", "longitude"])
         if is_new:
             # Check subscription
             has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()
