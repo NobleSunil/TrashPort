@@ -10,6 +10,33 @@
       ← Back to Dashboard
     </a>
 
+    <!-- Live Map & ETA HUD -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Live Collector Map &amp; Tracking</h4>
+          <span class="badge bg-primary px-3 py-2 fs-6" id="liveBadge"><i class="fas fa-satellite-dish me-1"></i> Tracking Live</span>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Live Distance</div>
+              <div class="fs-3 fw-bold mt-1" id="hudDistance">{{ pickup.distance_km }} km</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #0d3b66 0%, #0077b6 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Estimated Time of Arrival (ETA)</div>
+              <div class="fs-3 fw-bold mt-1" id="hudEta">Calculating...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="trackingMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #0d6efd; position: relative; z-index: 1;"></div>
+      </div>
+    </div>
+
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
@@ -146,3 +173,119 @@
   </div>
 </div>
 {% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      const pickupId = "{{ pickup.id }}";
+      const pickupLat = parseFloat("{{ pickup.latitude|default:pickup.address.latitude|default:12.9716 }}");
+      const pickupLng = parseFloat("{{ pickup.longitude|default:pickup.address.longitude|default:77.5946 }}");
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      });
+
+      let baseMaps = {
+        "🛰️ Satellite View": satelliteLayer,
+        "🗺️ Street Map": streetLayer
+      };
+
+      let map = L.map('trackingMap', {
+        center: [pickupLat, pickupLng],
+        zoom: 15,
+        layers: [satelliteLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // Pickup Pin Marker
+      let pickupMarker = L.marker([pickupLat, pickupLng]).addTo(map)
+        .bindPopup("<b>📍 Pickup Location</b><br>{{ pickup.address.address_line1 }}").openPopup();
+
+      let collectorMarker = null;
+      let routePolyline = null;
+
+      function updateTrackingUI(data) {
+        if (data.distance_km !== undefined) {
+          document.getElementById('hudDistance').textContent = `${data.distance_km} km`;
+        }
+        if (data.eta_mins !== undefined && data.eta_mins !== null) {
+          document.getElementById('hudEta').textContent = `${data.eta_mins} mins`;
+        } else {
+          document.getElementById('hudEta').textContent = `Waiting for collector`;
+        }
+
+        if (data.collector_location) {
+          const cLat = data.collector_location.latitude;
+          const cLng = data.collector_location.longitude;
+
+          if (!collectorMarker) {
+            collectorMarker = L.marker([cLat, cLng], {
+              title: "Collector Vehicle"
+            }).addTo(map);
+          } else {
+            collectorMarker.setLatLng([cLat, cLng]);
+          }
+          collectorMarker.bindPopup(`<b>🚛 Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
+
+          // Draw Route Polyline
+          if (routePolyline) {
+            map.removeLayer(routePolyline);
+          }
+          routePolyline = L.polyline([[pickupLat, pickupLng], [cLat, cLng]], {
+            color: '#ffc107',
+            weight: 5,
+            dashArray: '8, 8'
+          }).addTo(map);
+
+          // Fit bounds to fit both markers
+          let bounds = L.latLngBounds([[pickupLat, pickupLng], [cLat, cLng]]);
+          map.fitBounds(bounds, { padding: [40, 40] });
+        }
+      }
+
+      function fetchLiveTracking() {
+        fetch(`/api/maps/tracking/${pickupId}/`)
+          .then(res => res.json())
+          .then(data => updateTrackingUI(data))
+          .catch(err => console.error("Tracking API error:", err));
+      }
+
+      // Initial Fetch & 4s Polling Interval
+      fetchLiveTracking();
+      setInterval(fetchLiveTracking, 4000);
+
+      // Optional WebSocket Connection
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/maps/tracking/${pickupId}/`;
+      try {
+        const socket = new WebSocket(wsUrl);
+        socket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          updateTrackingUI(data);
+        };
+      } catch (e) {
+        console.log("WebSocket fallback to HTTP polling.");
+      }
+    });
+  </script>
+{% endblock inline_javascript %}

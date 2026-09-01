@@ -14,6 +14,8 @@ class Address(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -102,6 +104,8 @@ class PickupRequest(models.Model):
         related_name="assigned_pickups"
     )
     address = models.ForeignKey(Address, on_delete=models.PROTECT)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     category = models.ForeignKey(WasteCategory, on_delete=models.PROTECT)
     weight_kg = models.DecimalField(
         max_digits=6,
@@ -184,6 +188,11 @@ class PickupRequest(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = not self.pk
+        if self.address:
+            if self.latitude is None and self.address.latitude is not None:
+                self.latitude = self.address.latitude
+            if self.longitude is None and self.address.longitude is not None:
+                self.longitude = self.address.longitude
         if is_new:
             # Check subscription
             has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()

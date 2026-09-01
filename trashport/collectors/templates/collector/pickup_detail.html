@@ -10,12 +10,49 @@
       ← Back to Dashboard
     </a>
 
+    <!-- Navigation & GPS Broadcaster Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+          <div>
+            <h4 class="mb-1 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Pickup Navigation &amp; Live Location</h4>
+            <span class="text-muted small">Use layer control (top-right) to toggle 🛰️ Satellite / 🗺️ Street view.</span>
+          </div>
+          <div class="mt-2 mt-md-0 d-flex gap-2">
+            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success">
+              <i class="fas fa-broadcast-tower me-1"></i> <span id="gpsStatusText">Enable Live GPS</span>
+            </button>
+            <button id="simDriveBtn" class="btn btn-sm btn-primary shadow-sm">
+              <i class="fas fa-play me-1"></i> Simulate Driving to Pickup
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Live Distance to User</div>
+              <div class="fs-3 fw-bold mt-1" id="colHudDistance">{{ pickup.distance_km }} km</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Estimated Travel Time</div>
+              <div class="fs-3 fw-bold mt-1" id="colHudEta">Calculating...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="collectorMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
+      </div>
+    </div>
+
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3">
           <div>
             <h2 class="mb-1 text-success fw-bold">Pickup Request #{{ pickup.id }}</h2>
-            <span class="fs-6 text-muted">Booked on {{ pickup.created_at|date:"M d, Y" }} | Distance: <strong>{{ pickup.distance_km }} km</strong></span>
+            <span class="fs-6 text-muted">Booked on {{ pickup.created_at|date:"M d, Y" }} | Base Distance: <strong>{{ pickup.distance_km }} km</strong></span>
           </div>
           <div class="mt-2 mt-md-0">
             {% if pickup.status == 'AWAITING_PAYMENT' %}
@@ -156,7 +193,7 @@
                 </div>
                 <div class="col-md-7">
                   <div class="p-2 bg-white rounded border small">
-                    <div>Estimated: <strong>{{ pickup.weight_kg }} kg</strong> | Distance: <strong>{{ pickup.distance_km }} km</strong></div>
+                    <div>Estimated: <strong>{{ pickup.weight_kg }} kg</strong> | Base Distance: <strong>{{ pickup.distance_km }} km</strong></div>
                     <div id="extraWeightNotice" class="text-muted">No excess weight.</div>
                     <div id="earningCalcNotice" class="fw-bold text-success mt-1">
                       Estimated Collector Earning: Rs. {{ preview_earnings }}
@@ -182,40 +219,161 @@
 {% endblock %}
 
 {% block inline_javascript %}
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const input = document.getElementById('actualWeightInput');
-    const extraNotice = document.getElementById('extraWeightNotice');
-    const earningNotice = document.getElementById('earningCalcNotice');
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
 
-    const estimatedWeight = parseFloat("{{ pickup.weight_kg }}") || 0;
-    const ratePerKg = parseFloat("{{ pickup.category.fee_per_kg }}") || 0;
-    const distanceKm = parseFloat("{{ pickup.distance_km }}") || 5.0;
+      const pickupId = "{{ pickup.id }}";
+      const pickupLat = parseFloat("{{ pickup.latitude|default:pickup.address.latitude|default:12.9716 }}");
+      const pickupLng = parseFloat("{{ pickup.longitude|default:pickup.address.longitude|default:77.5946 }}");
 
-    function recalculate() {
-      if (!input) return;
-      const actualWeight = parseFloat(input.value) || estimatedWeight;
-      let extraWeight = Math.max(0, actualWeight - estimatedWeight);
-      let extraFee = extraWeight * ratePerKg * 2.0;
-      let baseFee = estimatedWeight * ratePerKg;
-      let totalFee = baseFee + extraFee;
-      
-      // Collector Formula: 35% of total fee + Rs. 0.25 per km
-      let collectorEarning = (totalFee * 0.35) + (distanceKm * 0.25);
+      // Default Collector Start: ~2 km away from pickup
+      let currentColLat = pickupLat - 0.015;
+      let currentColLng = pickupLng - 0.015;
 
-      if (extraWeight > 0) {
-        extraNotice.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> +${extraWeight.toFixed(2)} kg excess weight (+Rs. ${extraFee.toFixed(2)} at 2x rate)</span>`;
-      } else {
-        extraNotice.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> Standard weight (No excess surcharge)</span>`;
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      });
+
+      let baseMaps = {
+        "🛰️ Satellite View": satelliteLayer,
+        "🗺️ Street Map": streetLayer
+      };
+
+      let map = L.map('collectorMap', {
+        center: [pickupLat, pickupLng],
+        zoom: 14,
+        layers: [satelliteLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // User Pickup Marker
+      let userMarker = L.marker([pickupLat, pickupLng]).addTo(map)
+        .bindPopup("<b>📍 User Pickup Spot</b><br>{{ pickup.address.address_line1 }}").openPopup();
+
+      // Collector Vehicle Marker
+      let colMarker = L.marker([currentColLat, currentColLng]).addTo(map)
+        .bindPopup("<b>🚛 Your Location (Collector)</b>");
+
+      let routePolyline = L.polyline([[currentColLat, currentColLng], [pickupLat, pickupLng]], {
+        color: '#ffc107',
+        weight: 5
+      }).addTo(map);
+
+      function haversineDist(lat1, lon1, lat2, lon2) {
+        const R = 6371.0;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return (R * c).toFixed(2);
       }
 
-      earningNotice.innerHTML = `Your Earnings (35% Fee + Rs. 0.25/km): <span class="fs-6 text-success fw-bold">Rs. ${collectorEarning.toFixed(2)}</span>`;
-    }
+      function updateMapAndHUD(lat, lng) {
+        currentColLat = lat;
+        currentColLng = lng;
+        colMarker.setLatLng([lat, lng]);
+        routePolyline.setLatLngs([[lat, lng], [pickupLat, pickupLng]]);
 
-    if (input) {
-      input.addEventListener('input', recalculate);
-      recalculate();
-    }
-  });
-</script>
+        const dist = haversineDist(lat, lng, pickupLat, pickupLng);
+        document.getElementById('colHudDistance').textContent = `${dist} km`;
+        const eta = Math.max(1, Math.round((dist / 25.0) * 60));
+        document.getElementById('colHudEta').textContent = `${eta} mins`;
+
+        // Send to Backend API
+        fetch('/api/maps/locations/update/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            latitude: lat,
+            longitude: lng,
+            speed: 25.0,
+            heading: 0.0
+          })
+        }).catch(err => console.log("Location update error:", err));
+      }
+
+      updateMapAndHUD(currentColLat, currentColLng);
+
+      // Simulation Driver Mode
+      let simInterval = null;
+      document.getElementById('simDriveBtn').addEventListener('click', function () {
+        if (simInterval) {
+          clearInterval(simInterval);
+          simInterval = null;
+          this.innerHTML = '<i class="fas fa-play me-1"></i> Simulate Driving to Pickup';
+          this.classList.remove('btn-danger');
+          this.classList.add('btn-primary');
+          return;
+        }
+
+        this.innerHTML = '<i class="fas fa-pause me-1"></i> Stop Simulation';
+        this.classList.remove('btn-primary');
+        this.classList.add('btn-danger');
+
+        const steps = 30;
+        let step = 0;
+        const startLat = currentColLat;
+        const startLng = currentColLng;
+
+        simInterval = setInterval(() => {
+          step++;
+          if (step > steps) {
+            clearInterval(simInterval);
+            simInterval = null;
+            document.getElementById('simDriveBtn').innerHTML = '<i class="fas fa-check me-1"></i> Arrived at Pickup';
+            document.getElementById('simDriveBtn').className = 'btn btn-sm btn-success';
+            updateMapAndHUD(pickupLat, pickupLng);
+            return;
+          }
+
+          const lat = startLat + (pickupLat - startLat) * (step / steps);
+          const lng = startLng + (pickupLng - startLng) * (step / steps);
+          updateMapAndHUD(lat, lng);
+        }, 1000);
+      });
+
+      // Geolocation Watcher
+      let watchId = null;
+      document.getElementById('broadcastGpsBtn').addEventListener('click', function () {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+          document.getElementById('gpsStatusText').textContent = "Enable Live GPS";
+          this.classList.remove('btn-success');
+          this.classList.add('btn-outline-success');
+        } else if (navigator.geolocation) {
+          watchId = navigator.geolocation.watchPosition(pos => {
+            updateMapAndHUD(pos.coords.latitude, pos.coords.longitude);
+          });
+          document.getElementById('gpsStatusText').textContent = "GPS Active";
+          this.classList.remove('btn-outline-success');
+          this.classList.add('btn-success');
+        }
+      });
+    });
+  </script>
 {% endblock inline_javascript %}

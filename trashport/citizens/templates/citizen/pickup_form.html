@@ -5,22 +5,337 @@
 
 {% block content %}
 <div class="py-4 row justify-content-center">
-  <div class="col-md-8 col-lg-6">
+  <div class="col-md-10 col-lg-8">
     <div class="card border-0 shadow-sm">
       <div class="card-body p-4">
-        <h1 class="h3 mb-3">Book Waste Pickup</h1>
-        <p class="text-muted mb-4">Request waste collection by selecting your address, category, and schedule.</p>
+        <h1 class="h3 mb-2 text-success fw-bold"><i class="fas fa-truck-pickup me-2"></i>Book Waste Pickup</h1>
+        <p class="text-muted mb-4">Set your pickup location on the map, enter your address, and select your category and schedule.</p>
         
         <form method="post">
           {% csrf_token %}
-          {{ form|crispy }}
-          <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm">Confirm Booking</button>
+          
+          <div class="mb-4">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>1. Set Exact Pickup Location on Map</h5>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small text-muted">Click or drag the green pin marker. Street address will auto-fill below!</span>
+              <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-location-arrow me-1"></i> Use My Current Location
+              </button>
+            </div>
+            <!-- Explicit height so Leaflet container never collapses -->
+            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;">
+              <div id="mapLoader" class="d-none justify-content-center align-items-center" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); z-index: 1000; border-radius: 10px;">
+                <div class="spinner-border text-success" role="status">
+                  <span class="visually-hidden">Loading location...</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-muted small mb-3">
+              Selected Coordinates: <strong id="coordsDisplay" class="text-dark">12.971600, 77.594600</strong>
+            </div>
+
+            <!-- Address Input / Selection Panel -->
+            <div class="p-3 bg-light rounded-3 border">
+              <h6 class="fw-bold text-dark mb-3"><i class="fas fa-home me-2 text-success"></i>Pickup Address</h6>
+              
+              {% if form.address.field.queryset.count > 0 %}
+                <div class="mb-3">
+                  <label class="form-label fw-bold small text-muted">Option A: Select Saved Address</label>
+                  {{ form.address }}
+                </div>
+                <div class="text-center text-muted small my-2 fw-bold">— OR ENTER NEW ADDRESS BELOW —</div>
+              {% endif %}
+
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small text-dark">Street Address / Landmark:</label>
+                  {{ form.new_address_line1 }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small text-dark">City:</label>
+                  {{ form.new_city }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small text-dark">Postal Code:</label>
+                  {{ form.new_postal_code }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 border-top pt-3">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-clipboard-list text-success me-2"></i>2. Waste Category &amp; Schedule Details</h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Waste Category:*</label>
+                {{ form.category }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Estimated Weight (kg):*</label>
+                {{ form.weight_kg }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Quantity Estimate (Optional):</label>
+                {{ form.quantity_estimate }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Schedule Date &amp; Time:*</label>
+                {{ form.schedule_date }}
+                <div class="form-text small">Pickups must be scheduled at least 3 hours in advance.</div>
+              </div>
+            </div>
+            {{ form.latitude }}
+            {{ form.longitude }}
+          </div>
+
+          <div class="mt-4 d-flex gap-2 border-top pt-3">
+            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
+              <i class="fas fa-check-circle me-1"></i> Confirm Booking
+            </button>
             <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
           </div>
         </form>
       </div>
     </div>
   </div>
-</div>
+<script id="saved-addresses-json" type="application/json">
+  [
+    {% for addr in addresses %}
+      {
+        "id": "{{ addr.id }}",
+        "address_line1": "{{ addr.address_line1|escapejs }}",
+        "city": "{{ addr.city|escapejs }}",
+        "postal_code": "{{ addr.postal_code|escapejs }}",
+        "latitude": "{{ addr.latitude|default_if_none:'' }}",
+        "longitude": "{{ addr.longitude|default_if_none:'' }}"
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+</script>
 {% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      let latInput = document.getElementById("id_latitude");
+      let lngInput = document.getElementById("id_longitude");
+      let coordsDisplay = document.getElementById("coordsDisplay");
+
+      let addressLineInput = document.getElementById("id_new_address_line1");
+      let cityInput = document.getElementById("id_new_city");
+      let postalInput = document.getElementById("id_new_postal_code");
+
+      let defaultLat = parseFloat(latInput?.value) || 12.9716;
+      let defaultLng = parseFloat(lngInput?.value) || 77.5946;
+
+      // Define Base Map Tile Layers
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      });
+
+      let baseMaps = {
+        "🛰️ Satellite View": satelliteLayer,
+        "🗺️ Street Map": streetLayer
+      };
+
+      let map = L.map('mapPicker', {
+        center: [defaultLat, defaultLng],
+        zoom: 15,
+        layers: [satelliteLayer] // Default to Satellite View!
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+      function showMapLoading(show) {
+        let loader = document.getElementById("mapLoader");
+        if (loader) {
+          if (show) {
+            loader.classList.remove("d-none");
+            loader.classList.add("d-flex");
+          } else {
+            loader.classList.remove("d-flex");
+            loader.classList.add("d-none");
+          }
+        }
+      }
+
+      function reverseGeocode(lat, lng, forceOverwrite = false) {
+        showMapLoading(true);
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            showMapLoading(false);
+            if (data && data.address) {
+              let addr = data.address;
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
+              let city = addr.city || addr.town || addr.village || addr.county || "";
+              let postcode = addr.postcode || "";
+
+              if (road && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
+                addressLineInput.value = road;
+              } else if (data.display_name && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
+                addressLineInput.value = data.display_name.split(',')[0];
+              }
+
+              if (city && cityInput && (forceOverwrite || !cityInput.value)) {
+                cityInput.value = city;
+              }
+              if (postcode && postalInput && (forceOverwrite || !postalInput.value)) {
+                postalInput.value = postcode;
+              }
+            }
+          })
+          .catch(err => {
+            console.log("Geocoding notice:", err);
+            showMapLoading(false);
+          });
+      }
+
+      function updateCoords(lat, lng, fetchAddress = true, forceOverwrite = false) {
+        let formattedLat = lat.toFixed(6);
+        let formattedLng = lng.toFixed(6);
+        if (latInput) latInput.value = formattedLat;
+        if (lngInput) lngInput.value = formattedLng;
+        if (coordsDisplay) coordsDisplay.textContent = `${formattedLat}, ${formattedLng}`;
+
+        if (fetchAddress) {
+          reverseGeocode(lat, lng, forceOverwrite);
+        }
+      }
+
+      marker.on('dragend', function (e) {
+        let position = marker.getLatLng();
+        updateCoords(position.lat, position.lng, true, true);
+      });
+
+      map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        updateCoords(e.latlng.lat, e.latlng.lng, true, true);
+      });
+
+      // Parse Saved Addresses JSON Data
+      let savedAddresses = [];
+      try {
+        let jsonEl = document.getElementById("saved-addresses-json");
+        if (jsonEl) {
+          savedAddresses = JSON.parse(jsonEl.textContent);
+        }
+      } catch (e) {
+        console.error("Error parsing saved addresses JSON:", e);
+      }
+
+      // Sync map/coordinates with Saved Address selection
+      let addressSelect = document.getElementById("id_address");
+      if (addressSelect) {
+        addressSelect.addEventListener("change", function () {
+          let selectedId = addressSelect.value;
+          if (selectedId) {
+            let selectedAddr = savedAddresses.find(a => a.id == selectedId);
+            if (selectedAddr && selectedAddr.latitude && selectedAddr.longitude) {
+              let lat = parseFloat(selectedAddr.latitude);
+              let lng = parseFloat(selectedAddr.longitude);
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+              updateCoords(lat, lng, false);
+              
+              // Pre-fill the new address inputs and make them read-only
+              if (addressLineInput) {
+                addressLineInput.value = selectedAddr.address_line1;
+                addressLineInput.readOnly = true;
+              }
+              if (cityInput) {
+                cityInput.value = selectedAddr.city;
+                cityInput.readOnly = true;
+              }
+              if (postalInput) {
+                postalInput.value = selectedAddr.postal_code;
+                postalInput.readOnly = true;
+              }
+            }
+          } else {
+            // Re-enable and clear if selection reset
+            if (addressLineInput) {
+              addressLineInput.readOnly = false;
+              addressLineInput.value = "";
+            }
+            if (cityInput) {
+              cityInput.readOnly = false;
+              cityInput.value = "";
+            }
+            if (postalInput) {
+              postalInput.readOnly = false;
+              postalInput.value = "";
+            }
+          }
+        });
+        
+        // Trigger once on load if an address is already pre-selected
+        if (addressSelect.value) {
+          addressSelect.dispatchEvent(new Event("change"));
+        }
+      }
+
+      // Geolocation button function
+      function geolocateUser(forceOverwrite = true) {
+        if (navigator.geolocation) {
+          showMapLoading(true);
+          navigator.geolocation.getCurrentPosition(function (pos) {
+            showMapLoading(false);
+            let lat = pos.coords.latitude;
+            let lng = pos.coords.longitude;
+            map.setView([lat, lng], 17);
+            marker.setLatLng([lat, lng]);
+            updateCoords(lat, lng, true, forceOverwrite);
+          }, function (err) {
+            showMapLoading(false);
+            if (forceOverwrite) {
+              setTimeout(function () {
+                alert("Unable to fetch current GPS location. Please select manually on the map.");
+              }, 50);
+            } else {
+              console.log("Auto-geolocation declined or failed on page load.", err);
+            }
+          });
+        }
+      }
+
+      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+        geolocateUser(true);
+      });
+
+      // Auto-locate on load if no saved address is selected and coordinates are default
+      if (!addressSelect || !addressSelect.value) {
+        if (latInput && (!latInput.value || parseFloat(latInput.value) === 12.9716)) {
+          // Attempt silent auto-locate
+          geolocateUser(false);
+        }
+      }
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // If there is no pre-existing value, trigger map initialization coords
+      if (!latInput?.value) {
+        updateCoords(defaultLat, defaultLng, false);
+      }
+    });
+  </script>
+{% endblock inline_javascript %}

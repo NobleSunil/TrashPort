@@ -1,7 +1,10 @@
 const sessionKey = crypto.randomUUID();
 const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(FIREBASE_TOKEN)}`;
-const ws = new WebSocket(wsUrl);
+const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(typeof FIREBASE_TOKEN !== "undefined" ? FIREBASE_TOKEN : "")}`;
+
+let ws = null;
+let reconnectTimeout = null;
+let messageQueue = [];
 
 const history = []; // in-memory, max 20 items
 let lastUserMessage = "";
@@ -21,6 +24,95 @@ function getCookie(name) {
   return cookieValue;
 }
 
+function connectWebSocket() {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  try {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log("Chatbot WebSocket connected.");
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      // Flush any queued messages
+      while (messageQueue.length > 0 && ws.readyState === WebSocket.OPEN) {
+        const payload = messageQueue.shift();
+        ws.send(payload);
+      }
+    };
+
+    ws.onmessage = (event) => {
+      removeThinkingIndicator();
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.message) {
+          history.push({ role: "assistant", content: data.message });
+          if (history.length > 20) {
+            history.shift();
+          }
+        }
+
+        handleResponse(data);
+      } catch (e) {
+        console.error("Error parsing message payload:", e);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket connection error:", error);
+      removeThinkingIndicator();
+    };
+
+    ws.onclose = () => {
+      console.warn("WebSocket connection closed. Attempting reconnect...");
+      removeThinkingIndicator();
+      if (!reconnectTimeout) {
+        reconnectTimeout = setTimeout(() => {
+          reconnectTimeout = null;
+          connectWebSocket();
+        }, 2000);
+      }
+    };
+  } catch (err) {
+    console.error("Error initializing WebSocket:", err);
+    if (!reconnectTimeout) {
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectWebSocket();
+      }, 3000);
+    }
+  }
+}
+
+// Initialize connection
+connectWebSocket();
+
+function renderThinkingIndicator() {
+  removeThinkingIndicator();
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+
+  const bubble = document.createElement("div");
+  bubble.id = "chat-thinking-indicator";
+  bubble.className = "msg-bubble bot thinking-bubble";
+  bubble.innerHTML = `<span>Thinking</span><div class="thinking-dots"><span></span><span></span><span></span></div>`;
+  container.appendChild(bubble);
+
+  scrollToBottom();
+}
+
+function removeThinkingIndicator() {
+  const indicator = document.getElementById("chat-thinking-indicator");
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
 function send(message) {
   // Push user turn to history
   history.push({ role: "user", content: message });
@@ -36,12 +128,20 @@ function send(message) {
   if (input) input.value = "";
 
   renderUserMessage(message);
+  renderThinkingIndicator();
 
   // Hide initial prompt chips on first interaction
   const chips = document.getElementById("chat-chips");
   if (chips) chips.style.display = "none";
 
-  ws.send(JSON.stringify({ message, history }));
+  const payload = JSON.stringify({ message, history });
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(payload);
+  } else {
+    messageQueue.push(payload);
+    connectWebSocket();
+  }
 }
 
 function sendMessage() {
@@ -55,32 +155,6 @@ function sendMessage() {
 function sendChip(message) {
   send(message);
 }
-
-ws.onmessage = (event) => {
-  try {
-    const data = JSON.parse(event.data);
-
-    if (data.message) {
-      history.push({ role: "assistant", content: data.message });
-      if (history.length > 20) {
-        history.shift();
-      }
-    }
-
-    handleResponse(data);
-  } catch (e) {
-    console.error("Error parsing message payload:", e);
-  }
-};
-
-ws.onerror = (error) => {
-  console.error("WebSocket connection error:", error);
-  renderBotMessage("Connection error. Please refresh.");
-};
-
-ws.onclose = () => {
-  console.warn("WebSocket connection closed.");
-};
 
 // Listen for enter key press on input field
 document.addEventListener("DOMContentLoaded", () => {
@@ -141,7 +215,15 @@ function renderChips(options, onSelect) {
 }
 
 function renderSuccess(text) {
-  renderBotMessage("✓ " + text);
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble bot success-msg";
+  bubble.innerText = "✓ " + text;
+  container.appendChild(bubble);
+
+  scrollToBottom();
 }
 
 function renderFeedback(botMessage, userMessage) {
@@ -216,7 +298,9 @@ function handleResponse(data) {
     case "ask":
       renderBotMessage(data.message);
       renderFeedback(data.message, lastUserMessage);
-      renderChips(data.options, sendChip);
+      if (Array.isArray(data.options)) {
+        renderChips(data.options, sendChip);
+      }
       break;
     case "redirect":
       renderBotMessage(data.message);

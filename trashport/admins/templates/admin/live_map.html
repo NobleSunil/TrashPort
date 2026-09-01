@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet & Pickup Live Control Room Map | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 container-fluid">
+  
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+    <div>
+      <h2 class="mb-1 text-primary fw-bold"><i class="fas fa-globe-americas me-2"></i>Fleet &amp; Pickup Live Control Room</h2>
+      <span class="text-muted">Real-time monitoring of active citizen pickup locations and live collector vehicle movement.</span>
+    </div>
+    <div class="mt-3 mt-md-0 d-flex gap-2 align-items-center">
+      <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary">
+        ← Back to Dashboard
+      </a>
+      <span class="badge bg-success p-2 fs-6" id="adminMapStatus">
+        <i class="fas fa-satellite-dish fa-spin me-1"></i> Live Stream Active
+      </span>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-box me-1"></i> Active Pickups</div>
+        <div class="fs-2 fw-bold mt-1" id="statActivePickups">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-truck me-1"></i> Active Collectors</div>
+        <div class="fs-2 fw-bold mt-1" id="statActiveCollectors">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-spinner me-1"></i> Pending Assignments</div>
+        <div class="fs-2 fw-bold mt-1" id="statPendingPickups">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #4776e6 0%, #8e54e9 100%); border-radius: 12px;">
+        <div class="small text-white-50 text-uppercase fw-bold"><i class="fas fa-shipping-fast me-1"></i> Pickups In Transit</div>
+        <div class="fs-2 fw-bold mt-1" id="statInTransitPickups">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+        <div class="d-flex gap-3 small fw-bold">
+          <span class="text-warning"><i class="fas fa-circle me-1"></i> Pending Pickup</span>
+          <span class="text-primary"><i class="fas fa-circle me-1"></i> Assigned</span>
+          <span class="text-info"><i class="fas fa-circle me-1"></i> In Transit</span>
+          <span class="text-success"><i class="fas fa-truck me-1"></i> Collector Vehicle</span>
+        </div>
+        <button id="refreshMapBtn" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-sync-alt me-1"></i> Refresh Stream
+        </button>
+      </div>
+
+      <div id="adminLiveMap" class="shadow-sm" style="height: 580px; width: 100%; border-radius: 12px; border: 2px solid #0d6efd; position: relative; z-index: 1;"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      });
+
+      let baseMaps = {
+        "🛰️ Satellite View": satelliteLayer,
+        "🗺️ Street Map": streetLayer
+      };
+
+      let map = L.map('adminLiveMap', {
+        center: [12.9716, 77.5946],
+        zoom: 13,
+        layers: [satelliteLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      let pickupMarkers = {};
+      let collectorMarkers = {};
+
+      function loadLiveOverview() {
+        fetch('/api/maps/live-overview/')
+          .then(res => res.json())
+          .then(data => {
+            let activePickups = data.pickups || [];
+            let activeCollectors = data.collectors || [];
+
+            // Update stats
+            document.getElementById('statActivePickups').textContent = activePickups.length;
+            document.getElementById('statActiveCollectors').textContent = activeCollectors.length;
+            document.getElementById('statPendingPickups').textContent = activePickups.filter(p => p.status === 'PENDING').length;
+            document.getElementById('statInTransitPickups').textContent = activePickups.filter(p => p.status === 'IN_TRANSIT').length;
+
+            let bounds = [];
+
+            // Render/Update Pickups
+            activePickups.forEach(p => {
+              let lat = p.latitude;
+              let lng = p.longitude;
+              bounds.push([lat, lng]);
+
+              let popupHtml = `
+                <div class="p-1">
+                  <h6 class="mb-1 fw-bold text-primary">Pickup #${p.id} (${p.category})</h6>
+                  <div><strong>Customer:</strong> ${p.citizen_name}</div>
+                  <div><strong>Address:</strong> ${p.address}</div>
+                  <div><strong>Weight:</strong> ${p.weight_kg} kg</div>
+                  <div><strong>Status:</strong> <span class="badge bg-secondary">${p.status}</span></div>
+                  <div><strong>Collector:</strong> ${p.collector_name || 'Unassigned'}</div>
+                  <div class="mt-2"><a href="/waste-management/pickups/${p.id}/" class="btn btn-xs btn-primary text-white py-1 px-2" style="font-size: 11px;">View Request Details</a></div>
+                </div>
+              `;
+
+              if (pickupMarkers[p.id]) {
+                pickupMarkers[p.id].setLatLng([lat, lng]).setPopupContent(popupHtml);
+              } else {
+                pickupMarkers[p.id] = L.marker([lat, lng]).addTo(map).bindPopup(popupHtml);
+              }
+            });
+
+            // Render/Update Collectors
+            activeCollectors.forEach(c => {
+              let lat = c.latitude;
+              let lng = c.longitude;
+              bounds.push([lat, lng]);
+
+              let popupHtml = `
+                <div class="p-1">
+                  <h6 class="mb-1 fw-bold text-success">🚛 Collector ${c.name}</h6>
+                  <div><strong>Email:</strong> ${c.email}</div>
+                  <div><strong>Speed:</strong> ${c.speed} km/h</div>
+                  <div><strong>Last Updated:</strong> ${c.updated_at}</div>
+                </div>
+              `;
+
+              if (collectorMarkers[c.collector_id]) {
+                collectorMarkers[c.collector_id].setLatLng([lat, lng]).setPopupContent(popupHtml);
+              } else {
+                collectorMarkers[c.collector_id] = L.marker([lat, lng], {
+                  title: `Collector: ${c.name}`
+                }).addTo(map).bindPopup(popupHtml);
+              }
+            });
+
+            if (bounds.length > 0) {
+              map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
+            }
+          })
+          .catch(err => console.error("Admin Live Overview API Error:", err));
+      }
+
+      loadLiveOverview();
+      setInterval(loadLiveOverview, 3000);
+
+      document.getElementById('refreshMapBtn')?.addEventListener('click', loadLiveOverview);
+    });
+  </script>
+{% endblock inline_javascript %}

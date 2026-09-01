@@ -1,4 +1,5 @@
 from django.urls import path
+from trashport.admins.views import AdminLiveMapView
 from waste_management.views import (
     WasteCategoryListView,
     WasteCategoryCreateView,
@@ -14,6 +15,7 @@ from waste_management.views import (
 app_name = "admins"
 
 urlpatterns = [
+    path("live-map/", AdminLiveMapView.as_view(), name="live_map"),
     path("categories/", WasteCategoryListView.as_view(), name="category_list"),
     path("categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
     path("tiers/", SubscriptionTierListView.as_view(), name="tier_list"),

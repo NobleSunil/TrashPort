@@ -17,6 +17,19 @@ from waste_management.models import Complaint, PickupRequest, Subscription, Subs
 from .forms import CollectorCreationForm, SubscriptionTierForm, WalletPointAdjustmentForm, WasteCategoryForm
 
 
+class AdminLiveMapView(LoginRequiredMixin, TemplateView):
+    """
+    Renders the Control Room Live Map for Administrators.
+    Displays all active citizen pickup locations and live moving collector GPS coordinates in real-time.
+    """
+    template_name = "admin/live_map.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["role"] = self.request.user.role
+        return context
+
+
 class AdminDashboardView(LoginRequiredMixin, TemplateView):
     """
     Renders the Administrator Dashboard.

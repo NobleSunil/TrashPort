@@ -89,10 +89,10 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
 
             # Check rate limits
             uid = self.user.firebase_uid or str(self.user.id)
-            allowed, remaining = self.rate_limiter.is_allowed(uid)
+            allowed, remaining = await sync_to_async(self.rate_limiter.is_allowed)(uid)
 
             if not allowed:
-                retry_after = self.rate_limiter.get_retry_after(uid)
+                retry_after = await sync_to_async(self.rate_limiter.get_retry_after)(uid)
                 await self.send(json.dumps({
                     "type": "error",
                     "code": "RATE_LIMITED",

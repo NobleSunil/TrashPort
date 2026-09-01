@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 sys.path.append(str(BASE_DIR / "trashport"))
 
 # Set default settings
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 
 # Initialize Django ASGI application early to ensure AppRegistry is loaded
 django_asgi_app = get_asgi_application()
@@ -18,13 +18,14 @@ django_asgi_app = get_asgi_application()
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from trashport.chatbot.routing import websocket_urlpatterns as chatbot_ws
+from trashport.maps.routing import websocket_urlpatterns as maps_ws
 
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         "websocket": AuthMiddlewareStack(
             URLRouter(
-                chatbot_ws
+                chatbot_ws + maps_ws
             )
         ),
     }

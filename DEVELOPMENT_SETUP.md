@@ -137,6 +137,21 @@ Once running, navigate to:
 
 ---
 
+## 🔐 Google OAuth 2.0 Configuration
+TrashPort supports server-side Google OAuth 2.0 authentication.
+
+To prevent `Error 400: redirect_uri_mismatch`:
+1. Open [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+2. Under **Authorised redirect URIs**, ensure you have added:
+   - `http://localhost:8001/users/google/callback/`
+   - `http://127.0.0.1:8001/users/google/callback/`
+3. Under **Authorised JavaScript origins** (optional):
+   - `http://localhost:8001`
+   - `http://127.0.0.1:8001`
+4. Ensure `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` are set in `.env`.
+
+---
+
 ## 🤖 AI Chatbot Local Testing (No Firebase Setup Needed)
 During local development, the chatbot's websocket connection uses a **mock Firebase token fallback**. 
 * Developers can log in with any local Django user or superuser.

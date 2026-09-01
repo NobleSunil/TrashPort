@@ -69,16 +69,105 @@ This script will:
 ### Local Development (SQLite)
 Once the setup script completes, run the development server locally:
 ```bash
-uv run python manage.py runserver
+uv run python manage.py runserver 8001
 ```
-Navigate to `http://127.0.0.1:8000` in your web browser.
+Navigate to `http://127.0.0.1:8001` (or `http://localhost:8001`) in your web browser.
 
 ### VS Code Debugging
 Pre-configured debug targets are available in the repository. To debug in VS Code:
 1. Open the project folder in VS Code.
 2. Select the **Run and Debug** tab (`Ctrl+Shift+D`).
 3. Choose **`Django (SQLite local)`** from the dropdown configuration list.
-4. Press **`F5`** to start debugging with active breakpoints.
+4. Press **`F5`** to start debugging with active breakpoints (listens on port `8001`).
+
+---
+
+## 🔐 Google OAuth 2.0 Configuration
+
+TrashPort supports server-side Google OAuth 2.0 authentication for Citizens and Collectors.
+
+### 1. Environment Variables (`.env`)
+Ensure your `.env` file contains your Google OAuth Web Client credentials:
+```ini
+GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-your-client-secret
+```
+
+### 2. Google Cloud Console Setup
+To prevent `Error 400: redirect_uri_mismatch`, configure your OAuth 2.0 Web Client in [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials):
+
+* **Authorised redirect URIs** (Required):
+  * `http://localhost:8001/users/google/callback/`
+  * `http://127.0.0.1:8001/users/google/callback/`
+* **Authorised JavaScript origins** (Optional):
+  * `http://localhost:8001`
+  * `http://127.0.0.1:8001`
+
+---
+
+## 🐳 Running with Docker
+
+You can run TrashPort and its PostgreSQL database inside Docker using Docker Compose.
+
+### 1. Local Development (Docker Compose)
+Build and start all local containers (Django + PostgreSQL + Redis):
+```powershell
+docker compose -f docker-compose.local.yml up --build
+```
+> Add `-d` to run in detached (background) mode:
+```powershell
+docker compose -f docker-compose.local.yml up -d --build
+```
+The app will be accessible at `http://localhost:8001`.
+
+### 2. Common Django Commands via Docker Compose
+* **Run Database Migrations:**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django python manage.py migrate
+  ```
+* **Create Superuser:**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django python manage.py createsuperuser
+  ```
+* **Run Tests (pytest):**
+  ```powershell
+  docker compose -f docker-compose.local.yml run --rm django pytest
+  ```
+* **View Logs:**
+  ```powershell
+  docker compose -f docker-compose.local.yml logs -f
+  ```
+* **Stop Containers:**
+  ```powershell
+  docker compose -f docker-compose.local.yml down
+  ```
+
+### 3. Using `just` Shortcuts
+If you have [just](https://github.com/casey/just) installed:
+```powershell
+just build       # Build images
+just up          # Start containers in background
+just down        # Stop containers
+just logs        # Follow container logs
+just manage <cmd># Run manage.py commands (e.g. just manage migrate)
+just pytest      # Run pytest test suite
+```
+
+### 4. Running a Standalone Docker Image (`docker run`)
+If you want to build and run the Django image directly:
+```powershell
+# 1. Build the image
+docker build -t trashport_django -f compose/local/django/Dockerfile .
+
+# 2. Run the container
+docker run -p 8001:8001 --env-file .envs/.local/.django trashport_django
+```
+
+### 5. Production Environment
+To run the full production stack (Django, PostgreSQL, Redis, Traefik, Nginx):
+```powershell
+docker compose -f docker-compose.production.yml up --build -d
+```
 
 ---
 
@@ -154,3 +243,4 @@ To run the entire test suite locally using the SQLite database:
 ```powershell
 $env:DATABASE_URL="sqlite:///db.sqlite3"; $env:DJANGO_READ_DOT_ENV_FILE="True"; uv run pytest
 ```
+
