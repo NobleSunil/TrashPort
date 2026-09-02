@@ -32,11 +32,13 @@ logger = logging.getLogger(__name__)
 from django.conf import settings
 import os
 
-GOOGLE_CLIENT_ID = getattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "")
-if not GOOGLE_CLIENT_ID:
-    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "892775193863-5gtmd43tbtg4ds623kkr6ds3dm768or3.apps.googleusercontent.com")
-
-GOOGLE_CLIENT_SECRET_KEY = "GOCSPX-"  # We use token verification, not client secret
+def _get_client_id(request=None) -> str:
+    from django.conf import settings
+    cid = getattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "")
+    if not cid:
+        import os
+        cid = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+    return cid
 
 SCOPES = [
     "openid",
@@ -54,7 +56,7 @@ def _get_flow(request) -> Flow:
     redirect_uri = _get_redirect_uri(request)
     client_config = {
         "web": {
-            "client_id": GOOGLE_CLIENT_ID,
+            "client_id": _get_client_id(request),
             "client_secret": _get_client_secret(request),  # Use the actual client secret
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
@@ -123,7 +125,7 @@ def google_oauth_callback(request):
             "https://oauth2.googleapis.com/token",
             data={
                 "code": code,
-                "client_id": GOOGLE_CLIENT_ID,
+                "client_id": _get_client_id(request),
                 "client_secret": _get_client_secret(request),
                 "redirect_uri": _get_redirect_uri(request),
                 "grant_type": "authorization_code",

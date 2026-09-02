@@ -56,10 +56,51 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         total_earned = completed_qs.aggregate(total=Sum("collector_earnings"))["total"] or Decimal("0.00")
         context["total_earned"] = total_earned
 
-        # Available jobs in system
-        context["unassigned_pickups"] = PickupRequest.objects.filter(
-            status=PickupRequest.StatusChoices.PENDING
-        ).select_related("citizen", "address", "category").order_by("schedule_date")
+        # Available jobs in system (with proximity calculation & nearest-first sorting)
+        import json
+        from trashport.maps.models import CollectorLocation
+        from trashport.maps.services import GeoService
+
+        col_location = CollectorLocation.objects.filter(collector=user).first()
+        col_lat = float(col_location.latitude) if col_location else 12.9716
+        col_lng = float(col_location.longitude) if col_location else 77.5946
+
+        unassigned_qs = PickupRequest.objects.filter(
+            status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT],
+            collector__isnull=True
+        ).select_related("citizen", "address", "category")
+
+        unassigned_list = list(unassigned_qs)
+        for p in unassigned_list:
+            plat = float(p.effective_latitude)
+            plng = float(p.effective_longitude)
+            dist = GeoService.haversine_distance(col_lat, col_lng, plat, plng)
+            p.calculated_distance_km = dist
+            p.calculated_earnings = p.calculate_collector_earnings()
+
+        # Sort nearest first!
+        unassigned_list.sort(key=lambda item: item.calculated_distance_km)
+
+        context["unassigned_pickups"] = unassigned_list
+        context["collector_lat"] = col_lat
+        context["collector_lng"] = col_lng
+
+        # JSON data for interactive Leaflet map & radius filter
+        pickups_json_data = []
+        for p in unassigned_list:
+            pickups_json_data.append({
+                "id": p.id,
+                "category": p.category.name if p.category else "Waste",
+                "citizen_name": p.citizen.name or p.citizen.email,
+                "address": f"{p.address.address_line1}, {p.address.city}" if p.address else "",
+                "latitude": float(p.effective_latitude),
+                "longitude": float(p.effective_longitude),
+                "distance_km": float(p.calculated_distance_km),
+                "earnings": float(p.calculated_earnings),
+                "weight_kg": float(p.weight_kg),
+                "schedule_date": p.schedule_date.strftime("%b %d, %Y") if p.schedule_date else "",
+            })
+        context["unassigned_pickups_json"] = json.dumps(pickups_json_data)
 
         # UPI Payout / Redemption history
         context["upi_payouts"] = UPIPayoutRequest.objects.filter(collector=user).order_by("-created_at")[:10]
@@ -118,13 +159,14 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
             return redirect("waste_management:pickup_detail", pk=pk)
 
         if action == "claim":
-            if pickup.status != PickupRequest.StatusChoices.PENDING:
+            if pickup.status not in [PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT]:
                 messages.error(request, "This pickup request is no longer available to claim.")
             else:
                 pickup.collector = user
                 pickup.status = PickupRequest.StatusChoices.ASSIGNED
                 pickup.save()
                 messages.success(request, "Pickup job claimed successfully! Proceed to location when ready.")
+                return redirect(reverse("waste_management:pickup_detail", kwargs={"pk": pk}) + "?just_claimed=true")
         elif action == "transit" and pickup.collector == user:
             pickup.status = PickupRequest.StatusChoices.IN_TRANSIT
             pickup.save()

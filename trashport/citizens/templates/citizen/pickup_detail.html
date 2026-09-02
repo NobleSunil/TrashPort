@@ -187,8 +187,14 @@
       });
 
       const pickupId = "{{ pickup.id }}";
-      const pickupLat = parseFloat("{{ pickup.latitude|default:pickup.address.latitude|default:12.9716 }}");
-      const pickupLng = parseFloat("{{ pickup.longitude|default:pickup.address.longitude|default:77.5946 }}");
+      const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
+      const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
+
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
 
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
@@ -201,14 +207,15 @@
       });
 
       let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
         "🛰️ Satellite View": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        "📍 Street Map": streetLayer
       };
 
       let map = L.map('trackingMap', {
         center: [pickupLat, pickupLng],
         zoom: 15,
-        layers: [satelliteLayer]
+        layers: [positronLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);
@@ -222,18 +229,13 @@
         .bindPopup("<b>📍 Pickup Location</b><br>{{ pickup.address.address_line1 }}").openPopup();
 
       let collectorMarker = null;
-      let routePolyline = null;
+      let routePolyline = L.polyline([], {
+        color: '#2563eb',
+        weight: 6,
+        opacity: 0.85
+      }).addTo(map);
 
       function updateTrackingUI(data) {
-        if (data.distance_km !== undefined) {
-          document.getElementById('hudDistance').textContent = `${data.distance_km} km`;
-        }
-        if (data.eta_mins !== undefined && data.eta_mins !== null) {
-          document.getElementById('hudEta').textContent = `${data.eta_mins} mins`;
-        } else {
-          document.getElementById('hudEta').textContent = `Waiting for collector`;
-        }
-
         if (data.collector_location) {
           const cLat = data.collector_location.latitude;
           const cLng = data.collector_location.longitude;
@@ -247,19 +249,34 @@
           }
           collectorMarker.bindPopup(`<b>🚛 Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
 
-          // Draw Route Polyline
-          if (routePolyline) {
-            map.removeLayer(routePolyline);
-          }
-          routePolyline = L.polyline([[pickupLat, pickupLng], [cLat, cLng]], {
-            color: '#ffc107',
-            weight: 5,
-            dashArray: '8, 8'
-          }).addTo(map);
+          // Fetch OSRM Road Geometry
+          fetch(`/api/maps/route/?start_lat=${cLat}&start_lng=${cLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
+            .then(res => res.json())
+            .then(routeData => {
+              if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
+                routePolyline.setLatLngs(routeData.coordinates);
+                if (routeData.distance_km !== undefined) {
+                  document.getElementById('hudDistance').textContent = `${routeData.distance_km} km`;
+                }
+                if (routeData.duration_mins !== undefined) {
+                  document.getElementById('hudEta').textContent = `${routeData.duration_mins} mins`;
+                }
+              } else {
+                routePolyline.setLatLngs([[cLat, cLng], [pickupLat, pickupLng]]);
+              }
+            })
+            .catch(err => {
+              routePolyline.setLatLngs([[cLat, cLng], [pickupLat, pickupLng]]);
+            });
 
           // Fit bounds to fit both markers
           let bounds = L.latLngBounds([[pickupLat, pickupLng], [cLat, cLng]]);
           map.fitBounds(bounds, { padding: [40, 40] });
+        } else {
+          if (data.distance_km !== undefined) {
+            document.getElementById('hudDistance').textContent = `${data.distance_km} km`;
+          }
+          document.getElementById('hudEta').textContent = `Waiting for collector`;
         }
       }
 

@@ -63,14 +63,15 @@ def live_map_data_view(request):
 
     pickups_data = []
     for p in pickups_qs:
-        lat = float(p.latitude or (p.address.latitude if p.address else None) or 12.9716)
-        lng = float(p.longitude or (p.address.longitude if p.address else None) or 77.5946)
+        lat = p.effective_latitude
+        lng = p.effective_longitude
         pickups_data.append({
             "id": p.id,
             "status": p.status,
             "category": p.category.name if p.category else "Waste",
             "citizen_name": p.citizen.name or p.citizen.email,
             "citizen_email": p.citizen.email,
+            "collector_id": p.collector.id if p.collector else None,
             "collector_name": (p.collector.name or p.collector.email) if p.collector else None,
             "address": f"{p.address.address_line1}, {p.address.city}" if p.address else "",
             "latitude": lat,
@@ -82,6 +83,23 @@ def live_map_data_view(request):
     collectors_qs = CollectorLocation.objects.all().select_related("collector")
     collectors_data = []
     for c in collectors_qs:
+        # Find active pickups assigned to this specific collector
+        assigned_jobs = [p for p in pickups_qs if p.collector_id == c.collector.id]
+        is_assigned = len(assigned_jobs) > 0
+
+        assigned_pickups_list = []
+        for job in assigned_jobs:
+            assigned_pickups_list.append({
+                "id": job.id,
+                "category": job.category.name if job.category else "Waste",
+                "citizen_name": job.citizen.name or job.citizen.email,
+                "address": f"{job.address.address_line1}, {job.address.city}" if job.address else "",
+                "latitude": job.effective_latitude,
+                "longitude": job.effective_longitude,
+                "status": job.status,
+                "weight_kg": float(job.weight_kg),
+            })
+
         collectors_data.append({
             "collector_id": c.collector.id,
             "name": c.collector.name or c.collector.email,
@@ -90,6 +108,9 @@ def live_map_data_view(request):
             "longitude": float(c.longitude),
             "speed": c.speed,
             "heading": c.heading,
+            "is_assigned": is_assigned,
+            "active_task_count": len(assigned_jobs),
+            "assigned_pickups": assigned_pickups_list,
             "updated_at": c.updated_at.strftime("%H:%M:%S"),
         })
 
@@ -112,8 +133,8 @@ def pickup_live_tracking_view(request, pickup_id):
     pickup = get_object_or_404(PickupRequest, id=pickup_id)
 
     # Pickup lat/lng
-    pickup_lat = float(pickup.latitude or (pickup.address.latitude if pickup.address else None) or 12.9716)
-    pickup_lng = float(pickup.longitude or (pickup.address.longitude if pickup.address else None) or 77.5946)
+    pickup_lat = pickup.effective_latitude
+    pickup_lng = pickup.effective_longitude
 
     collector_loc = None
     distance_km = float(pickup.distance_km or 0)
@@ -156,3 +177,22 @@ def pickup_live_tracking_view(request, pickup_id):
         "distance_km": distance_km,
         "eta_mins": eta_mins,
     }, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def calculate_road_route_view(request):
+    """
+    Returns actual turn-by-turn road route coordinates between start and end locations.
+    Query params: start_lat, start_lng, end_lat, end_lng
+    """
+    try:
+        start_lat = float(request.GET.get("start_lat", 0))
+        start_lng = float(request.GET.get("start_lng", 0))
+        end_lat = float(request.GET.get("end_lat", 0))
+        end_lng = float(request.GET.get("end_lng", 0))
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid coordinates provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    route_info = GeoService.get_road_route_osrm(start_lat, start_lng, end_lat, end_lng)
+    return Response(route_info, status=status.HTTP_200_OK)
