@@ -10,6 +10,7 @@ from .views import (
     SubscriptionTierListView, SubscriptionTierCreateView, SubscriptionTierUpdateView,
     UserListView, CollectorCreateView, UserDetailView, UserToggleActiveView, CollectorVerificationView, WalletAdjustView, CollectorRedeemUPIView,
     AutoAssignPickupsView, SubscriptionOverviewView, ExportPickupsCSVView, ExportRevenueCSVView,
+    PaymentCheckoutView, PaymentSuccessView,
 )
 
 app_name = "waste_management"
@@ -32,6 +33,8 @@ urlpatterns = [
     path("pickups/new/", PickupRequestCreateView.as_view(), name="pickup_create"),
     path("pickups/<int:pk>/", PickupRequestDetailView.as_view(), name="pickup_detail"),
     path("pickups/<int:pk>/status/", PickupStatusUpdateView.as_view(), name="pickup_status_update"),
+    path("pickups/<int:pk>/pay/", PaymentCheckoutView.as_view(), name="payment_checkout"),
+    path("pickups/<int:pk>/pay/success/", PaymentSuccessView.as_view(), name="payment_success"),
     path("admin/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
     
     # Complaints CRUD & actions

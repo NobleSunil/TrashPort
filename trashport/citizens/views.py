@@ -13,6 +13,8 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, T
 
 from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
+from trashport.payments.services import PaymentGatewayService
+from trashport.payments.models import PaymentTransaction
 
 
 class CitizenDashboardView(LoginRequiredMixin, TemplateView):
@@ -250,10 +252,8 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
             pickup.save()
             messages.warning(request, "Your pickup request has been cancelled.")
         elif action == "pay" and pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT:
-            pickup.is_paid = True
-            pickup.status = PickupRequest.StatusChoices.PENDING
-            pickup.save()
-            messages.success(request, f"Payment of Rs. {pickup.fee:.2f} processed successfully! Your request is now pending assignment.")
+            # Redirect to the full payment checkout flow
+            return redirect("waste_management:payment_checkout", pk=pk)
 
         return redirect("waste_management:pickup_detail", pk=pk)
 
@@ -328,3 +328,135 @@ class CitizenComplaintDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return Complaint.objects.filter(citizen=self.request.user)
+
+
+# ==============================================================================
+# Payment Checkout & Receipt Views
+# ==============================================================================
+
+class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
+    """
+    GET  — Renders the payment checkout page for a pickup request that
+            requires payment (status = AWAITING_PAYMENT, is_paid = False).
+    POST — Routes the payment to the appropriate PaymentGatewayService method
+            based on the selected payment_method (card / upi / wallet).
+    """
+    template_name = "citizen/payment_checkout.html"
+
+    def _get_pickup(self, request, pk):
+        return get_object_or_404(
+            PickupRequest,
+            pk=pk,
+            citizen=request.user,
+            status=PickupRequest.StatusChoices.AWAITING_PAYMENT,
+            is_paid=False,
+        )
+
+    def get(self, request, pk, *args, **kwargs):
+        pickup = self._get_pickup(request, pk)
+        wallet_points = getattr(request.user, "wallet_points", 0)
+        # 100 pts = Rs. 1 — calculate whether wallet covers the fee
+        wallet_value_inr = Decimal(str(wallet_points)) * Decimal("0.01")
+        context = {
+            "pickup": pickup,
+            "wallet_points": wallet_points,
+            "wallet_value_inr": wallet_value_inr,
+            "wallet_covers_fee": wallet_value_inr >= pickup.fee,
+            "test_cards": [
+                {"number": "4242 4242 4242 4242", "brand": "Visa", "result": "Always succeeds"},
+                {"number": "5555 5555 5555 4444", "brand": "Mastercard", "result": "Always succeeds"},
+                {"number": "4000 0000 0000 0002", "brand": "Visa", "result": "Card declined"},
+                {"number": "4000 0000 0000 9995", "brand": "Visa", "result": "Insufficient funds"},
+            ],
+        }
+        return self._render(request, context)
+
+    def post(self, request, pk, *args, **kwargs):
+        pickup = self._get_pickup(request, pk)
+        method = request.POST.get("payment_method", "card")
+        result = None
+
+        if method == "card":
+            result = PaymentGatewayService.process_card_payment(
+                user=request.user,
+                pickup=pickup,
+                card_number=request.POST.get("card_number", ""),
+                card_name=request.POST.get("card_name", ""),
+                expiry=request.POST.get("expiry", ""),
+                cvv=request.POST.get("cvv", ""),
+            )
+        elif method == "upi":
+            result = PaymentGatewayService.process_upi_payment(
+                user=request.user,
+                pickup=pickup,
+                upi_id=request.POST.get("upi_id", "").strip(),
+            )
+        elif method == "wallet":
+            result = PaymentGatewayService.process_wallet_payment(
+                user=request.user,
+                pickup=pickup,
+            )
+        else:
+            messages.error(request, "Invalid payment method selected.")
+            return redirect("waste_management:payment_checkout", pk=pk)
+
+        if result and result["success"]:
+            # Attach result data to session for the success page
+            request.session[f"payment_result_{pk}"] = {
+                "transaction_id": result["transaction_id"],
+                "amount": result["amount"],
+                "method": result["method"],
+                "card_last4": result.get("card_last4"),
+                "upi_id": result.get("upi_id"),
+                "points_used": result.get("points_used"),
+            }
+            return redirect("waste_management:payment_success", pk=pk)
+        else:
+            error_msg = result.get("error_message", "Payment failed. Please try again.") if result else "Payment processing error."
+            wallet_points = getattr(request.user, "wallet_points", 0)
+            wallet_value_inr = Decimal(str(wallet_points)) * Decimal("0.01")
+            context = {
+                "pickup": pickup,
+                "wallet_points": wallet_points,
+                "wallet_value_inr": wallet_value_inr,
+                "wallet_covers_fee": wallet_value_inr >= pickup.fee,
+                "error": error_msg,
+                "active_method": method,
+                "test_cards": [
+                    {"number": "4242 4242 4242 4242", "brand": "Visa", "result": "Always succeeds"},
+                    {"number": "5555 5555 5555 4444", "brand": "Mastercard", "result": "Always succeeds"},
+                    {"number": "4000 0000 0000 0002", "brand": "Visa", "result": "Card declined"},
+                    {"number": "4000 0000 0000 9995", "brand": "Visa", "result": "Insufficient funds"},
+                ],
+            }
+            return self._render(request, context)
+
+    def _render(self, request, context):
+        from django.shortcuts import render
+        return render(request, self.template_name, context)
+
+
+class CitizenPaymentSuccessView(LoginRequiredMixin, View):
+    """
+    Displays a payment success receipt page after a successful payment.
+    Reads result data from the session and also fetches the PaymentTransaction
+    record for display.
+    """
+    def get(self, request, pk, *args, **kwargs):
+        pickup = get_object_or_404(PickupRequest, pk=pk, citizen=request.user)
+        session_key = f"payment_result_{pk}"
+        result = request.session.pop(session_key, None)
+
+        # Fetch the most recent completed transaction for this pickup
+        transaction = PaymentTransaction.objects.filter(
+            user=request.user,
+            description__icontains=f"Pickup #{pickup.id}",
+            status=PaymentTransaction.Statuses.COMPLETED,
+        ).order_by("-created_at").first()
+
+        from django.shortcuts import render
+        return render(request, "citizen/payment_success.html", {
+            "pickup": pickup,
+            "result": result,
+            "transaction": transaction,
+        })

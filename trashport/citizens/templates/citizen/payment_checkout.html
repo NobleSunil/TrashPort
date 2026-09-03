@@ -1,0 +1,499 @@
+{% extends "base_citizen.html" %}
+
+{% block title %}Secure Payment — Pickup #{{ pickup.id }} | TrashPort{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  /* ── Method Tabs ── */
+  .pay-method-tabs { display:flex; gap:8px; margin-bottom:1.5rem; }
+  .pay-tab {
+    flex:1; padding:10px 8px; border:2px solid #dee2e6; border-radius:10px;
+    background:#fff; color:#6c757d; font-size:0.85rem; font-weight:600;
+    cursor:pointer; transition:all .2s; display:flex; align-items:center;
+    justify-content:center; gap:6px;
+  }
+  .pay-tab:hover { border-color:#0d6efd; color:#0d6efd; }
+  .pay-tab.active { border-color:#0d6efd; background:#0d6efd; color:#fff; box-shadow:0 4px 12px rgba(13,110,253,.25); }
+
+  /* ── Virtual Card Preview ── */
+  .card-preview-widget {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5f8a 50%, #1a4a70 100%);
+    border-radius:16px; padding:1.4rem 1.6rem; position:relative;
+    overflow:hidden; margin-bottom:1.5rem; min-height:140px;
+    box-shadow:0 8px 24px rgba(0,0,0,.18);
+  }
+  .card-preview-widget::before {
+    content:''; position:absolute; top:-40px; right:-40px;
+    width:160px; height:160px; border-radius:50%;
+    background:rgba(255,255,255,.06);
+  }
+  .card-preview-widget::after {
+    content:''; position:absolute; bottom:-60px; left:-30px;
+    width:200px; height:200px; border-radius:50%;
+    background:rgba(255,255,255,.04);
+  }
+  .card-chip { width:34px; height:24px; border-radius:4px; background:linear-gradient(135deg,#d4a843,#f0c060); margin-bottom:.9rem; }
+  .card-num-display { font-size:1.2rem; letter-spacing:3px; color:rgba(255,255,255,.9); font-weight:300; margin-bottom:.9rem; font-family:monospace; }
+  .card-info-row { display:flex; gap:2rem; }
+  .card-info-item label { font-size:0.55rem; text-transform:uppercase; color:rgba(255,255,255,.45); letter-spacing:.06em; display:block; }
+  .card-info-item span  { font-size:0.82rem; color:rgba(255,255,255,.85); }
+  .card-brand-badge { position:absolute; top:1.2rem; right:1.4rem; font-size:1.5rem; font-weight:900; font-style:italic; }
+
+  /* ── Form Inputs ── */
+  .form-label.pay-label { font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; margin-bottom:5px; }
+
+  /* ── UPI app buttons ── */
+  .upi-app-grid { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.2rem; }
+  .upi-app-pill {
+    flex:1; min-width:80px; padding:9px 6px; text-align:center;
+    border:1.5px solid #dee2e6; border-radius:10px;
+    background:#fff; color:#6c757d; cursor:pointer; transition:all .2s;
+    font-size:0.76rem; font-weight:500;
+  }
+  .upi-app-pill:hover, .upi-app-pill.selected { border-color:#0d6efd; color:#0d6efd; background:#f0f5ff; }
+  .upi-app-pill .upi-icon { font-size:1.3rem; display:block; margin-bottom:3px; }
+
+  /* ── Test Cards Panel ── */
+  .test-card-panel { border:1.5px dashed #dee2e6; border-radius:10px; margin-top:1rem; overflow:hidden; }
+  .test-card-toggle { width:100%; padding:9px 14px; background:#fffbeb; border:none; color:#92650a; font-size:0.82rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .test-card-toggle:hover { background:#fef3c7; }
+  .test-card-row { display:flex; justify-content:space-between; align-items:center; padding:7px 14px; border-top:1px solid #f1f5f9; cursor:pointer; font-size:0.8rem; }
+  .test-card-row:hover { background:#f8fafc; }
+  .test-card-row:hover .tc-num { color:#0d6efd; }
+  .tc-num { font-family:monospace; color:#1e293b; font-weight:500; }
+  .tc-ok  { color:#16a34a; font-weight:600; }
+  .tc-fail{ color:#dc2626; font-weight:600; }
+
+  /* ── Summary Sidebar ── */
+  .summary-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:0.875rem; }
+  .summary-item:last-child { border-bottom:none; }
+  .summary-item.total-row { font-weight:700; font-size:1rem; color:#0d6efd; padding-top:12px; }
+
+  /* ── CVV wrapper ── */
+  .cvv-wrap { position:relative; }
+  .cvv-eye { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#6c757d; cursor:pointer; }
+
+  /* ── Processing overlay ── */
+  .pay-overlay {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(255,255,255,.85); backdrop-filter:blur(4px);
+    flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  }
+  .pay-overlay.show { display:flex; }
+  .pay-spinner { width:52px; height:52px; border-radius:50%; border:4px solid #dee2e6; border-top-color:#0d6efd; animation:spin .75s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .method-panel { display:none; }
+  .method-panel.active { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="row justify-content-center">
+    <div class="col-xl-10">
+
+      <!-- Back link -->
+      <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="fas fa-arrow-left me-1"></i> Back to Pickup Details
+      </a>
+
+      <!-- Page Header -->
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="d-flex align-items-center justify-content-center rounded-circle bg-success text-white" style="width:42px;height:42px;font-size:1.1rem;">
+          <i class="fas fa-lock"></i>
+        </div>
+        <div>
+          <h2 class="mb-0 fw-bold">Secure Payment</h2>
+          <p class="text-muted small mb-0">Pickup #{{ pickup.id }} &middot; {{ pickup.category.name }} &middot; {{ pickup.schedule_date|date:"M d, Y" }}</p>
+        </div>
+        <span class="ms-auto badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+          <i class="fas fa-shield-alt me-1"></i> SSL Secured
+        </span>
+      </div>
+
+      <div class="row g-4">
+
+        <!-- ══ LEFT: Payment Form ══ -->
+        <div class="col-lg-7">
+
+          <!-- Error alert -->
+          {% if error %}
+          <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <i class="fas fa-exclamation-circle mt-1"></i>
+            <span>{{ error }}</span>
+          </div>
+          {% endif %}
+
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+              <!-- Method Tabs -->
+              <p class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.05em;">Select Payment Method</p>
+              <div class="pay-method-tabs">
+                <button class="pay-tab {% if active_method == 'card' or not active_method %}active{% endif %}" data-method="card" type="button">
+                  <i class="fas fa-credit-card"></i> Card
+                </button>
+                <button class="pay-tab {% if active_method == 'upi' %}active{% endif %}" data-method="upi" type="button">
+                  <i class="fas fa-mobile-alt"></i> UPI
+                </button>
+                <button class="pay-tab {% if active_method == 'wallet' %}active{% endif %}" data-method="wallet" type="button">
+                  <i class="fas fa-coins"></i> Wallet Points
+                </button>
+              </div>
+
+              <!-- ── CARD PANEL ── -->
+              <div class="method-panel {% if active_method == 'card' or not active_method %}active{% endif %}" id="panel-card">
+                <form method="post" id="card-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="payment_method" value="card">
+
+                  <!-- Visual Card -->
+                  <div class="card-preview-widget">
+                    <div class="card-chip"></div>
+                    <div class="card-num-display" id="previewNumber">&#x2022;&#x2022;&#x2022;&#x2022; &#x2022;&#x2022;&#x2022;&#x2022; &#x2022;&#x2022;&#x2022;&#x2022; &#x2022;&#x2022;&#x2022;&#x2022;</div>
+                    <div class="card-info-row">
+                      <div class="card-info-item"><label>Card Holder</label><span id="previewName">YOUR NAME</span></div>
+                      <div class="card-info-item"><label>Expires</label><span id="previewExpiry">MM/YY</span></div>
+                    </div>
+                    <div class="card-brand-badge text-white" id="cardBrand" style="opacity:.6;">VISA</div>
+                  </div>
+
+                  <!-- Card Number -->
+                  <div class="mb-3">
+                    <label class="form-label pay-label" for="card_number">Card Number</label>
+                    <input type="text" id="card_number" name="card_number"
+                           class="form-control form-control-lg"
+                           placeholder="1234 5678 9012 3456"
+                           maxlength="19" autocomplete="cc-number" inputmode="numeric">
+                  </div>
+
+                  <!-- Cardholder Name -->
+                  <div class="mb-3">
+                    <label class="form-label pay-label" for="card_name">Name on Card</label>
+                    <input type="text" id="card_name" name="card_name"
+                           class="form-control" placeholder="John Smith"
+                           autocomplete="cc-name">
+                  </div>
+
+                  <!-- Expiry + CVV -->
+                  <div class="row g-3 mb-4">
+                    <div class="col-6">
+                      <label class="form-label pay-label" for="expiry">Expiry Date</label>
+                      <input type="text" id="expiry" name="expiry"
+                             class="form-control" placeholder="MM / YY"
+                             maxlength="7" autocomplete="cc-exp" inputmode="numeric">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label pay-label" for="cvv">CVV / CVC</label>
+                      <div class="cvv-wrap">
+                        <input type="password" id="cvv" name="cvv"
+                               class="form-control pe-5" placeholder="&bull;&bull;&bull;"
+                               maxlength="4" autocomplete="cc-csc" inputmode="numeric">
+                        <button class="cvv-eye" type="button" id="cvvToggle">
+                          <i class="fas fa-eye" id="cvvIcon"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="btn btn-primary btn-lg w-100 py-3" type="submit">
+                    <i class="fas fa-lock me-2"></i>Pay Rs. {{ pickup.fee }}
+                  </button>
+                </form>
+
+                <!-- Test Cards -->
+                <div class="test-card-panel mt-3">
+                  <button class="test-card-toggle" type="button" onclick="toggleTestCards()">
+                    <i class="fas fa-flask me-1"></i> Test Card Numbers (Demo Mode)
+                    <i class="fas fa-chevron-down ms-auto" id="tcChevron"></i>
+                  </button>
+                  <div id="tcBody" style="display:none;">
+                    <div class="px-3 py-2 bg-light border-top">
+                      <small class="text-muted">Click a card number to auto-fill. Use any future expiry and any 3-digit CVV.</small>
+                    </div>
+                    {% for tc in test_cards %}
+                    <div class="test-card-row" onclick="fillTestCard('{{ tc.number }}')" role="button" tabindex="0">
+                      <span class="tc-num">{{ tc.number }}</span>
+                      <span class="text-muted" style="font-size:0.75rem;">{{ tc.brand }}</span>
+                      <span class="{% if 'succeeds' in tc.result %}tc-ok{% else %}tc-fail{% endif %}">
+                        {% if 'succeeds' in tc.result %}&#x2713;{% else %}&#x2717;{% endif %} {{ tc.result }}
+                      </span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── UPI PANEL ── -->
+              <div class="method-panel {% if active_method == 'upi' %}active{% endif %}" id="panel-upi">
+                <form method="post" id="upi-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="payment_method" value="upi">
+
+                  <p class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.05em;">Quick Pay via</p>
+                  <div class="upi-app-grid">
+                    <div class="upi-app-pill" data-suffix="@okaxis" onclick="setUpiSuffix(this)"><span class="upi-icon">&#x1F535;</span>Axis Pay</div>
+                    <div class="upi-app-pill" data-suffix="@oksbi"  onclick="setUpiSuffix(this)"><span class="upi-icon">&#x1F499;</span>SBI Pay</div>
+                    <div class="upi-app-pill" data-suffix="@paytm"  onclick="setUpiSuffix(this)"><span class="upi-icon">&#x1F7E6;</span>Paytm</div>
+                    <div class="upi-app-pill" data-suffix="@gpay"   onclick="setUpiSuffix(this)"><span class="upi-icon">&#x1F7E2;</span>Google Pay</div>
+                    <div class="upi-app-pill" data-suffix="@ybl"    onclick="setUpiSuffix(this)"><span class="upi-icon">&#x1F7E3;</span>PhonePe</div>
+                  </div>
+
+                  <hr class="my-3">
+
+                  <div class="mb-4">
+                    <label class="form-label pay-label" for="upi_id">Your UPI ID / VPA</label>
+                    <input type="text" id="upi_id" name="upi_id"
+                           class="form-control form-control-lg"
+                           placeholder="yourname@okaxis" autocomplete="off">
+                    <div class="form-text">
+                      <i class="fas fa-info-circle me-1"></i>
+                      Enter any valid UPI ID (e.g. <code>abc@okaxis</code>). All UPI payments succeed in demo mode.
+                    </div>
+                  </div>
+
+                  <button class="btn btn-primary btn-lg w-100 py-3" type="submit">
+                    <i class="fas fa-bolt me-2"></i>Pay Rs. {{ pickup.fee }} via UPI
+                  </button>
+                </form>
+              </div>
+
+              <!-- ── WALLET PANEL ── -->
+              <div class="method-panel {% if active_method == 'wallet' %}active{% endif %}" id="panel-wallet">
+                <form method="post" id="wallet-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="payment_method" value="wallet">
+
+                  <!-- Balance card -->
+                  <div class="p-3 rounded-3 mb-3 d-flex align-items-center gap-3"
+                       style="background:linear-gradient(135deg,#1b4332 0%,#2d6a4f 100%);">
+                    <div class="fs-2">&#x1FA99;</div>
+                    <div>
+                      <div class="text-white-50 small fw-semibold text-uppercase" style="letter-spacing:.04em;">Recycling Wallet Balance</div>
+                      <div class="text-white fs-4 fw-bold">{{ wallet_points|default:"0" }} pts</div>
+                    </div>
+                    <div class="ms-auto text-end">
+                      <div class="text-white-50 small">Wallet Value</div>
+                      <div class="text-white fw-bold">Rs. {{ wallet_value_inr|floatformat:2 }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Breakdown -->
+                  <div class="card border-0 bg-light mb-3">
+                    <div class="card-body py-3">
+                      <div class="d-flex justify-content-between small py-1 border-bottom">
+                        <span class="text-muted">Fee due</span>
+                        <span class="fw-semibold">Rs. {{ pickup.fee }}</span>
+                      </div>
+                      <div class="d-flex justify-content-between small py-1">
+                        <span class="text-muted">Conversion rate</span>
+                        <span class="fw-semibold">100 pts = Rs. 1.00</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {% if wallet_covers_fee %}
+                  <div class="alert alert-success d-flex align-items-center gap-2 py-2">
+                    <i class="fas fa-check-circle"></i>
+                    Your wallet fully covers this payment!
+                  </div>
+                  {% else %}
+                  <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Insufficient points. Please use Card or UPI.
+                  </div>
+                  {% endif %}
+
+                  <button class="btn btn-lg w-100 py-3 {% if wallet_covers_fee %}btn-success{% else %}btn-secondary disabled{% endif %}" type="submit">
+                    <i class="fas fa-coins me-2"></i>
+                    {% if wallet_covers_fee %}Redeem Points &amp; Pay{% else %}Insufficient Points{% endif %}
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ RIGHT: Order Summary ══ -->
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm" style="position:sticky;top:20px;">
+            <div class="card-body p-4">
+
+              <h5 class="fw-bold text-primary mb-3">
+                <i class="fas fa-receipt me-2"></i>Order Summary
+              </h5>
+
+              <div class="summary-item">
+                <span class="text-muted">Pickup Request</span>
+                <span class="fw-semibold">#{{ pickup.id }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="text-muted">Waste Category</span>
+                <span class="fw-semibold">{{ pickup.category.name }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="text-muted">Estimated Weight</span>
+                <span class="fw-semibold">{{ pickup.weight_kg }} kg</span>
+              </div>
+              <div class="summary-item">
+                <span class="text-muted">Scheduled</span>
+                <span class="fw-semibold">{{ pickup.schedule_date|date:"d M, Y" }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="text-muted">Rate</span>
+                <span class="fw-semibold">Rs. {{ pickup.category.fee_per_kg }}/kg</span>
+              </div>
+              {% if pickup.extra_fee and pickup.extra_fee > 0 %}
+              <div class="summary-item">
+                <span class="text-muted">Extra Weight Fee</span>
+                <span class="fw-semibold text-warning">+ Rs. {{ pickup.extra_fee }}</span>
+              </div>
+              {% endif %}
+              <div class="summary-item total-row">
+                <span>Total Due</span>
+                <span>Rs. {{ pickup.fee }}</span>
+              </div>
+
+              <hr class="my-3">
+
+              <h6 class="fw-semibold text-muted text-uppercase small mb-2" style="letter-spacing:.05em;">Pickup Location</h6>
+              <address class="text-muted small mb-0" style="line-height:1.7;">
+                {{ pickup.address.address_line1 }}<br>
+                {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+                {{ pickup.address.city }}, {{ pickup.address.state }} &mdash; {{ pickup.address.postal_code }}
+              </address>
+
+              <hr class="my-3">
+
+              <!-- Trust badges -->
+              <div class="row g-2 text-center">
+                <div class="col-4">
+                  <div class="p-2 bg-light rounded-3 border">
+                    <div class="fs-5">&#x1F512;</div>
+                    <div class="text-muted" style="font-size:0.68rem;">Encrypted</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="p-2 bg-light rounded-3 border">
+                    <div class="fs-5">&#x1F6E1;&#xFE0F;</div>
+                    <div class="text-muted" style="font-size:0.68rem;">PCI DSS</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="p-2 bg-light rounded-3 border">
+                    <div class="fs-5">&#x2705;</div>
+                    <div class="text-muted" style="font-size:0.68rem;">Verified</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Overlay -->
+<div class="pay-overlay" id="payOverlay">
+  <div class="pay-spinner"></div>
+  <h5 class="fw-bold text-dark mb-1">Processing Payment...</h5>
+  <p class="text-muted small mb-0">Please do not close this window</p>
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+<script>
+// ── Tab switching ──
+document.querySelectorAll(".pay-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    const method = tab.dataset.method;
+    document.querySelectorAll(".pay-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".method-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + method).classList.add("active");
+  });
+});
+
+// ── Card number formatting + brand detection ──
+const BRANDS = [
+  { re:/^4/,          name:"VISA",       color:"#fff" },
+  { re:/^5[1-5]/,     name:"MASTERCARD", color:"#ffd700" },
+  { re:/^3[47]/,      name:"AMEX",       color:"#60a5fa" },
+  { re:/^6(?:011|5)/, name:"DISCOVER",   color:"#fb923c" },
+];
+document.getElementById("card_number").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g,"").slice(0,16);
+  e.target.value = v.replace(/(.{4})/g,"$1 ").trim();
+  const padded = v.padEnd(16,"•");
+  document.getElementById("previewNumber").textContent = padded.replace(/(.{4})/g,"$1 ").trim();
+  const b = BRANDS.find(b => b.re.test(v));
+  const el = document.getElementById("cardBrand");
+  if(b){ el.textContent=b.name; el.style.color=b.color; el.style.opacity="1"; }
+  else { el.textContent=""; el.style.opacity=".6"; }
+});
+
+// ── Cardholder name ──
+document.getElementById("card_name").addEventListener("input", e => {
+  document.getElementById("previewName").textContent = e.target.value.toUpperCase() || "YOUR NAME";
+});
+
+// ── Expiry formatting ──
+document.getElementById("expiry").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g,"").slice(0,4);
+  if(v.length >= 2) v = v.slice(0,2)+" / "+v.slice(2);
+  e.target.value = v;
+  document.getElementById("previewExpiry").textContent = v || "MM/YY";
+});
+
+// ── CVV toggle ──
+const cvvInput = document.getElementById("cvv");
+const cvvIcon  = document.getElementById("cvvIcon");
+document.getElementById("cvvToggle").addEventListener("click", () => {
+  const show = cvvInput.type === "password";
+  cvvInput.type = show ? "text" : "password";
+  cvvIcon.className = show ? "fas fa-eye-slash" : "fas fa-eye";
+});
+
+// ── UPI app quick-fill ──
+function setUpiSuffix(el) {
+  const inp = document.getElementById("upi_id");
+  inp.value = (inp.value.split("@")[0] || "yourname") + el.dataset.suffix;
+  document.querySelectorAll(".upi-app-pill").forEach(b => b.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+// ── Test card auto-fill ──
+function fillTestCard(number) {
+  const inp = document.getElementById("card_number");
+  inp.value = number;
+  inp.dispatchEvent(new Event("input"));
+  document.getElementById("card_name").value = "Test User";
+  document.getElementById("previewName").textContent = "TEST USER";
+  document.getElementById("expiry").value = "12 / 28";
+  document.getElementById("previewExpiry").textContent = "12 / 28";
+}
+
+// ── Test cards toggle ──
+function toggleTestCards() {
+  const body = document.getElementById("tcBody");
+  const chev = document.getElementById("tcChevron");
+  const vis  = body.style.display !== "none";
+  body.style.display = vis ? "none" : "block";
+  chev.className = vis ? "fas fa-chevron-down ms-auto" : "fas fa-chevron-up ms-auto";
+}
+
+// ── Processing overlay on submit ──
+["card-form","upi-form","wallet-form"].forEach(id => {
+  const f = document.getElementById(id);
+  if(f) f.addEventListener("submit", () => {
+    document.getElementById("payOverlay").classList.add("show");
+  });
+});
+</script>
+{% endblock inline_javascript %}

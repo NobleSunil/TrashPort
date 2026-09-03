@@ -282,3 +282,24 @@ class ExportRevenueCSVView(LoginRequiredMixin, View):
             return AdminExportRevenueCSVView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
+
+class PaymentCheckoutView(LoginRequiredMixin, View):
+    """
+    Dispatches the payment checkout page to CitizenPaymentCheckoutView.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.CITIZEN:
+            from trashport.citizens.views import CitizenPaymentCheckoutView
+            return CitizenPaymentCheckoutView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class PaymentSuccessView(LoginRequiredMixin, View):
+    """
+    Dispatches the payment success/receipt page to CitizenPaymentSuccessView.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.CITIZEN:
+            from trashport.citizens.views import CitizenPaymentSuccessView
+            return CitizenPaymentSuccessView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
