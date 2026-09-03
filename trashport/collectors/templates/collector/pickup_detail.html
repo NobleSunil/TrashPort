@@ -231,12 +231,18 @@
       });
 
       const pickupId = "{{ pickup.id }}";
-      const pickupLat = parseFloat("{{ pickup.latitude|default:pickup.address.latitude|default:12.9716 }}");
-      const pickupLng = parseFloat("{{ pickup.longitude|default:pickup.address.longitude|default:77.5946 }}");
+      const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
+      const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
 
       // Default Collector Start: ~2 km away from pickup
       let currentColLat = pickupLat - 0.015;
       let currentColLng = pickupLng - 0.015;
+
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
 
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
@@ -249,14 +255,15 @@
       });
 
       let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
         "🛰️ Satellite View": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        "📍 Street Map": streetLayer
       };
 
       let map = L.map('collectorMap', {
         center: [pickupLat, pickupLng],
         zoom: 14,
-        layers: [satelliteLayer]
+        layers: [positronLayer] // Default to Carto Clean Vector!
       });
 
       L.control.layers(baseMaps).addTo(map);
@@ -273,32 +280,41 @@
       let colMarker = L.marker([currentColLat, currentColLng]).addTo(map)
         .bindPopup("<b>🚛 Your Location (Collector)</b>");
 
-      let routePolyline = L.polyline([[currentColLat, currentColLng], [pickupLat, pickupLng]], {
-        color: '#ffc107',
-        weight: 5
+      let routePolyline = L.polyline([], {
+        color: '#16a34a',
+        weight: 6,
+        opacity: 0.85
       }).addTo(map);
 
-      function haversineDist(lat1, lon1, lat2, lon2) {
-        const R = 6371.0;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return (R * c).toFixed(2);
+      let roadWaypoints = [[currentColLat, currentColLng], [pickupLat, pickupLng]];
+
+      function fetchRoadRoute(startLat, startLng) {
+        fetch(`/api/maps/route/?start_lat=${startLat}&start_lng=${startLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.coordinates && data.coordinates.length > 0) {
+              roadWaypoints = data.coordinates;
+              routePolyline.setLatLngs(roadWaypoints);
+              if (data.distance_km) {
+                document.getElementById('colHudDistance').textContent = `${data.distance_km} km`;
+              }
+              if (data.duration_mins) {
+                document.getElementById('colHudEta').textContent = `${data.duration_mins} mins`;
+              }
+            } else {
+              routePolyline.setLatLngs([[startLat, startLng], [pickupLat, pickupLng]]);
+            }
+          })
+          .catch(err => {
+            console.log("OSRM route fetch notice:", err);
+            routePolyline.setLatLngs([[startLat, startLng], [pickupLat, pickupLng]]);
+          });
       }
 
       function updateMapAndHUD(lat, lng) {
         currentColLat = lat;
         currentColLng = lng;
         colMarker.setLatLng([lat, lng]);
-        routePolyline.setLatLngs([[lat, lng], [pickupLat, pickupLng]]);
-
-        const dist = haversineDist(lat, lng, pickupLat, pickupLng);
-        document.getElementById('colHudDistance').textContent = `${dist} km`;
-        const eta = Math.max(1, Math.round((dist / 25.0) * 60));
-        document.getElementById('colHudEta').textContent = `${eta} mins`;
 
         // Send to Backend API
         fetch('/api/maps/locations/update/', {
@@ -316,9 +332,9 @@
         }).catch(err => console.log("Location update error:", err));
       }
 
-      updateMapAndHUD(currentColLat, currentColLng);
+      fetchRoadRoute(currentColLat, currentColLng);
 
-      // Simulation Driver Mode
+      // Simulation Driver Mode (Animates along real road waypoints!)
       let simInterval = null;
       document.getElementById('simDriveBtn').addEventListener('click', function () {
         if (simInterval) {
@@ -334,14 +350,11 @@
         this.classList.remove('btn-primary');
         this.classList.add('btn-danger');
 
-        const steps = 30;
-        let step = 0;
-        const startLat = currentColLat;
-        const startLng = currentColLng;
+        let index = 0;
+        const total = roadWaypoints.length;
 
         simInterval = setInterval(() => {
-          step++;
-          if (step > steps) {
+          if (index >= total) {
             clearInterval(simInterval);
             simInterval = null;
             document.getElementById('simDriveBtn').innerHTML = '<i class="fas fa-check me-1"></i> Arrived at Pickup';
@@ -350,10 +363,10 @@
             return;
           }
 
-          const lat = startLat + (pickupLat - startLat) * (step / steps);
-          const lng = startLng + (pickupLng - startLng) * (step / steps);
-          updateMapAndHUD(lat, lng);
-        }, 1000);
+          const pt = roadWaypoints[index];
+          updateMapAndHUD(pt[0], pt[1]);
+          index++;
+        }, 400);
       });
 
       // Geolocation Watcher
@@ -367,7 +380,10 @@
           this.classList.add('btn-outline-success');
         } else if (navigator.geolocation) {
           watchId = navigator.geolocation.watchPosition(pos => {
-            updateMapAndHUD(pos.coords.latitude, pos.coords.longitude);
+            let lat = pos.coords.latitude;
+            let lng = pos.coords.longitude;
+            updateMapAndHUD(lat, lng);
+            fetchRoadRoute(lat, lng);
           });
           document.getElementById('gpsStatusText').textContent = "GPS Active";
           this.classList.remove('btn-outline-success');

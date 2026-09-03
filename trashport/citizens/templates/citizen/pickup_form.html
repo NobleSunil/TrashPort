@@ -118,6 +118,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      // Saved addresses JSON mapping
+      const savedAddresses = {{ addresses_json|safe|default:"{}" }};
+      const addressSelect = document.getElementById("id_address");
+
       // Fix default Leaflet icon CDN URLs
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -138,6 +142,12 @@
       let defaultLng = parseFloat(lngInput?.value) || 77.5946;
 
       // Define Base Map Tile Layers
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
+
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
@@ -149,14 +159,15 @@
       });
 
       let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
         "🛰️ Satellite View": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        "📍 Street Map": streetLayer
       };
 
       let map = L.map('mapPicker', {
         center: [defaultLat, defaultLng],
         zoom: 15,
-        layers: [satelliteLayer] // Default to Satellite View!
+        layers: [positronLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);
@@ -184,8 +195,8 @@
             showMapLoading(false);
             if (data && data.address) {
               let addr = data.address;
-              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
-              let city = addr.city || addr.town || addr.village || addr.county || "";
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.subdistrict || addr.amenity || "";
+              let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.city_district || "";
               let postcode = addr.postcode || "";
 
               if (road && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
@@ -220,6 +231,54 @@
         }
       }
 
+      function syncMapWithSelectedAddress() {
+        if (!addressSelect) return;
+        const selectedId = addressSelect.value;
+        if (selectedId && savedAddresses[selectedId]) {
+          const addrObj = savedAddresses[selectedId];
+          const lat = addrObj.lat;
+          const lng = addrObj.lng;
+          map.setView([lat, lng], 17);
+          marker.setLatLng([lat, lng]);
+          updateCoords(lat, lng, false);
+
+          // Pre-fill the new address inputs and make them read-only
+          if (addressLineInput) {
+            addressLineInput.value = addrObj.line1 || "";
+            addressLineInput.readOnly = true;
+          }
+          if (cityInput) {
+            cityInput.value = addrObj.city || "";
+            cityInput.readOnly = true;
+          }
+          if (postalInput) {
+            postalInput.value = addrObj.postal_code || "";
+            postalInput.readOnly = true;
+          }
+        } else {
+          // Re-enable and clear if selection reset
+          if (addressLineInput) {
+            addressLineInput.readOnly = false;
+            addressLineInput.value = "";
+          }
+          if (cityInput) {
+            cityInput.readOnly = false;
+            cityInput.value = "";
+          }
+          if (postalInput) {
+            postalInput.readOnly = false;
+            postalInput.value = "";
+          }
+        }
+      }
+
+      if (addressSelect) {
+        addressSelect.addEventListener("change", syncMapWithSelectedAddress);
+        if (addressSelect.value) {
+          syncMapWithSelectedAddress();
+        }
+      }
+
       marker.on('dragend', function (e) {
         let position = marker.getLatLng();
         updateCoords(position.lat, position.lng, true, true);
@@ -229,68 +288,6 @@
         marker.setLatLng(e.latlng);
         updateCoords(e.latlng.lat, e.latlng.lng, true, true);
       });
-
-      // Parse Saved Addresses JSON Data
-      let savedAddresses = [];
-      try {
-        let jsonEl = document.getElementById("saved-addresses-json");
-        if (jsonEl) {
-          savedAddresses = JSON.parse(jsonEl.textContent);
-        }
-      } catch (e) {
-        console.error("Error parsing saved addresses JSON:", e);
-      }
-
-      // Sync map/coordinates with Saved Address selection
-      let addressSelect = document.getElementById("id_address");
-      if (addressSelect) {
-        addressSelect.addEventListener("change", function () {
-          let selectedId = addressSelect.value;
-          if (selectedId) {
-            let selectedAddr = savedAddresses.find(a => a.id == selectedId);
-            if (selectedAddr && selectedAddr.latitude && selectedAddr.longitude) {
-              let lat = parseFloat(selectedAddr.latitude);
-              let lng = parseFloat(selectedAddr.longitude);
-              map.setView([lat, lng], 17);
-              marker.setLatLng([lat, lng]);
-              updateCoords(lat, lng, false);
-              
-              // Pre-fill the new address inputs and make them read-only
-              if (addressLineInput) {
-                addressLineInput.value = selectedAddr.address_line1;
-                addressLineInput.readOnly = true;
-              }
-              if (cityInput) {
-                cityInput.value = selectedAddr.city;
-                cityInput.readOnly = true;
-              }
-              if (postalInput) {
-                postalInput.value = selectedAddr.postal_code;
-                postalInput.readOnly = true;
-              }
-            }
-          } else {
-            // Re-enable and clear if selection reset
-            if (addressLineInput) {
-              addressLineInput.readOnly = false;
-              addressLineInput.value = "";
-            }
-            if (cityInput) {
-              cityInput.readOnly = false;
-              cityInput.value = "";
-            }
-            if (postalInput) {
-              postalInput.readOnly = false;
-              postalInput.value = "";
-            }
-          }
-        });
-        
-        // Trigger once on load if an address is already pre-selected
-        if (addressSelect.value) {
-          addressSelect.dispatchEvent(new Event("change"));
-        }
-      }
 
       // Geolocation button function
       function geolocateUser(forceOverwrite = true) {

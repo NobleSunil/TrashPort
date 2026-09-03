@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View
 
@@ -155,11 +155,26 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["addresses"] = Address.objects.filter(user=self.request.user)
+        user_addresses = Address.objects.filter(user=self.request.user)
+        context["addresses"] = user_addresses
+        import json
+        addresses_data = {}
+        for addr in user_addresses:
+            if addr.latitude is not None and addr.longitude is not None:
+                addresses_data[str(addr.id)] = {
+                    "lat": float(addr.latitude),
+                    "lng": float(addr.longitude),
+                    "line1": addr.address_line1,
+                    "city": addr.city,
+                    "postal_code": addr.postal_code,
+                }
+        context["addresses_json"] = json.dumps(addresses_data)
         return context
 
     def form_valid(self, form):
         form.instance.citizen = self.request.user
+        submitted_lat = form.cleaned_data.get("latitude")
+        submitted_lng = form.cleaned_data.get("longitude")
         
         # If no saved address was selected, create a new Address from inline inputs
         if not form.cleaned_data.get("address"):
@@ -169,14 +184,32 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
                 city=form.cleaned_data.get("new_city") or "Kochi",
                 state="Kerala",
                 postal_code=form.cleaned_data.get("new_postal_code") or "682001",
-                latitude=form.cleaned_data.get("latitude"),
-                longitude=form.cleaned_data.get("longitude"),
+                latitude=submitted_lat,
+                longitude=submitted_lng,
                 is_default=not Address.objects.filter(user=self.request.user).exists(),
             )
             form.instance.address = addr
+            form.instance.latitude = submitted_lat
+            form.instance.longitude = submitted_lng
+        else:
+            selected_addr = form.cleaned_data.get("address")
+            form.instance.address = selected_addr
+            if submitted_lat and submitted_lng:
+                form.instance.latitude = submitted_lat
+                form.instance.longitude = submitted_lng
+                if selected_addr and (selected_addr.latitude is None or selected_addr.longitude is None):
+                    selected_addr.latitude = submitted_lat
+                    selected_addr.longitude = submitted_lng
+                    selected_addr.save(update_fields=["latitude", "longitude"])
+            elif selected_addr and selected_addr.latitude is not None:
+                form.instance.latitude = selected_addr.latitude
+                form.instance.longitude = selected_addr.longitude
 
         messages.success(self.request, "Pickup request booked successfully!")
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("waste_management:pickup_detail", kwargs={"pk": self.object.pk}) + "?just_booked=true"
 
 
 class CitizenPickupRequestDetailView(LoginRequiredMixin, DetailView):

@@ -5,18 +5,101 @@
 
 {% block content %}
 <div class="py-4 row justify-content-center">
-  <div class="col-md-8 col-lg-6">
+  <div class="col-md-10 col-lg-8">
     <div class="card border-0 shadow-sm">
       <div class="card-body p-4">
-        <h1 class="h3 mb-3">{% if object %}Edit Address{% else %}Add New Address{% endif %}</h1>
-        <p class="text-muted mb-4">Enter address details for waste pickup requests</p>
+        <h1 class="h3 mb-2 text-success fw-bold">
+          <i class="fas fa-map-marker-alt me-2"></i>{% if object %}Edit Address{% else %}Add New Saved Address{% endif %}
+        </h1>
+        <p class="text-muted mb-4">Set your precise pickup coordinates on the map or enter your address details below.</p>
         
         <form method="post">
           {% csrf_token %}
-          {{ form|crispy }}
-          <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Save Address</button>
-            <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          
+          <!-- 1. Interactive Map Section (Automatic Geocoding Enabled) -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold text-dark mb-0">
+                <i class="fas fa-map-marked-alt text-primary me-2"></i>1. Pick Location on Map
+              </h5>
+              <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-location-arrow me-1"></i> Use My Current Location
+              </button>
+            </div>
+
+            <!-- Leaflet map container -->
+            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 380px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
+            <div class="d-flex justify-content-between align-items-center text-muted small mb-3">
+              <div>Selected Coordinates: <strong id="coordsDisplay" class="text-dark">12.971600, 77.594600</strong></div>
+              <div id="geocodeStatus" class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="fas fa-check-circle me-1"></i> Auto Map Geocoding Active
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Address Details Form Section -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <h5 class="fw-bold text-dark mb-3">
+              <i class="fas fa-building text-success me-2"></i>2. Address Details
+            </h5>
+            
+            <div class="mb-3">
+              <label for="id_address_line1" class="form-label fw-bold small text-dark">Street Address / Landmark:*</label>
+              {{ form.address_line1 }}
+              {% if form.address_line1.errors %}
+                <div class="text-danger small mt-1">{{ form.address_line1.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="id_address_line2" class="form-label fw-bold small text-dark">Apartment, Suite, Unit (Optional):</label>
+              {{ form.address_line2 }}
+              {% if form.address_line2.errors %}
+                <div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="id_city" class="form-label fw-bold small text-dark">City:*</label>
+                {{ form.city }}
+                {% if form.city.errors %}
+                  <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label for="id_state" class="form-label fw-bold small text-dark">State:*</label>
+                {{ form.state }}
+                {% if form.state.errors %}
+                  <div class="text-danger small mt-1">{{ form.state.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label for="id_postal_code" class="form-label fw-bold small text-dark">Postal Code:*</label>
+                {{ form.postal_code }}
+                {% if form.postal_code.errors %}
+                  <div class="text-danger small mt-1">{{ form.postal_code.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-check mt-3">
+              {{ form.is_default }}
+              <label for="id_is_default" class="form-check-label fw-bold small text-dark ms-1">
+                Set as my default pickup address
+              </label>
+            </div>
+
+            <!-- Hidden Lat / Lng inputs -->
+            {{ form.latitude }}
+            {{ form.longitude }}
+          </div>
+
+          <div class="mt-4 d-flex gap-2 border-top pt-3">
+            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
+              <i class="fas fa-save me-1"></i> Save Address
+            </button>
+            <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
           </div>
         </form>
       </div>
@@ -24,3 +107,161 @@
   </div>
 </div>
 {% endblock %}
+
+{% block inline_javascript %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      let latInput = document.getElementById("id_latitude");
+      let lngInput = document.getElementById("id_longitude");
+      let coordsDisplay = document.getElementById("coordsDisplay");
+
+      let addressLineInput = document.getElementById("id_address_line1");
+      let cityInput = document.getElementById("id_city");
+      let stateInput = document.getElementById("id_state");
+      let postalInput = document.getElementById("id_postal_code");
+
+      let defaultLat = parseFloat(latInput?.value) || 12.9716;
+      let defaultLng = parseFloat(lngInput?.value) || 77.5946;
+
+      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; CartoDB &copy; OpenStreetMap'
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      });
+
+      let baseMaps = {
+        "🗺️ Carto Clean Vector": positronLayer,
+        "🛰️ Satellite View": satelliteLayer,
+        "📍 Street Map": streetLayer
+      };
+
+      let map = L.map('mapPicker', {
+        center: [defaultLat, defaultLng],
+        zoom: 15,
+        layers: [positronLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+      function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.address) {
+              let addr = data.address;
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.subdistrict || addr.amenity || "";
+              let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.city_district || "";
+              let state = addr.state || "";
+              let postcode = addr.postcode || "";
+
+              // AUTOMATICALLY fill/overwrite fields dynamically from pinned map location!
+              if (addressLineInput) {
+                if (road) addressLineInput.value = road;
+                else if (data.display_name) addressLineInput.value = data.display_name.split(',')[0];
+              }
+
+              if (cityInput && city) cityInput.value = city;
+              if (stateInput && state) stateInput.value = state;
+              if (postalInput && postcode) postalInput.value = postcode;
+            }
+          })
+          .catch(err => console.log("Reverse geocode notice:", err));
+      }
+
+      function updateCoords(lat, lng, fetchAddress = true) {
+        let formattedLat = lat.toFixed(6);
+        let formattedLng = lng.toFixed(6);
+        if (latInput) latInput.value = formattedLat;
+        if (lngInput) lngInput.value = formattedLng;
+        if (coordsDisplay) coordsDisplay.textContent = `${formattedLat}, ${formattedLng}`;
+
+        if (fetchAddress) {
+          reverseGeocode(lat, lng);
+        }
+      }
+
+      marker.on('dragend', function (e) {
+        let position = marker.getLatLng();
+        updateCoords(position.lat, position.lng, true);
+      });
+
+      map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        updateCoords(e.latlng.lat, e.latlng.lng, true);
+      });
+
+      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function (pos) {
+            let lat = pos.coords.latitude;
+            let lng = pos.coords.longitude;
+            map.setView([lat, lng], 17);
+            marker.setLatLng([lat, lng]);
+            updateCoords(lat, lng, true);
+          }, function () {
+            alert("Unable to fetch current GPS location. Please select manually on the map.");
+          });
+        }
+      });
+
+      // Forward-geocoding in Manual Mode when user types
+      let debounceTimer;
+      function handleManualForwardGeocode() {
+        if (isAutoMode) return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          let street = addressLineInput?.value || "";
+          let city = cityInput?.value || "";
+          let state = stateInput?.value || "";
+          let post = postalInput?.value || "";
+
+          let query = [street, city, state, post].filter(Boolean).join(", ");
+          if (query.length > 3) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.length > 0) {
+                  let lat = parseFloat(data[0].lat);
+                  let lng = parseFloat(data[0].lon);
+                  map.setView([lat, lng], 16);
+                  marker.setLatLng([lat, lng]);
+                  updateCoords(lat, lng, false);
+                }
+              })
+              .catch(err => {});
+          }
+        }, 800);
+      }
+
+      cityInput?.addEventListener('input', handleManualForwardGeocode);
+      postalInput?.addEventListener('input', handleManualForwardGeocode);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      updateCoords(defaultLat, defaultLng, false);
+    });
+  </script>
+{% endblock inline_javascript %}
