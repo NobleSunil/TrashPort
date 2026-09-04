@@ -18,11 +18,9 @@ if exist .venv\Scripts\activate.bat (
 )
 echo.
 
-:: Set environment variables
-set DATABASE_URL=sqlite:///db.sqlite3
-set DJANGO_READ_DOT_ENV_FILE=True
-set DJANGO_DEBUG=True
+:: Load environment from main .env
 set DJANGO_SETTINGS_MODULE=config.settings.local
+set DJANGO_READ_DOT_ENV_FILE=True
 
 echo [*] Running database migrations...
 python manage.py migrate

@@ -16,8 +16,6 @@ services:
     volumes:
       - .:/app:z
     env_file:
-      - ./.envs/.local/.django
-      - ./.envs/.local/.postgres
       - .env
     environment:
       - REDIS_URL=redis://redis:6379
@@ -43,4 +41,4 @@ services:
       - trashport_local_postgres_data:/var/lib/postgresql/data
       - trashport_local_postgres_data_backups:/backups
     env_file:
-      - ./.envs/.local/.postgres
+      - .env

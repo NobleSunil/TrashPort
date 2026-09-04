@@ -60,7 +60,7 @@ class TestChatActions:
         assert "Apt 3B" in prompt
         assert "Ernakulam" in prompt
         assert "682001" in prompt
-        assert f"- ID: {pickup.id}" in prompt
+        assert f"- ID: {pickup.display_id}" in prompt
         assert "Plastic" in prompt
 
     def test_sync_check_status_includes_full_address_and_id(self):
@@ -86,9 +86,10 @@ class TestChatActions:
             schedule_date=timezone.now(),
             status="ASSIGNED"
         )
+        pickup.refresh_from_db()
         res = _sync_check_status(user)
         assert res["type"] == "text"
-        assert f"Pickup #{pickup.id}" in res["message"]
+        assert f"Pickup #{pickup.display_id}" in res["message"]
         assert "10 Downing Court" in res["message"]
         assert "Floor 2" in res["message"]
         assert pickup.status in res["message"]
