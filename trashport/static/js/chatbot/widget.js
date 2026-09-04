@@ -8,6 +8,7 @@ let messageQueue = [];
 
 const history = []; // in-memory, max 20 items
 let lastUserMessage = "";
+let greetingRendered = false;
 
 function getCookie(name) {
   let cookieValue = null;
@@ -50,7 +51,7 @@ function connectWebSocket() {
       try {
         const data = JSON.parse(event.data);
 
-        if (data.message) {
+        if (data.message && data.type !== "greeting") {
           history.push({ role: "assistant", content: data.message });
           if (history.length > 20) {
             history.shift();
@@ -156,8 +157,35 @@ function sendChip(message) {
   send(message);
 }
 
-// Listen for enter key press on input field
+function saveChatToSession() {
+  const container = document.getElementById("chat-messages");
+  if (container) {
+    sessionStorage.setItem("trashport_chat_html", container.innerHTML);
+    sessionStorage.setItem("trashport_chat_history", JSON.stringify(history));
+  }
+}
+
+// Listen for enter key press on input field and restore chat state
 document.addEventListener("DOMContentLoaded", () => {
+  const savedHtml = sessionStorage.getItem("trashport_chat_html");
+  const savedHistory = sessionStorage.getItem("trashport_chat_history");
+  if (savedHtml) {
+    const container = document.getElementById("chat-messages");
+    if (container && container.innerHTML.trim() === "") {
+      container.innerHTML = savedHtml;
+      greetingRendered = true;
+      scrollToBottom();
+    }
+  }
+  if (savedHistory) {
+    try {
+      const parsed = JSON.parse(savedHistory);
+      if (Array.isArray(parsed) && history.length === 0) {
+        history.push(...parsed);
+      }
+    } catch (e) {}
+  }
+
   const input = document.getElementById("chat-input");
   if (input) {
     input.addEventListener("keydown", (event) => {
@@ -203,7 +231,10 @@ function renderChips(options, onSelect) {
     const button = document.createElement("button");
     button.className = "chip";
     button.innerText = option;
-    button.onclick = () => {
+    button.onclick = (e) => {
+      if (e && typeof e.stopPropagation === "function") {
+        e.stopPropagation();
+      }
       onSelect(option);
       chipRow.remove();
     };
@@ -287,24 +318,54 @@ function scrollToBottom() {
 
 function handleResponse(data) {
   switch (data.type) {
+    case "greeting":
+      if (!greetingRendered) {
+        renderBotMessage(data.message);
+        greetingRendered = true;
+      }
+      break;
     case "text":
+      // Deduplicate if greeting was sent as standard text or on reconnect
+      if (data.message && data.message.startsWith("Hi ") && data.message.includes("How can I help you today?")) {
+        if (!greetingRendered) {
+          renderBotMessage(data.message);
+          greetingRendered = true;
+        }
+        break;
+      }
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       break;
     case "action_done":
       renderSuccess(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
+      saveChatToSession();
+      // If user is on dashboard, reload page after a moment so the newly added pickup appears immediately!
+      if (window.location.pathname.includes("dashboard") || window.location.pathname === "/") {
+        setTimeout(() => {
+          saveChatToSession();
+          window.location.reload();
+        }, 1200);
+      }
       break;
     case "ask":
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       if (Array.isArray(data.options)) {
         renderChips(data.options, sendChip);
       }
       break;
     case "redirect":
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       setTimeout(() => {
         window.location.href = data.url;
       }, 1200);

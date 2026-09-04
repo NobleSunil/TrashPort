@@ -40,7 +40,7 @@
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.id }}</h2>
+          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.display_id }}</h2>
           <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
         </div>
 
@@ -76,12 +76,20 @@
               {% endif %}
             </p>
             <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
-            <p class="mb-2">
+            <p class="mb-2 d-flex align-items-center flex-wrap gap-2">
               <strong>Payment Status:</strong>
               {% if pickup.is_paid %}
                 <span class="badge bg-success">Paid</span>
+                <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank" class="btn btn-sm btn-outline-success">
+                  <i class="fas fa-file-invoice me-1"></i> Download Tax Invoice
+                </a>
               {% else %}
                 <span class="badge bg-danger">Unpaid</span>
+                {% if pickup.status == 'AWAITING_PAYMENT' %}
+                  <a href="{% url 'waste_management:payment_checkout' pickup.id %}" class="btn btn-sm btn-success fw-bold">
+                    <i class="fas fa-credit-card me-1"></i> Pay Rs. {{ pickup.fee }}
+                  </a>
+                {% endif %}
               {% endif %}
             </p>
           </div>

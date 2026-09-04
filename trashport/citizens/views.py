@@ -34,16 +34,18 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         context["role"] = user.role
 
-        # Active pickups that are not completed and not cancelled
+        # Active pickups that are not completed and not cancelled (newest first)
         context["active_pickups"] = PickupRequest.objects.filter(
             citizen=user
-        ).exclude(status=PickupRequest.StatusChoices.COMPLETED).exclude(status=PickupRequest.StatusChoices.CANCELLED).order_by("-schedule_date")
+        ).exclude(
+            status__in=[PickupRequest.StatusChoices.COMPLETED, PickupRequest.StatusChoices.CANCELLED]
+        ).select_related("category", "address", "collector").order_by("-created_at")
         
         # History of completed pickups
         context["past_pickups"] = PickupRequest.objects.filter(
             citizen=user,
             status=PickupRequest.StatusChoices.COMPLETED
-        ).order_by("-schedule_date")
+        ).select_related("category", "address", "collector").order_by("-created_at")
         
         context["addresses"] = Address.objects.filter(user=user)
         context["complaints"] = Complaint.objects.filter(citizen=user).order_by("-created_at")
@@ -65,9 +67,22 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         context["pending_payment_count"] = context["active_pickups"].filter(
             status=PickupRequest.StatusChoices.AWAITING_PAYMENT
         ).count()
-        context["address_count"] = context["addresses"].count()
+        # Completed payment transactions for the citizen
+        context["payment_transactions"] = PaymentTransaction.objects.filter(
+            user=user,
+            status=PaymentTransaction.Statuses.COMPLETED
+        ).order_by("-created_at")
+        context["transaction_count"] = context["payment_transactions"].count()
+
+        # Paid pickup requests eligible for tax invoices
+        context["paid_pickups"] = PickupRequest.objects.filter(
+            citizen=user,
+            is_paid=True
+        ).select_related("category", "address").order_by("-updated_at")
+        context["invoice_count"] = context["paid_pickups"].count()
 
         return context
+
 
 
 # ==============================================================================
@@ -460,3 +475,60 @@ class CitizenPaymentSuccessView(LoginRequiredMixin, View):
             "result": result,
             "transaction": transaction,
         })
+
+
+class CitizenInvoiceView(LoginRequiredMixin, View):
+    """
+    Renders and allows printing/downloading an official Tax Invoice / Payment Receipt
+    for a paid pickup request.
+    Restricted to the request's owner (citizen) or an administrator.
+    """
+    template_name = "citizen/invoice.html"
+
+    def get(self, request, pk, *args, **kwargs):
+        pickup = get_object_or_404(
+            PickupRequest.objects.select_related("citizen", "category", "address", "collector"),
+            pk=pk,
+        )
+
+        # Authorization check: owner or admin/superuser
+        if pickup.citizen != request.user and not (getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser):
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden("You do not have permission to view this invoice.")
+
+        # Check if pickup is paid
+        if not pickup.is_paid:
+            messages.warning(request, "This pickup has not been paid for yet. Please complete payment to view the invoice.")
+            if pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT:
+                return redirect("waste_management:payment_checkout", pk=pickup.pk)
+            return redirect("waste_management:pickup_detail", pk=pickup.pk)
+
+        # Retrieve matching completed payment transaction
+        transaction = PaymentTransaction.objects.filter(
+            user=pickup.citizen,
+            description__icontains=f"Pickup #{pickup.id}",
+            status=PaymentTransaction.Statuses.COMPLETED,
+        ).order_by("-created_at").first()
+
+        # Compute line-item breakdown
+        base_rate = pickup.category.fee_per_kg if pickup.category else Decimal("0.00")
+        base_amount = Decimal(str(pickup.weight_kg)) * Decimal(str(base_rate))
+        extra_fee = pickup.extra_fee or Decimal("0.00")
+        total_amount = pickup.fee
+
+        # Invoice number format: INV-YYYY-00000{id}
+        invoice_year = pickup.created_at.year if pickup.created_at else timezone.now().year
+        invoice_number = f"INV-{invoice_year}-{pickup.id:05d}"
+
+        from django.shortcuts import render
+        return render(request, self.template_name, {
+            "pickup": pickup,
+            "transaction": transaction,
+            "invoice_number": invoice_number,
+            "invoice_date": transaction.created_at if transaction else pickup.updated_at,
+            "base_rate": base_rate,
+            "base_amount": base_amount,
+            "extra_fee": extra_fee,
+            "total_amount": total_amount,
+        })
+

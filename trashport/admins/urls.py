@@ -10,6 +10,7 @@ from waste_management.views import (
     SubscriptionOverviewView,
     ExportPickupsCSVView,
     ExportRevenueCSVView,
+    OperationsReportView,
 )
 
 app_name = "admins"
@@ -23,6 +24,7 @@ urlpatterns = [
     path("users/", UserListView.as_view(), name="user_list"),
     path("auto-assign/", AutoAssignPickupsView.as_view(), name="auto_assign"),
     path("subscriptions/", SubscriptionOverviewView.as_view(), name="subscription_overview"),
+    path("reports/operations/", OperationsReportView.as_view(), name="operations_report"),
     path("export/pickups/", ExportPickupsCSVView.as_view(), name="export_pickups"),
     path("export/revenue/", ExportRevenueCSVView.as_view(), name="export_revenue"),
 ]

@@ -31,12 +31,12 @@ echo.
 echo [*] Starting Django development server...
 echo.
 echo =========================================
-echo   Server running at: http://127.0.0.1:8000
-echo   Dashboard URL:     http://127.0.0.1:8000/dashboard/
+echo   Server running at: http://127.0.0.1:8001
+echo   Dashboard URL:     http://127.0.0.1:8001/dashboard/
 echo   Press CTRL+C to stop
 echo =========================================
 echo.
 
-python manage.py runserver 8000
+python manage.py runserver 8001
 
 pause

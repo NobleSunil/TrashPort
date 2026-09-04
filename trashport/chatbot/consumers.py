@@ -32,7 +32,12 @@ def _get_user_by_uid(uid):
     return user
 
 def _get_active_pickups(user):
-    return list(PickupRequest.objects.filter(citizen=user).exclude(status="CANCELLED"))
+    return list(
+        PickupRequest.objects.filter(citizen=user)
+        .select_related("address", "category")
+        .exclude(status="CANCELLED")
+        .order_by("-id")
+    )
 
 class ChatbotConsumer(AsyncWebsocketConsumer):
     """
@@ -70,7 +75,7 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
 
             name = user.name or user.email
             await self.send(json.dumps({
-                "type": "text",
+                "type": "greeting",
                 "message": f"Hi {name}! How can I help you today?"
             }))
 

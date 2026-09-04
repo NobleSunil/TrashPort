@@ -522,6 +522,258 @@ class AdminSubscriptionOverviewView(LoginRequiredMixin, ListView):
 
 
 # ==============================================================================
+# Operations & Analytics Report View
+# ==============================================================================
+
+from datetime import date, datetime, timedelta
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+
+
+class AdminOperationsReportView(LoginRequiredMixin, TemplateView):
+    """
+    Renders comprehensive operations and financial analytics report for administrators.
+    Supports custom duration selection (presets or start/end date pickers),
+    computes key performance indicators, generates multi-dimensional Chart.js visual graphs,
+    and provides dedicated print/PDF styling and duration-filtered CSV exports.
+    """
+    template_name = "admin/operations_report.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context["role"] = user.role
+
+        today = timezone.localdate()
+        duration = self.request.GET.get("duration", "").strip()
+        start_date_str = self.request.GET.get("start_date", "").strip()
+        end_date_str = self.request.GET.get("end_date", "").strip()
+
+        start_date = None
+        end_date = None
+
+        # Parse duration presets or custom date range
+        if start_date_str or end_date_str:
+            duration = "custom"
+            if start_date_str:
+                start_date = parse_date(start_date_str)
+            if end_date_str:
+                end_date = parse_date(end_date_str)
+        elif duration == "today":
+            start_date = today
+            end_date = today
+        elif duration == "yesterday":
+            start_date = today - timedelta(days=1)
+            end_date = today - timedelta(days=1)
+        elif duration == "7days":
+            start_date = today - timedelta(days=6)
+            end_date = today
+        elif duration == "30days":
+            start_date = today - timedelta(days=29)
+            end_date = today
+        elif duration == "this_month":
+            start_date = today.replace(day=1)
+            end_date = today
+        elif duration == "last_month":
+            first_day_current_month = today.replace(day=1)
+            last_day_last_month = first_day_current_month - timedelta(days=1)
+            start_date = last_day_last_month.replace(day=1)
+            end_date = last_day_last_month
+        elif duration == "year":
+            start_date = today.replace(month=1, day=1)
+            end_date = today
+        elif duration == "all":
+            start_date = None
+            end_date = None
+        else:
+            duration = "30days"
+            start_date = today - timedelta(days=29)
+            end_date = today
+
+        context["duration"] = duration
+        context["start_date"] = start_date.strftime("%Y-%m-%d") if start_date else ""
+        context["end_date"] = end_date.strftime("%Y-%m-%d") if end_date else ""
+        context["today"] = today.strftime("%Y-%m-%d")
+        context["generated_at"] = timezone.now()
+
+        # Date range human-readable display
+        if duration == "all":
+            context["date_range_display"] = "All Time"
+        elif start_date and end_date:
+            if start_date == end_date:
+                context["date_range_display"] = start_date.strftime("%B %d, %Y")
+            else:
+                context["date_range_display"] = f"{start_date.strftime('%b %d, %Y')} - {end_date.strftime('%b %d, %Y')}"
+        elif start_date:
+            context["date_range_display"] = f"From {start_date.strftime('%b %d, %Y')}"
+        elif end_date:
+            context["date_range_display"] = f"Until {end_date.strftime('%b %d, %Y')}"
+        else:
+            context["date_range_display"] = "All Time"
+
+        # Filter base querysets
+        pickups_qs = PickupRequest.objects.all()
+        complaints_qs = Complaint.objects.all()
+
+        if start_date:
+            pickups_qs = pickups_qs.filter(created_at__date__gte=start_date)
+            complaints_qs = complaints_qs.filter(created_at__date__gte=start_date)
+        if end_date:
+            pickups_qs = pickups_qs.filter(created_at__date__lte=end_date)
+            complaints_qs = complaints_qs.filter(created_at__date__lte=end_date)
+
+        # Operational KPIs
+        total_pickups = pickups_qs.count()
+        completed_pickups = pickups_qs.filter(status=PickupRequest.StatusChoices.COMPLETED).count()
+        cancelled_pickups = pickups_qs.filter(status=PickupRequest.StatusChoices.CANCELLED).count()
+        pending_pickups = pickups_qs.filter(status=PickupRequest.StatusChoices.PENDING).count()
+        in_progress_pickups = pickups_qs.filter(
+            status__in=[PickupRequest.StatusChoices.ASSIGNED, PickupRequest.StatusChoices.IN_TRANSIT]
+        ).count()
+        completion_rate = round((completed_pickups / total_pickups * 100), 1) if total_pickups > 0 else 0
+
+        total_weight_kg = pickups_qs.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("weight_kg"))["total"] or 0
+        total_revenue = pickups_qs.filter(is_paid=True).aggregate(total=Sum("fee"))["total"] or 0
+        total_collector_payouts = pickups_qs.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("collector_earnings"))["total"] or 0
+        total_points_earned = pickups_qs.aggregate(total=Sum("points_earned"))["total"] or 0
+        net_margin = float(total_revenue) - float(total_collector_payouts)
+
+        total_complaints = complaints_qs.count()
+        resolved_complaints = complaints_qs.filter(status=Complaint.StatusChoices.RESOLVED).count()
+
+        context["total_pickups"] = total_pickups
+        context["completed_pickups"] = completed_pickups
+        context["cancelled_pickups"] = cancelled_pickups
+        context["pending_pickups"] = pending_pickups
+        context["in_progress_pickups"] = in_progress_pickups
+        context["completion_rate"] = completion_rate
+        context["total_weight_kg"] = float(total_weight_kg)
+        context["total_revenue"] = float(total_revenue)
+        context["total_collector_payouts"] = float(total_collector_payouts)
+        context["net_margin"] = float(net_margin)
+        context["total_points_earned"] = total_points_earned
+        context["total_complaints"] = total_complaints
+        context["resolved_complaints"] = resolved_complaints
+
+        # Category Performance Breakdown
+        categories = WasteCategory.objects.all()
+        category_report = []
+        for cat in categories:
+            cat_pickups = pickups_qs.filter(category=cat)
+            cat_completed = cat_pickups.filter(status=PickupRequest.StatusChoices.COMPLETED)
+            cat_paid = cat_pickups.filter(is_paid=True)
+
+            c_count = cat_pickups.count()
+            c_completed_count = cat_completed.count()
+            c_weight = float(cat_completed.aggregate(total=Sum("weight_kg"))["total"] or 0)
+            c_revenue = float(cat_paid.aggregate(total=Sum("fee"))["total"] or 0)
+            c_payout = float(cat_completed.aggregate(total=Sum("collector_earnings"))["total"] or 0)
+            c_margin = c_revenue - c_payout
+
+            category_report.append({
+                "category": cat,
+                "count": c_count,
+                "completed": c_completed_count,
+                "weight_kg": c_weight,
+                "revenue": c_revenue,
+                "payout": c_payout,
+                "margin": c_margin,
+            })
+        category_report.sort(key=lambda x: x["weight_kg"], reverse=True)
+        context["category_report"] = category_report
+
+        # Graph 1: Timeline Trend (Daily or Date Bins)
+        days_span = (end_date - start_date).days + 1 if (start_date and end_date) else 30
+        trend_labels = []
+        trend_total_counts = []
+        trend_completed_counts = []
+        trend_revenues = []
+        trend_payouts = []
+
+        if start_date and end_date and days_span <= 62:
+            date_cursor = start_date
+            dates_list = []
+            while date_cursor <= end_date:
+                dates_list.append(date_cursor)
+                date_cursor += timedelta(days=1)
+
+            daily_stats = (
+                pickups_qs.annotate(day=TruncDate("created_at"))
+                .values("day")
+                .annotate(
+                    total=Count("id"),
+                    completed=Count("id", filter=Q(status=PickupRequest.StatusChoices.COMPLETED)),
+                    revenue=Sum("fee", filter=Q(is_paid=True)),
+                    payout=Sum("collector_earnings", filter=Q(status=PickupRequest.StatusChoices.COMPLETED)),
+                )
+            )
+            daily_dict = {item["day"]: item for item in daily_stats if item["day"]}
+
+            for d in dates_list:
+                trend_labels.append(d.strftime("%b %d"))
+                stat = daily_dict.get(d)
+                if stat:
+                    trend_total_counts.append(stat["total"])
+                    trend_completed_counts.append(stat["completed"])
+                    trend_revenues.append(float(stat["revenue"] or 0))
+                    trend_payouts.append(float(stat["payout"] or 0))
+                else:
+                    trend_total_counts.append(0)
+                    trend_completed_counts.append(0)
+                    trend_revenues.append(0.0)
+                    trend_payouts.append(0.0)
+        else:
+            daily_stats = (
+                pickups_qs.annotate(day=TruncDate("created_at"))
+                .values("day")
+                .annotate(
+                    total=Count("id"),
+                    completed=Count("id", filter=Q(status=PickupRequest.StatusChoices.COMPLETED)),
+                    revenue=Sum("fee", filter=Q(is_paid=True)),
+                    payout=Sum("collector_earnings", filter=Q(status=PickupRequest.StatusChoices.COMPLETED)),
+                )
+                .order_by("day")
+            )
+            for item in daily_stats:
+                if item["day"]:
+                    fmt = "%b %d, %Y" if days_span > 90 else "%b %d"
+                    trend_labels.append(item["day"].strftime(fmt))
+                    trend_total_counts.append(item["total"])
+                    trend_completed_counts.append(item["completed"])
+                    trend_revenues.append(float(item["revenue"] or 0))
+                    trend_payouts.append(float(item["payout"] or 0))
+
+        context["trend_labels_json"] = json.dumps(trend_labels)
+        context["trend_total_counts_json"] = json.dumps(trend_total_counts)
+        context["trend_completed_counts_json"] = json.dumps(trend_completed_counts)
+        context["trend_revenues_json"] = json.dumps(trend_revenues)
+        context["trend_payouts_json"] = json.dumps(trend_payouts)
+
+        # Graph 2: Category Weight Distribution
+        cat_labels = [item["category"].name for item in category_report if item["weight_kg"] > 0]
+        cat_weights = [item["weight_kg"] for item in category_report if item["weight_kg"] > 0]
+        if not cat_labels:
+            cat_labels = [item["category"].name for item in category_report]
+            cat_weights = [item["weight_kg"] for item in category_report]
+        context["cat_labels_json"] = json.dumps(cat_labels)
+        context["cat_weights_json"] = json.dumps(cat_weights)
+
+        # Graph 3: Status Breakdown
+        status_labels = ["Completed", "Assigned / In Transit", "Pending / Awaiting Payment", "Cancelled"]
+        pending_and_payment = pending_pickups + pickups_qs.filter(status=PickupRequest.StatusChoices.AWAITING_PAYMENT).count()
+        status_counts = [completed_pickups, in_progress_pickups, pending_and_payment, cancelled_pickups]
+        context["status_labels_json"] = json.dumps(status_labels)
+        context["status_counts_json"] = json.dumps(status_counts)
+
+        # Table rows of recent pickups in this period (up to 100)
+        context["recent_pickups"] = (
+            pickups_qs.select_related("citizen", "address", "category", "collector")
+            .order_by("-created_at")[:100]
+        )
+        return context
+
+
+# ==============================================================================
 # Data Export Views (CSV Output)
 # ==============================================================================
 
@@ -531,7 +783,7 @@ from django.http import HttpResponse
 
 class AdminExportPickupsCSVView(LoginRequiredMixin, View):
     """
-    Generates a CSV report of all pickup requests in the system.
+    Generates a CSV report of pickup requests in the system, optionally filtered by date range.
     """
     def get(self, request, *args, **kwargs):
         response = HttpResponse(content_type="text/csv")
@@ -540,7 +792,20 @@ class AdminExportPickupsCSVView(LoginRequiredMixin, View):
         writer = csv.writer(response)
         writer.writerow(["ID", "Customer Email", "Customer Name", "City", "Category", "Weight (kg)", "Fee (Rs.)", "Points", "Status", "Collector", "Schedule Date", "Created At"])
 
-        pickups = PickupRequest.objects.select_related("citizen", "address", "category", "collector").all().order_by("-created_at")
+        pickups = PickupRequest.objects.select_related("citizen", "address", "category", "collector").all()
+
+        start_date_str = request.GET.get("start_date", "").strip()
+        end_date_str = request.GET.get("end_date", "").strip()
+        if start_date_str:
+            s_date = parse_date(start_date_str)
+            if s_date:
+                pickups = pickups.filter(created_at__date__gte=s_date)
+        if end_date_str:
+            e_date = parse_date(end_date_str)
+            if e_date:
+                pickups = pickups.filter(created_at__date__lte=e_date)
+
+        pickups = pickups.order_by("-created_at")
         for p in pickups:
             writer.writerow([
                 p.id,
@@ -561,25 +826,41 @@ class AdminExportPickupsCSVView(LoginRequiredMixin, View):
 
 class AdminExportRevenueCSVView(LoginRequiredMixin, View):
     """
-    Generates a CSV financial report summarizing paid collection fees and category totals.
+    Generates a CSV financial report summarizing collection fees and category totals,
+    optionally filtered by date range.
     """
     def get(self, request, *args, **kwargs):
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="trashport_revenue_report.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(["Category", "Total Completed Pickups", "Total Recycled Weight (kg)", "Total Revenue (Rs.)", "Total Points Rewarded"])
+        writer.writerow(["Category", "Total Pickups", "Completed Pickups", "Total Recycled Weight (kg)", "Total Revenue (Rs.)", "Collector Payouts (Rs.)", "Net Margin (Rs.)", "Total Points Rewarded"])
+
+        start_date_str = request.GET.get("start_date", "").strip()
+        end_date_str = request.GET.get("end_date", "").strip()
+        s_date = parse_date(start_date_str) if start_date_str else None
+        e_date = parse_date(end_date_str) if end_date_str else None
 
         cats = WasteCategory.objects.all()
         for c in cats:
-            completed_qs = PickupRequest.objects.filter(category=c, status=PickupRequest.StatusChoices.COMPLETED)
-            paid_qs = PickupRequest.objects.filter(category=c, is_paid=True)
+            qs = PickupRequest.objects.filter(category=c)
+            if s_date:
+                qs = qs.filter(created_at__date__gte=s_date)
+            if e_date:
+                qs = qs.filter(created_at__date__lte=e_date)
 
-            count = completed_qs.count()
+            total_count = qs.count()
+            completed_qs = qs.filter(status=PickupRequest.StatusChoices.COMPLETED)
+            paid_qs = qs.filter(is_paid=True)
+
+            completed_count = completed_qs.count()
             weight = completed_qs.aggregate(total=Sum("weight_kg"))["total"] or 0
             revenue = paid_qs.aggregate(total=Sum("fee"))["total"] or 0
-            points = PickupRequest.objects.filter(category=c).aggregate(total=Sum("points_earned"))["total"] or 0
+            payout = completed_qs.aggregate(total=Sum("collector_earnings"))["total"] or 0
+            margin = float(revenue) - float(payout)
+            points = qs.aggregate(total=Sum("points_earned"))["total"] or 0
 
-            writer.writerow([c.name, count, weight, revenue, points])
+            writer.writerow([c.name, total_count, completed_count, weight, revenue, payout, margin, points])
         return response
+
 
