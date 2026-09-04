@@ -277,9 +277,12 @@
               routePolyline.setLatLngs([[cLat, cLng], [pickupLat, pickupLng]]);
             });
 
-          // Fit bounds to fit both markers
-          let bounds = L.latLngBounds([[pickupLat, pickupLng], [cLat, cLng]]);
-          map.fitBounds(bounds, { padding: [40, 40] });
+          // Fit bounds smoothly on initial load without jarring repetitive re-centering
+          if (!boundsFitted) {
+            let bounds = L.latLngBounds([[pickupLat, pickupLng], [cLat, cLng]]);
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+            boundsFitted = true;
+          }
         } else {
           if (data.distance_km !== undefined) {
             document.getElementById('hudDistance').textContent = `${data.distance_km} km`;
@@ -288,29 +291,75 @@
         }
       }
 
+      let boundsFitted = false;
+      let lastFetchedLat = null;
+      let lastFetchedLng = null;
+      let isTrackingFetch = false;
+
       function fetchLiveTracking() {
+        if (isTrackingFetch || document.hidden) return;
+        isTrackingFetch = true;
         fetch(`/api/maps/tracking/${pickupId}/`)
           .then(res => res.json())
           .then(data => updateTrackingUI(data))
-          .catch(err => console.error("Tracking API error:", err));
+          .catch(err => console.error("Tracking API error:", err))
+          .finally(() => {
+            isTrackingFetch = false;
+          });
       }
 
-      // Initial Fetch & 4s Polling Interval
-      fetchLiveTracking();
-      setInterval(fetchLiveTracking, 4000);
+      let trackingInterval = null;
+      function startTrackingPoll() {
+        if (!trackingInterval) {
+          fetchLiveTracking();
+          trackingInterval = setInterval(fetchLiveTracking, 5000);
+        }
+      }
+      function stopTrackingPoll() {
+        if (trackingInterval) {
+          clearInterval(trackingInterval);
+          trackingInterval = null;
+        }
+      }
 
-      // Optional WebSocket Connection
+      startTrackingPoll();
+
+      let trackingSocket = null;
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${window.location.host}/ws/maps/tracking/${pickupId}/`;
       try {
-        const socket = new WebSocket(wsUrl);
-        socket.onmessage = function (e) {
+        trackingSocket = new WebSocket(wsUrl);
+        trackingSocket.onopen = function () {
+          // If WebSocket connects, slow down HTTP polling to save mobile battery
+          stopTrackingPoll();
+        };
+        trackingSocket.onmessage = function (e) {
           const data = JSON.parse(e.data);
           updateTrackingUI(data);
         };
+        trackingSocket.onerror = function () {
+          startTrackingPoll();
+        };
+        trackingSocket.onclose = function () {
+          startTrackingPoll();
+        };
       } catch (e) {
-        console.log("WebSocket fallback to HTTP polling.");
+        startTrackingPoll();
       }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stopTrackingPoll();
+        } else if (!trackingSocket || trackingSocket.readyState !== WebSocket.OPEN) {
+          startTrackingPoll();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        stopTrackingPoll();
+        if (trackingSocket) trackingSocket.close();
+        map.remove();
+      });
     });
   </script>
 {% endblock inline_javascript %}

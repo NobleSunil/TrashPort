@@ -1,14 +1,29 @@
-const sessionKey = crypto.randomUUID();
+const sessionKey = (window.crypto && typeof window.crypto.randomUUID === "function")
+  ? window.crypto.randomUUID()
+  : (Math.random().toString(36).substring(2) + Date.now().toString(36));
+
 const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(typeof FIREBASE_TOKEN !== "undefined" ? FIREBASE_TOKEN : "")}`;
 
 let ws = null;
 let reconnectTimeout = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 let messageQueue = [];
 
 const history = []; // in-memory, max 20 items
 let lastUserMessage = "";
 let greetingRendered = false;
+
+// DOM Memory Cap for low-end mobile devices (max 40 messages retained in DOM)
+const MAX_DOM_MESSAGES = 40;
+function pruneOldMessages() {
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+  while (container.children.length > MAX_DOM_MESSAGES) {
+    container.removeChild(container.firstElementChild);
+  }
+}
 
 function getCookie(name) {
   let cookieValue = null;
@@ -26,6 +41,10 @@ function getCookie(name) {
 }
 
 function connectWebSocket() {
+  if (document.hidden) {
+    // Delay connection if tab is in background on low-end device
+    return;
+  }
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
@@ -35,6 +54,7 @@ function connectWebSocket() {
 
     ws.onopen = () => {
       console.log("Chatbot WebSocket connected.");
+      reconnectAttempts = 0;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
@@ -65,30 +85,47 @@ function connectWebSocket() {
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket connection error:", error);
       removeThinkingIndicator();
     };
 
     ws.onclose = () => {
-      console.warn("WebSocket connection closed. Attempting reconnect...");
       removeThinkingIndicator();
-      if (!reconnectTimeout) {
-        reconnectTimeout = setTimeout(() => {
-          reconnectTimeout = null;
-          connectWebSocket();
-        }, 2000);
+      if (document.hidden) return; // Don't churn battery in background tab
+
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const backoffMs = Math.min(2000 * Math.pow(1.5, reconnectAttempts), 15000);
+        if (!reconnectTimeout) {
+          reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            connectWebSocket();
+          }, backoffMs);
+        }
+      } else {
+        console.warn("Chatbot WebSocket paused after max reconnect attempts.");
       }
     };
   } catch (err) {
-    console.error("Error initializing WebSocket:", err);
-    if (!reconnectTimeout) {
-      reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        connectWebSocket();
-      }, 3000);
-    }
+    removeThinkingIndicator();
   }
 }
+
+// Pause/resume on visibility change to preserve mobile memory and CPU
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && (!ws || ws.readyState === WebSocket.CLOSED)) {
+    reconnectAttempts = 0;
+    connectWebSocket();
+  }
+});
+
+// Clean up socket on unload
+window.addEventListener("beforeunload", () => {
+  if (reconnectTimeout) clearTimeout(reconnectTimeout);
+  if (ws) {
+    ws.onclose = null; // Prevent reconnect loop
+    ws.close();
+  }
+});
 
 // Initialize connection
 connectWebSocket();
@@ -160,8 +197,13 @@ function sendChip(message) {
 function saveChatToSession() {
   const container = document.getElementById("chat-messages");
   if (container) {
-    sessionStorage.setItem("trashport_chat_html", container.innerHTML);
-    sessionStorage.setItem("trashport_chat_history", JSON.stringify(history));
+    try {
+      pruneOldMessages();
+      sessionStorage.setItem("trashport_chat_html", container.innerHTML);
+      sessionStorage.setItem("trashport_chat_history", JSON.stringify(history));
+    } catch (err) {
+      console.warn("Storage quota exceeded or disabled:", err);
+    }
   }
 }
 
@@ -200,6 +242,7 @@ function renderUserMessage(text) {
   const container = document.getElementById("chat-messages");
   if (!container) return;
 
+  pruneOldMessages();
   const bubble = document.createElement("div");
   bubble.className = "msg-bubble user";
   bubble.innerText = text;
@@ -212,6 +255,7 @@ function renderBotMessage(text) {
   const container = document.getElementById("chat-messages");
   if (!container) return;
 
+  pruneOldMessages();
   const bubble = document.createElement("div");
   bubble.className = "msg-bubble bot";
   bubble.innerText = text;

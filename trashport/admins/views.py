@@ -133,7 +133,9 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["status_choices"] = PickupRequest.StatusChoices.choices
 
         # Dashboard components
-        context["complaints"] = Complaint.objects.filter(status=Complaint.StatusChoices.PENDING).order_by("-created_at")
+        context["complaints"] = Complaint.objects.filter(
+            status=Complaint.StatusChoices.PENDING
+        ).select_related("citizen", "pickup_request").order_by("-created_at")[:15]
         context["categories"] = WasteCategory.objects.all()
         context["tiers"] = SubscriptionTier.objects.all()
 

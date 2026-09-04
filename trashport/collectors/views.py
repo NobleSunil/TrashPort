@@ -78,8 +78,9 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
             p.calculated_distance_km = dist
             p.calculated_earnings = p.calculate_collector_earnings()
 
-        # Sort nearest first!
+        # Sort nearest first and cap to closest 50 opportunities for smooth mobile rendering
         unassigned_list.sort(key=lambda item: item.calculated_distance_km)
+        unassigned_list = unassigned_list[:50]
 
         context["unassigned_pickups"] = unassigned_list
         context["collector_lat"] = col_lat

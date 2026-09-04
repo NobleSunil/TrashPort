@@ -48,10 +48,10 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         ).select_related("category", "address", "collector").order_by("-created_at")
         
         context["addresses"] = Address.objects.filter(user=user)
-        context["complaints"] = Complaint.objects.filter(citizen=user).order_by("-created_at")
+        context["complaints"] = Complaint.objects.filter(citizen=user).select_related("pickup_request").order_by("-created_at")[:10]
         
         # Subscription details
-        context["subscription"] = Subscription.objects.filter(user=user, is_active=True).first()
+        context["subscription"] = Subscription.objects.filter(user=user, is_active=True).select_related("tier").first()
         context["available_tiers"] = SubscriptionTier.objects.filter(is_active=True)
         context["waste_categories"] = WasteCategory.objects.all().order_by("name")
 

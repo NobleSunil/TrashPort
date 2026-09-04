@@ -254,6 +254,19 @@
           }
         });
 
+        // Prune completed/cancelled pickup markers from map (prevents memory leak)
+        const activePickupIds = new Set(activePickups.map(p => p.id));
+        Object.keys(pickupMarkers).forEach(id => {
+          if (!activePickupIds.has(Number(id))) {
+            map.removeLayer(pickupMarkers[id]);
+            delete pickupMarkers[id];
+            if (routePolylines[id]) {
+              map.removeLayer(routePolylines[id]);
+              delete routePolylines[id];
+            }
+          }
+        });
+
         // 2. Render/Update Collector Markers (Green = Assigned, Red = Free)
         activeCollectors.forEach(c => {
           let lat = c.latitude;
@@ -296,6 +309,15 @@
             collectorMarkers[c.collector_id].setOpacity(0.3);
           } else {
             collectorMarkers[c.collector_id].setOpacity(1.0);
+          }
+        });
+
+        // Prune disconnected collector markers from map (prevents memory leak)
+        const activeCollectorIds = new Set(activeCollectors.map(c => c.collector_id));
+        Object.keys(collectorMarkers).forEach(id => {
+          if (!activeCollectorIds.has(Number(id))) {
+            map.removeLayer(collectorMarkers[id]);
+            delete collectorMarkers[id];
           }
         });
 
@@ -406,15 +428,50 @@
         selectCollector(collectorId);
       };
 
+      let isFetching = false;
       function loadLiveOverview() {
+        if (isFetching || document.hidden) return;
+        isFetching = true;
         fetch('/api/maps/live-overview/')
           .then(res => res.json())
-          .then(data => renderOverview(data))
-          .catch(err => console.error("Admin Live Overview API Error:", err));
+          .then(data => {
+            renderOverview(data);
+          })
+          .catch(err => console.error("Admin Live Overview API Error:", err))
+          .finally(() => {
+            isFetching = false;
+          });
       }
 
-      loadLiveOverview();
-      setInterval(loadLiveOverview, 3000);
+      // Memory & CPU friendly polling (pauses when browser tab is inactive)
+      let livePollInterval = null;
+      function startLivePolling() {
+        if (!livePollInterval) {
+          loadLiveOverview();
+          livePollInterval = setInterval(loadLiveOverview, 4000);
+        }
+      }
+      function stopLivePolling() {
+        if (livePollInterval) {
+          clearInterval(livePollInterval);
+          livePollInterval = null;
+        }
+      }
+
+      startLivePolling();
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stopLivePolling();
+        } else {
+          startLivePolling();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        stopLivePolling();
+        map.remove();
+      });
 
       document.getElementById('refreshMapBtn')?.addEventListener('click', loadLiveOverview);
       document.getElementById('resetMapBtn')?.addEventListener('click', resetSelection);

@@ -1058,6 +1058,10 @@
         });
       });
     });
+
+    window.addEventListener('beforeunload', () => {
+      map.remove();
+    });
   });
 </script>
 {% endblock inline_javascript %}

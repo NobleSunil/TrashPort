@@ -61,6 +61,8 @@ else:
     }
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# Enable database connection pooling/reuse for low-end hardware & container performance
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
