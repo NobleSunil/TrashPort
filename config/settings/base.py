@@ -259,13 +259,13 @@ EMAIL_BACKEND = env(
 EMAIL_HOST = env("DJANGO_EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("DJANGO_EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("DJANGO_EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="albertcyriac443@gmail.com")
-EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="REDACTED_EMAIL_KEY")
+EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="TrashPort <albertcyriac443@gmail.com>",
+    default="TrashPort <noreply@trashport.com>",
 )
-SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <albertcyriac443@gmail.com>")
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <noreply@trashport.com>")
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 10
 
@@ -406,7 +406,7 @@ FIREBASE_CREDENTIALS_PATH = env("DJANGO_FIREBASE_CREDENTIALS", default=str(BASE_
 FIREBASE_CREDENTIALS = Path(FIREBASE_CREDENTIALS_PATH)
 FIREBASE_WEB_API_KEY = env("DJANGO_FIREBASE_WEB_API_KEY", default="YOUR_API_KEY")
 
-GROQ_API_KEY = env("GROQ_API_KEY")
+GROQ_API_KEY = env("GROQ_API_KEY", default="")
 CHATBOT_MODEL = env("CHATBOT_MODEL", default="llama-3.1-8b-instant")
 CHATBOT_MAX_TOKENS = env.int("CHATBOT_MAX_TOKENS", default=400)
 CHATBOT_MAX_HISTORY = env.int("CHATBOT_MAX_HISTORY", default=10)

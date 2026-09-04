@@ -82,19 +82,37 @@ Pre-configured debug targets are available in the repository. To debug in VS Cod
 
 ---
 
-## 🔐 Google OAuth 2.0 Configuration
+## 🔑 Secrets & Environment Configuration Guide
 
-TrashPort supports server-side Google OAuth 2.0 authentication for Citizens and Collectors.
+TrashPort uses a single root `.env` file and a `serviceAccountKey.json` credentials file for third-party integrations. For security, **real secrets, private keys, and API tokens are never committed to GitHub**.
 
-### 1. Environment Variables (`.env`)
-Ensure your `.env` file contains your Google OAuth Web Client credentials:
-```ini
-GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-your-client-secret
+### 1. Create Your Local `.env` File
+Copy the provided dummy template `.env.example` into a new `.env` file:
+```bash
+cp .env.example .env
 ```
+*(On Windows PowerShell: `Copy-Item .env.example .env`)*
 
-### 2. Google Cloud Console Setup
-To prevent `Error 400: redirect_uri_mismatch`, configure your OAuth 2.0 Web Client in [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials):
+### 2. Configure Your Secrets & API Credentials
+
+| Secret / Environment Variable | Purpose | How to Obtain / Configure |
+| :--- | :--- | :--- |
+| **`DATABASE_URL`** | PostgreSQL DB connection | Defaults to `postgres://debug:debug@127.0.0.1:5432/trashport` when running local Postgres container. (Or `sqlite:///db.sqlite3` for local SQLite development). |
+| **`REDIS_URL`** | Caching & WebSocket channels | Defaults to `redis://127.0.0.1:6379/0` when running local Redis container. |
+| **`GOOGLE_OAUTH_CLIENT_ID`<br>`GOOGLE_OAUTH_CLIENT_SECRET`** | Google One-Click Sign-In | 1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).<br>2. Create an **OAuth 2.0 Web Client ID**.<br>3. Add Authorized Redirect URI: `http://localhost:8001/users/google/callback/`.<br>4. Paste your Client ID and Secret into `.env`. |
+| **`DJANGO_FIREBASE_CREDENTIALS`<br>`DJANGO_FIREBASE_WEB_API_KEY`** | Firebase Authentication & Admin SDK | 1. Open [Firebase Console](https://console.firebase.google.com/) > **Project Settings** > **Service accounts** tab.<br>2. Click **Generate new private key** and download the `.json` file.<br>3. Save the file as `serviceAccountKey.json` in your project root *(see `serviceAccountKey.example.json` for structure)*.<br>4. Copy the Web API Key from the **General** tab into `DJANGO_FIREBASE_WEB_API_KEY`. |
+| **`GROQ_API_KEY`** | AI Assistant / Chatbot | 1. Sign in to [Groq Cloud Console](https://console.groq.com/keys).<br>2. Generate a new API key (`gsk_...`).<br>3. Paste it as `GROQ_API_KEY=gsk_...` in `.env`. |
+| **`DJANGO_EMAIL_HOST_USER`<br>`DJANGO_EMAIL_HOST_PASSWORD`** | Email & Password Reset (SMTP) | 1. Go to your Google Account > **Security**.<br>2. Enable **2-Step Verification**.<br>3. Generate an **App Password** (16 characters).<br>4. Set `DJANGO_EMAIL_HOST_USER=your_email@gmail.com` and `DJANGO_EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx`. |
+| **`STRIPE_PUBLIC_KEY`<br>`STRIPE_SECRET_KEY`<br>`STRIPE_WEBHOOK_SECRET`** | Online Payments | Obtain test API keys (`pk_test_...`, `sk_test_...`) from [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys). |
+
+> 🛡️ **Security Notice:**
+> Both `.env` and `serviceAccountKey.json` (as well as `*.key` and `*.pem`) are strictly listed in `.gitignore`. **Never commit actual API keys, passwords, or private key JSON files to version control.**
+
+---
+
+## 🔐 Google Cloud Console Setup
+
+To prevent `Error 400: redirect_uri_mismatch` during Google Login, ensure your OAuth 2.0 Web Client in [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials) has:
 
 * **Authorised redirect URIs** (Required):
   * `http://localhost:8001/users/google/callback/`

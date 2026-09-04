@@ -273,16 +273,20 @@ trashport/media/
 .pytest_cache/
 .ipython/
 .env
+.env.*
+!.env.example
 .envs/
 
 # Databases
 *.sqlite3
 
-# Firebase credentials
+# Firebase credentials & certificates
 serviceAccountKey.json
 serviceAccountKey.*.json
 !serviceAccountKey.example.json
 keys/*.json
 !keys/serviceAccountKey.example.json
+*.pem
+*.key
 
 
