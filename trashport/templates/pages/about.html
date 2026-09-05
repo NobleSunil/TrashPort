@@ -1,3 +1,112 @@
 {% extends "base.html" %}
+{% load static i18n %}
 
+{% block title %}About Us | TrashPort{% endblock title %}
 
+{% block content %}
+<div class="py-5">
+  <!-- Hero Section -->
+  <div class="text-center max-w-3xl mx-auto mb-5">
+    <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 rounded-pill mb-3 fs-6">
+      <i class="fas fa-leaf me-1"></i> About TrashPort
+    </span>
+    <h1 class="display-5 fw-bold text-dark mb-3">
+      Transforming Urban Waste Management Through Smart Logistics
+    </h1>
+    <p class="lead text-muted px-md-4">
+      TrashPort is an end-to-end, on-demand smart waste management and recycling platform designed to modernize urban sanitation. By bridging the gap between households, field collectors, and municipal authorities, we eliminate the inefficiencies of traditional static route scheduling. Our platform optimizes waste logistics through real-time pickup requests, AI-assisted customer service, and distance-based automated dispatching.
+    </p>
+  </div>
+
+  <!-- Mission Banner Card -->
+  <div class="card border-0 shadow-sm rounded-4 bg-dark text-white p-4 p-md-5 mb-5 overflow-hidden position-relative">
+    <div class="position-relative z-1">
+      <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-25 text-success rounded-circle p-3 mb-3">
+        <i class="fas fa-bullseye fa-2x"></i>
+      </div>
+      <h2 class="h3 fw-bold mb-3 text-white">Our Mission</h2>
+      <p class="fs-5 text-light opacity-90 mb-0 leading-relaxed" style="max-width: 900px;">
+        We aim to build a cleaner, more sustainable urban ecosystem by making waste collection transparent, efficient, and rewarding. We believe that by incentivizing citizens to recycle and empowering collectors with fair, automated earnings, we can revolutionize how cities handle their daily waste footprint.
+      </p>
+    </div>
+  </div>
+
+  <!-- Ecosystem Section -->
+  <div class="mb-5">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold text-dark">How the Ecosystem Works</h2>
+      <p class="text-muted">Designed for seamless collaboration between citizens, collectors, and city administrators.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- For Citizens -->
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
+          <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
+            <i class="fas fa-user-shield fa-xl"></i>
+          </div>
+          <h3 class="h5 fw-bold text-dark mb-2">For Citizens</h3>
+          <span class="badge bg-success bg-opacity-10 text-success fw-semibold mb-3 w-auto align-self-start">On-Demand & Rewarding</span>
+          <p class="text-secondary small mb-0">
+            Schedule waste collection on your terms. Citizens can easily book pickups, categorize their waste, and estimate weight—all assisted by our integrated Groq AI chatbot. Through our digital wallet system, users earn recycling incentive points for high-value categories, while active subscribers enjoy zero-fee routine collections.
+          </p>
+        </div>
+      </div>
+
+      <!-- For Collectors -->
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
+          <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
+            <i class="fas fa-truck-pickup fa-xl"></i>
+          </div>
+          <h3 class="h5 fw-bold text-dark mb-2">For Collectors</h3>
+          <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold mb-3 w-auto align-self-start">Optimized & Fair Routing</span>
+          <p class="text-secondary small mb-0">
+            We empower verified drivers with a live, geolocation-aware job board. Our automated dispatch engine uses proximity algorithms to assign the nearest available jobs. With on-site weight verification and automated commission calculations—factoring in both base fees and travel distance—collectors are guaranteed transparent and immediate digital payouts.
+          </p>
+        </div>
+      </div>
+
+      <!-- For Administrators -->
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
+          <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
+            <i class="fas fa-chart-line fa-xl"></i>
+          </div>
+          <h3 class="h5 fw-bold text-dark mb-2">For Administrators</h3>
+          <span class="badge bg-info bg-opacity-10 text-info fw-semibold mb-3 w-auto align-self-start">Complete Operational Oversight</span>
+          <p class="text-secondary small mb-0">
+            The Admin Control Room is the central nervous system of TrashPort. City authorities and platform managers gain real-time visibility through live GPS fleet tracking, automated compliance audits, and dynamic dashboard analytics covering revenue, recycled tonnage, and collector payouts.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tech Stack Section -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-light mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-4 text-center text-lg-start">
+        <div class="d-inline-flex align-items-center justify-content-center bg-dark text-white rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
+          <i class="fas fa-microchip fa-xl"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">Powered by Modern Technology</h3>
+        <p class="text-muted small mb-0">Scalable, fast, and secure infrastructure designed for modern civic operations.</p>
+      </div>
+      <div class="col-lg-8">
+        <p class="text-secondary mb-4">
+          TrashPort is built for scale and speed. Powered by a robust Django framework, REST APIs, and PostgreSQL, the platform integrates Stripe for seamless payments and Haversine distance calculations for precision routing. It is a comprehensive technological solution for a complex civic challenge.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-python text-primary me-1"></i> Django 5</span>
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-database text-info me-1"></i> PostgreSQL</span>
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-stripe text-indigo me-1"></i> Stripe Payments</span>
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-robot text-success me-1"></i> Groq AI Chatbot</span>
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-map-marked-alt text-warning me-1"></i> Leaflet / Maps</span>
+          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-docker text-primary me-1"></i> Docker & Redis</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
