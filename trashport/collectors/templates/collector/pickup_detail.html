@@ -390,6 +390,12 @@
           this.classList.add('btn-success');
         }
       });
+
+      window.addEventListener('beforeunload', () => {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        if (simInterval) clearInterval(simInterval);
+        map.remove();
+      });
     });
   </script>
 {% endblock inline_javascript %}

@@ -60,13 +60,13 @@
         import { getAuth, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
         const app = initializeApp({
-            apiKey:            "REDACTED_FIREBASE_KEY",
-            authDomain:        "trashport-956d8.firebaseapp.com",
-            projectId:         "trashport-956d8",
-            storageBucket:     "trashport-956d8.firebasestorage.app",
-            messagingSenderId: "670978162800",
-            appId:             "1:670978162800:web:981107db4f2fe0e32134b5",
-            measurementId:     "G-JD1JK493W5"
+            apiKey:            "{{ FIREBASE_WEB_API_KEY|default:'AIzaSyYourFirebaseWebApiKeyHere' }}",
+            authDomain:        "trashport-project.firebaseapp.com",
+            projectId:         "trashport-project",
+            storageBucket:     "trashport-project.firebasestorage.app",
+            messagingSenderId: "123456789012",
+            appId:             "1:123456789012:web:abcdef1234567890",
+            measurementId:     "G-XXXXXXXXXX"
         });
 
         const auth = getAuth(app);

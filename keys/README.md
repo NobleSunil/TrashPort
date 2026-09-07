@@ -12,7 +12,7 @@ This directory / root path is used for storing your local Firebase Admin SDK ser
    cp serviceAccountKey.example.json serviceAccountKey.json
    ```
 5. Open `serviceAccountKey.json` and paste your downloaded Firebase private key credentials into it.
-6. Verify your `.envs/.local/.django` file has:
+6. Verify your `.env` file has:
    ```env
    DJANGO_FIREBASE_CREDENTIALS=serviceAccountKey.json
    ```

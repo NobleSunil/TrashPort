@@ -1,13 +1,29 @@
-const sessionKey = crypto.randomUUID();
+const sessionKey = (window.crypto && typeof window.crypto.randomUUID === "function")
+  ? window.crypto.randomUUID()
+  : (Math.random().toString(36).substring(2) + Date.now().toString(36));
+
 const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(typeof FIREBASE_TOKEN !== "undefined" ? FIREBASE_TOKEN : "")}`;
 
 let ws = null;
 let reconnectTimeout = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 let messageQueue = [];
 
 const history = []; // in-memory, max 20 items
 let lastUserMessage = "";
+let greetingRendered = false;
+
+// DOM Memory Cap for low-end mobile devices (max 40 messages retained in DOM)
+const MAX_DOM_MESSAGES = 40;
+function pruneOldMessages() {
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+  while (container.children.length > MAX_DOM_MESSAGES) {
+    container.removeChild(container.firstElementChild);
+  }
+}
 
 function getCookie(name) {
   let cookieValue = null;
@@ -25,6 +41,10 @@ function getCookie(name) {
 }
 
 function connectWebSocket() {
+  if (document.hidden) {
+    // Delay connection if tab is in background on low-end device
+    return;
+  }
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
@@ -34,6 +54,7 @@ function connectWebSocket() {
 
     ws.onopen = () => {
       console.log("Chatbot WebSocket connected.");
+      reconnectAttempts = 0;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
@@ -50,7 +71,7 @@ function connectWebSocket() {
       try {
         const data = JSON.parse(event.data);
 
-        if (data.message) {
+        if (data.message && data.type !== "greeting") {
           history.push({ role: "assistant", content: data.message });
           if (history.length > 20) {
             history.shift();
@@ -64,30 +85,47 @@ function connectWebSocket() {
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket connection error:", error);
       removeThinkingIndicator();
     };
 
     ws.onclose = () => {
-      console.warn("WebSocket connection closed. Attempting reconnect...");
       removeThinkingIndicator();
-      if (!reconnectTimeout) {
-        reconnectTimeout = setTimeout(() => {
-          reconnectTimeout = null;
-          connectWebSocket();
-        }, 2000);
+      if (document.hidden) return; // Don't churn battery in background tab
+
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const backoffMs = Math.min(2000 * Math.pow(1.5, reconnectAttempts), 15000);
+        if (!reconnectTimeout) {
+          reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            connectWebSocket();
+          }, backoffMs);
+        }
+      } else {
+        console.warn("Chatbot WebSocket paused after max reconnect attempts.");
       }
     };
   } catch (err) {
-    console.error("Error initializing WebSocket:", err);
-    if (!reconnectTimeout) {
-      reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        connectWebSocket();
-      }, 3000);
-    }
+    removeThinkingIndicator();
   }
 }
+
+// Pause/resume on visibility change to preserve mobile memory and CPU
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && (!ws || ws.readyState === WebSocket.CLOSED)) {
+    reconnectAttempts = 0;
+    connectWebSocket();
+  }
+});
+
+// Clean up socket on unload
+window.addEventListener("beforeunload", () => {
+  if (reconnectTimeout) clearTimeout(reconnectTimeout);
+  if (ws) {
+    ws.onclose = null; // Prevent reconnect loop
+    ws.close();
+  }
+});
 
 // Initialize connection
 connectWebSocket();
@@ -156,8 +194,40 @@ function sendChip(message) {
   send(message);
 }
 
-// Listen for enter key press on input field
+function saveChatToSession() {
+  const container = document.getElementById("chat-messages");
+  if (container) {
+    try {
+      pruneOldMessages();
+      sessionStorage.setItem("trashport_chat_html", container.innerHTML);
+      sessionStorage.setItem("trashport_chat_history", JSON.stringify(history));
+    } catch (err) {
+      console.warn("Storage quota exceeded or disabled:", err);
+    }
+  }
+}
+
+// Listen for enter key press on input field and restore chat state
 document.addEventListener("DOMContentLoaded", () => {
+  const savedHtml = sessionStorage.getItem("trashport_chat_html");
+  const savedHistory = sessionStorage.getItem("trashport_chat_history");
+  if (savedHtml) {
+    const container = document.getElementById("chat-messages");
+    if (container && container.innerHTML.trim() === "") {
+      container.innerHTML = savedHtml;
+      greetingRendered = true;
+      scrollToBottom();
+    }
+  }
+  if (savedHistory) {
+    try {
+      const parsed = JSON.parse(savedHistory);
+      if (Array.isArray(parsed) && history.length === 0) {
+        history.push(...parsed);
+      }
+    } catch (e) {}
+  }
+
   const input = document.getElementById("chat-input");
   if (input) {
     input.addEventListener("keydown", (event) => {
@@ -172,6 +242,7 @@ function renderUserMessage(text) {
   const container = document.getElementById("chat-messages");
   if (!container) return;
 
+  pruneOldMessages();
   const bubble = document.createElement("div");
   bubble.className = "msg-bubble user";
   bubble.innerText = text;
@@ -184,6 +255,7 @@ function renderBotMessage(text) {
   const container = document.getElementById("chat-messages");
   if (!container) return;
 
+  pruneOldMessages();
   const bubble = document.createElement("div");
   bubble.className = "msg-bubble bot";
   bubble.innerText = text;
@@ -203,7 +275,10 @@ function renderChips(options, onSelect) {
     const button = document.createElement("button");
     button.className = "chip";
     button.innerText = option;
-    button.onclick = () => {
+    button.onclick = (e) => {
+      if (e && typeof e.stopPropagation === "function") {
+        e.stopPropagation();
+      }
       onSelect(option);
       chipRow.remove();
     };
@@ -287,24 +362,54 @@ function scrollToBottom() {
 
 function handleResponse(data) {
   switch (data.type) {
+    case "greeting":
+      if (!greetingRendered) {
+        renderBotMessage(data.message);
+        greetingRendered = true;
+      }
+      break;
     case "text":
+      // Deduplicate if greeting was sent as standard text or on reconnect
+      if (data.message && data.message.startsWith("Hi ") && data.message.includes("How can I help you today?")) {
+        if (!greetingRendered) {
+          renderBotMessage(data.message);
+          greetingRendered = true;
+        }
+        break;
+      }
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       break;
     case "action_done":
       renderSuccess(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
+      saveChatToSession();
+      // If user is on dashboard, reload page after a moment so the newly added pickup appears immediately!
+      if (window.location.pathname.includes("dashboard") || window.location.pathname === "/") {
+        setTimeout(() => {
+          saveChatToSession();
+          window.location.reload();
+        }, 1200);
+      }
       break;
     case "ask":
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       if (Array.isArray(data.options)) {
         renderChips(data.options, sendChip);
       }
       break;
     case "redirect":
       renderBotMessage(data.message);
-      renderFeedback(data.message, lastUserMessage);
+      if (lastUserMessage) {
+        renderFeedback(data.message, lastUserMessage);
+      }
       setTimeout(() => {
         window.location.href = data.url;
       }, 1200);

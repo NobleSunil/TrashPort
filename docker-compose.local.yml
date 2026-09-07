@@ -16,13 +16,14 @@ services:
     volumes:
       - .:/app:z
     env_file:
-      - ./.envs/.local/.django
-      - ./.envs/.local/.postgres
       - .env
     environment:
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql://debug:debug@postgres:5432/trashport
       - REDIS_URL=redis://redis:6379
     ports:
-      - '8001:8001'
+      - '127.0.0.1:8001:8001'
+      - '127.0.0.1:8000:8001'
     command: /start
 
   redis:
@@ -43,4 +44,4 @@ services:
       - trashport_local_postgres_data:/var/lib/postgresql/data
       - trashport_local_postgres_data_backups:/backups
     env_file:
-      - ./.envs/.local/.postgres
+      - .env
