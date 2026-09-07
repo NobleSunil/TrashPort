@@ -52,9 +52,9 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": env.str("POSTGRES_DB"),
-            "USER": env.str("POSTGRES_USER"),
-            "PASSWORD": env.str("POSTGRES_PASSWORD"),
+            "NAME": env.str("POSTGRES_DB", default="trashport"),
+            "USER": env.str("POSTGRES_USER", default="postgres"),
+            "PASSWORD": env.str("POSTGRES_PASSWORD", default="postgres"),
             "HOST": env.str("POSTGRES_HOST", default="postgres"),
             "PORT": env.str("POSTGRES_PORT", default="5432"),
         },
@@ -406,7 +406,7 @@ FIREBASE_CREDENTIALS_PATH = env("DJANGO_FIREBASE_CREDENTIALS", default=str(BASE_
 FIREBASE_CREDENTIALS = Path(FIREBASE_CREDENTIALS_PATH)
 FIREBASE_WEB_API_KEY = env("DJANGO_FIREBASE_WEB_API_KEY", default="YOUR_API_KEY")
 
-GROQ_API_KEY = env("GROQ_API_KEY")
+GROQ_API_KEY = env("GROQ_API_KEY", default="")
 CHATBOT_MODEL = env("CHATBOT_MODEL", default="llama-3.1-8b-instant")
 CHATBOT_MAX_TOKENS = env.int("CHATBOT_MAX_TOKENS", default=400)
 CHATBOT_MAX_HISTORY = env.int("CHATBOT_MAX_HISTORY", default=10)

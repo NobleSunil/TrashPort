@@ -10,3 +10,9 @@ class UsersConfig(AppConfig):
         """
         Override this method in subclasses to run code when Django starts.
         """
+        try:
+            from .firebase import initialize_firebase
+            initialize_firebase()
+        except Exception:
+            pass
+
