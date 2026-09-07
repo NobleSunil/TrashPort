@@ -1,0 +1,698 @@
+{% extends "base.html" %}
+
+{% block title %}Operations & Financial Analytics Report | TrashPort{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Custom badge and card accents */
+  .border-accent-primary { border-left: 4px solid #0d6efd !important; }
+  .border-accent-success { border-left: 4px solid #198754 !important; }
+  .border-accent-info    { border-left: 4px solid #0dcaf0 !important; }
+  .border-accent-warning { border-left: 4px solid #ffc107 !important; }
+  .border-accent-danger  { border-left: 4px solid #dc3545 !important; }
+  .border-accent-dark    { border-left: 4px solid #212529 !important; }
+
+  /* Print Stylesheet for High-Quality PDF & Paper Export */
+  @media print {
+    /* Hide all web chrome elements */
+    .d-print-none,
+    nav,
+    footer,
+    .btn,
+    .dropdown,
+    #filter-container {
+      display: none !important;
+    }
+
+    body {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      font-size: 11pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container, .container-fluid {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+
+    .card {
+      border: 1px solid #dee2e6 !important;
+      box-shadow: none !important;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      margin-bottom: 1rem !important;
+    }
+
+    .card-header {
+      background-color: #f8f9fa !important;
+      border-bottom: 1px solid #dee2e6 !important;
+      color: #000 !important;
+    }
+
+    /* Print Header display */
+    .print-header {
+      display: block !important;
+      border-bottom: 2px solid #212529;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+
+    /* Chart wrappers page-break protection */
+    .chart-container {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Preserve colors on print */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+
+  @media screen {
+    .print-header {
+      display: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  <!-- Print-Only Header -->
+  <div class="print-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="fw-bold mb-0 text-dark">TrashPort Operations & Analytics Report</h2>
+        <div class="text-muted small">Intelligent Municipal & Industrial Waste Logistics</div>
+      </div>
+      <div class="text-end">
+        <div class="fw-bold text-dark">Report Duration: {{ date_range_display }}</div>
+        <div class="text-muted small">Generated on: {{ generated_at|date:"M d, Y H:i" }} | Admin: {{ request.user.email }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen Header Banner -->
+  <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 pb-3 border-bottom d-print-none">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-light border text-muted">
+          <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <h1 class="h3 mb-0 text-dark fw-bold">Operations & Financial Report</h1>
+      </div>
+      <p class="text-muted mb-0">
+        Reporting Window: <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">{{ date_range_display }}</span>
+        • Generated: {{ generated_at|date:"M d, Y H:i" }}
+      </p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-3 mt-lg-0">
+      <button onclick="window.print()" class="btn btn-dark shadow-sm" type="button">
+        <i class="bi bi-printer-fill me-1"></i> Print / Save as PDF
+      </button>
+
+      <!-- Split Button: Direct click exports Filtered CSV, dropdown arrow allows selecting options -->
+      <div class="btn-group shadow-sm">
+        <a href="{% url 'waste_management:export_pickups_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success text-white fw-semibold" id="btnExportFilteredCsv" title="Click to export filtered pickups CSV">
+          <i class="bi bi-file-earmark-excel me-1"></i> Export Filtered CSV
+        </a>
+        <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split text-white" data-bs-toggle="dropdown" aria-expanded="false" id="btnExportCsvDropdown" title="More CSV options">
+          <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2">
+          <li><h6 class="dropdown-header text-uppercase small fw-bold text-muted"><i class="bi bi-download me-1"></i> Choose Dataset</h6></li>
+          <li>
+            <a class="dropdown-item py-2 fw-medium" href="{% url 'waste_management:export_pickups_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}">
+              <i class="bi bi-table me-2 text-success"></i> Pickups Registry (CSV)
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item py-2 fw-medium" href="{% url 'waste_management:export_revenue_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}">
+              <i class="bi bi-cash-stack me-2 text-primary"></i> Category Revenue Summary (CSV)
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- One-click Revenue CSV Export -->
+      <a href="{% url 'waste_management:export_revenue_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-success shadow-sm bg-white" title="Export Category Revenue Breakdown as CSV">
+        <i class="bi bi-cash-stack me-1"></i> Revenue CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Custom Duration Control Section (Hidden in Print) -->
+  <div id="filter-container" class="card border-0 shadow-sm mb-4 d-print-none bg-white">
+    <div class="card-body p-3">
+      <div class="row g-3 align-items-center">
+        <!-- Preset Duration Chips -->
+        <div class="col-12 col-xl-7">
+          <div class="d-flex flex-wrap align-items-center gap-1">
+            <span class="text-muted small fw-semibold me-2 text-uppercase">
+              <i class="bi bi-clock-history me-1"></i> Quick Presets:
+            </span>
+            <a href="?duration=today" class="btn btn-sm {% if duration == 'today' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">Today</a>
+            <a href="?duration=yesterday" class="btn btn-sm {% if duration == 'yesterday' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">Yesterday</a>
+            <a href="?duration=7days" class="btn btn-sm {% if duration == '7days' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">Last 7 Days</a>
+            <a href="?duration=30days" class="btn btn-sm {% if duration == '30days' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">Last 30 Days</a>
+            <a href="?duration=this_month" class="btn btn-sm {% if duration == 'this_month' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">This Month</a>
+            <a href="?duration=last_month" class="btn btn-sm {% if duration == 'last_month' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">Last Month</a>
+            <a href="?duration=year" class="btn btn-sm {% if duration == 'year' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">This Year</a>
+            <a href="?duration=all" class="btn btn-sm {% if duration == 'all' %}btn-primary text-white shadow-sm{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">All Time</a>
+          </div>
+        </div>
+
+        <!-- Custom Date Range Form -->
+        <div class="col-12 col-xl-5">
+          <form method="get" class="row g-2 justify-content-xl-end align-items-center">
+            <input type="hidden" name="duration" value="custom">
+            <div class="col-auto">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted">From</span>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}" max="{{ today }}" required>
+              </div>
+            </div>
+            <div class="col-auto">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted">To</span>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}" max="{{ today }}" required>
+              </div>
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-sm btn-primary px-3 shadow-sm">
+                <i class="bi bi-funnel-fill me-1"></i> Filter
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Performance Indicators (KPIs) Summary Grid -->
+  <div class="row g-3 mb-4">
+    <!-- Pickups Processed -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-primary">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Pickups</div>
+          <h3 class="fw-bold mb-1 text-dark">{{ total_pickups }}</h3>
+          <div class="text-muted small">
+            <span class="text-success fw-bold">{{ completed_pickups }}</span> completed ({{ completion_rate }}%)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Recycled Volume (kg) -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-success">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Recycled Weight</div>
+          <h3 class="fw-bold mb-1 text-success">{{ total_weight_kg|floatformat:1 }} <span class="fs-6 text-muted">kg</span></h3>
+          <div class="text-muted small">
+            <i class="bi bi-award text-warning me-1"></i> {{ total_points_earned }} pts rewarded
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gross Revenue -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-info">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Gross Revenue</div>
+          <h3 class="fw-bold mb-1 text-primary">Rs. {{ total_revenue|floatformat:2 }}</h3>
+          <div class="text-muted small">
+            <i class="bi bi-check-circle-fill text-primary me-1"></i> Paid collection fees
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collector Disbursements -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-warning">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Collector Payouts</div>
+          <h3 class="fw-bold mb-1 text-warning-emphasis">Rs. {{ total_collector_payouts|floatformat:2 }}</h3>
+          <div class="text-muted small">
+            <i class="bi bi-truck text-muted me-1"></i> Partner earnings
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Net Operating Margin -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-dark">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Net Margin</div>
+          <h3 class="fw-bold mb-1 {% if net_margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+            Rs. {{ net_margin|floatformat:2 }}
+          </h3>
+          <div class="text-muted small">
+            <i class="bi bi-graph-up me-1"></i> Revenue − Disbursements
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Complaints & Quality -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card border-0 shadow-sm h-100 bg-white border-accent-danger">
+        <div class="card-body p-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Complaints</div>
+          <h3 class="fw-bold mb-1 {% if total_complaints > 0 %}text-danger{% else %}text-muted{% endif %}">
+            {{ total_complaints }}
+          </h3>
+          <div class="text-muted small">
+            <span class="text-success fw-semibold">{{ resolved_complaints }}</span> resolved
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visual Graphs Section (Chart.js) -->
+  <div class="row g-4 mb-4">
+    <!-- Graph 1: Pickup Request Volume & Completion Timeline -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100 chart-container">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title mb-0 fw-bold text-dark">Pickup Volume & Fulfillment Trend</h5>
+            <small class="text-muted">Daily pickup request flow and completed jobs in this duration</small>
+          </div>
+          <span class="badge bg-light text-dark border">{{ date_range_display }}</span>
+        </div>
+        <div class="card-body">
+          <div style="height: 280px; position: relative;">
+            <canvas id="reportTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graph 2: Waste Weight Category Breakdown -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100 chart-container">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title mb-0 fw-bold text-dark">Waste Volume by Category</h5>
+            <small class="text-muted">Proportion of recycled kg</small>
+          </div>
+          <span class="badge bg-light text-dark border">kg share</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <div style="height: 260px; width: 100%; position: relative;">
+            <canvas id="reportCategoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graph 3: Revenue vs. Collector Payout Comparison -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100 chart-container">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title mb-0 fw-bold text-dark">Financial Comparison: Revenue vs. Payouts</h5>
+            <small class="text-muted">Collection revenue received vs. compensation disbursed to collectors</small>
+          </div>
+          <span class="badge bg-light text-dark border">Rs. Cash Flow</span>
+        </div>
+        <div class="card-body">
+          <div style="height: 280px; position: relative;">
+            <canvas id="reportFinancialChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graph 4: Status Distribution Breakdown -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100 chart-container">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title mb-0 fw-bold text-dark">Fulfillment Status Share</h5>
+            <small class="text-muted">Distribution of request states</small>
+          </div>
+          <span class="badge bg-light text-dark border">Status</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <div style="height: 260px; width: 100%; position: relative;">
+            <canvas id="reportStatusChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Tabular Breakdown 1: Waste Category Performance -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="card-title mb-0 fw-bold text-dark">Category Operations & Financial Performance</h5>
+        <small class="text-muted">Breakdown of volume, revenue, and contractor earnings per waste stream</small>
+      </div>
+      <a href="{% url 'waste_management:export_revenue_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-sm btn-outline-primary d-print-none">
+        <i class="bi bi-download me-1"></i> Export Table
+      </a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Waste Category</th>
+            <th class="text-center">Total Requests</th>
+            <th class="text-center">Completed</th>
+            <th class="text-end">Recycled Weight</th>
+            <th class="text-end">Gross Revenue</th>
+            <th class="text-end">Collector Payout</th>
+            <th class="text-end pe-3">Net Margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in category_report %}
+            <tr>
+              <td class="ps-3 fw-semibold text-dark">
+                {{ item.category.name }}
+                <div class="text-muted small">Rs. {{ item.category.fee_per_kg }}/kg</div>
+              </td>
+              <td class="text-center">{{ item.count }}</td>
+              <td class="text-center">
+                <span class="badge bg-success-subtle text-success">{{ item.completed }}</span>
+              </td>
+              <td class="text-end fw-bold">{{ item.weight_kg|floatformat:1 }} kg</td>
+              <td class="text-end text-primary fw-semibold">Rs. {{ item.revenue|floatformat:2 }}</td>
+              <td class="text-end text-warning-emphasis">Rs. {{ item.payout|floatformat:2 }}</td>
+              <td class="text-end pe-3 fw-bold {% if item.margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+                Rs. {{ item.margin|floatformat:2 }}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">No activity recorded for this date duration.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        {% if category_report %}
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td class="ps-3">Total Summary</td>
+            <td class="text-center">{{ total_pickups }}</td>
+            <td class="text-center text-success">{{ completed_pickups }}</td>
+            <td class="text-end">{{ total_weight_kg|floatformat:1 }} kg</td>
+            <td class="text-end text-primary">Rs. {{ total_revenue|floatformat:2 }}</td>
+            <td class="text-end text-warning-emphasis">Rs. {{ total_collector_payouts|floatformat:2 }}</td>
+            <td class="text-end pe-3 {% if net_margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+              Rs. {{ net_margin|floatformat:2 }}
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Detailed Tabular Breakdown 2: Pickups Registry (Filtered for Duration) -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="card-title mb-0 fw-bold text-dark">Pickup Requests Log (Filtered Duration)</h5>
+        <small class="text-muted">Detailed records created between {{ date_range_display }} (showing up to 100 entries)</small>
+      </div>
+      <a href="{% url 'waste_management:export_pickups_csv' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-sm btn-outline-success d-print-none">
+        <i class="bi bi-download me-1"></i> Export All Pickups CSV
+      </a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover table-striped align-middle mb-0" style="font-size: 0.9rem;">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">ID</th>
+            <th>Citizen</th>
+            <th>Location</th>
+            <th>Category</th>
+            <th class="text-end">Weight</th>
+            <th class="text-end">Fee</th>
+            <th class="text-center">Status</th>
+            <th>Collector</th>
+            <th class="pe-3">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent_pickups %}
+            <tr>
+              <td class="ps-3 fw-semibold">#{{ p.id }}</td>
+              <td>
+                <div class="fw-semibold text-dark">{{ p.citizen.name|default:p.citizen.email }}</div>
+                <div class="text-muted small">{{ p.citizen.email }}</div>
+              </td>
+              <td>
+                {% if p.address %}
+                  {{ p.address.city|default:"Local Area" }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ p.category.name|default:"General" }}</span></td>
+              <td class="text-end fw-bold">{{ p.weight_kg }} kg</td>
+              <td class="text-end text-primary fw-semibold">
+                Rs. {{ p.fee }}
+                {% if p.is_paid %}
+                  <span class="badge bg-success-subtle text-success ms-1" title="Paid"><i class="bi bi-check"></i></span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if p.status == 'completed' %}
+                  <span class="badge bg-success text-white">Completed</span>
+                {% elif p.status == 'in_progress' %}
+                  <span class="badge bg-info text-dark">In Progress</span>
+                {% elif p.status == 'assigned' %}
+                  <span class="badge bg-primary">Assigned</span>
+                {% elif p.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% elif p.status == 'cancelled' %}
+                  <span class="badge bg-danger">Cancelled</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ p.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if p.collector %}
+                  <span class="text-dark">{{ p.collector.name|default:p.collector.email }}</span>
+                {% else %}
+                  <span class="text-muted fst-italic">Unassigned</span>
+                {% endif %}
+              </td>
+              <td class="pe-3 text-muted small">{{ p.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4">No pickup requests found within {{ date_range_display }}.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js Library from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // 1. Trend Line & Bar Chart
+    const trendLabels = {{ trend_labels_json|safe }};
+    const trendTotals = {{ trend_total_counts_json|safe }};
+    const trendCompleted = {{ trend_completed_counts_json|safe }};
+
+    const ctxTrend = document.getElementById('reportTrendChart').getContext('2d');
+    new Chart(ctxTrend, {
+      type: 'line',
+      data: {
+        labels: trendLabels.length ? trendLabels : ['No Data'],
+        datasets: [
+          {
+            label: 'Total Pickups Requested',
+            data: trendTotals.length ? trendTotals : [0],
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.12)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: trendLabels.length > 20 ? 1 : 3,
+            pointBackgroundColor: '#0d6efd'
+          },
+          {
+            label: 'Completed Pickups',
+            data: trendCompleted.length ? trendCompleted : [0],
+            borderColor: '#198754',
+            backgroundColor: 'rgba(25, 135, 84, 0.08)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: trendLabels.length > 20 ? 1 : 3,
+            pointBackgroundColor: '#198754'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { boxWidth: 12, padding: 12, usePointStyle: true }
+          },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // 2. Category Doughnut Chart
+    const catLabels = {{ cat_labels_json|safe }};
+    const catWeights = {{ cat_weights_json|safe }};
+    const ctxCat = document.getElementById('reportCategoryChart').getContext('2d');
+
+    new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels.length ? catLabels : ['No Data'],
+        datasets: [{
+          data: catWeights.length ? catWeights : [1],
+          backgroundColor: [
+            '#0d6efd',
+            '#198754',
+            '#ffc107',
+            '#0dcaf0',
+            '#6f42c1',
+            '#fd7e14',
+            '#20c997',
+            '#d63384'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 10 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` ${context.label}: ${context.parsed} kg`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Financial Comparison Bar Chart
+    const trendRevenues = {{ trend_revenues_json|safe }};
+    const trendPayouts = {{ trend_payouts_json|safe }};
+    const ctxFin = document.getElementById('reportFinancialChart').getContext('2d');
+
+    new Chart(ctxFin, {
+      type: 'bar',
+      data: {
+        labels: trendLabels.length ? trendLabels : ['No Data'],
+        datasets: [
+          {
+            label: 'Gross Collection Revenue (Rs.)',
+            data: trendRevenues.length ? trendRevenues : [0],
+            backgroundColor: '#0d6efd',
+            borderRadius: 4
+          },
+          {
+            label: 'Collector Disbursements (Rs.)',
+            data: trendPayouts.length ? trendPayouts : [0],
+            backgroundColor: '#ffc107',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { boxWidth: 12, padding: 12, usePointStyle: true }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(val) { return 'Rs. ' + val; }
+            }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // 4. Status Breakdown Doughnut Chart
+    const statusLabels = {{ status_labels_json|safe }};
+    const statusCounts = {{ status_counts_json|safe }};
+    const ctxStatus = document.getElementById('reportStatusChart').getContext('2d');
+
+    new Chart(ctxStatus, {
+      type: 'doughnut',
+      data: {
+        labels: statusLabels,
+        datasets: [{
+          data: statusCounts,
+          backgroundColor: [
+            '#198754', // Completed
+            '#0dcaf0', // In Progress
+            '#ffc107', // Pending
+            '#dc3545'  // Cancelled
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 10 }
+          }
+        }
+      }
+    });
+
+  });
+</script>
+{% endblock %}

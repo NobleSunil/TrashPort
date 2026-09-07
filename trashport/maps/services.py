@@ -53,10 +53,21 @@ class GeoService:
         """
         Queries OSRM public demo routing service to get actual road coordinates, 
         distance, and travel duration following real turn-by-turn driving paths.
+        Results are cached for 15 minutes to save bandwidth, memory, and CPU.
         Falls back to straight line if service is unavailable.
         """
+        cache_key = f"osrm_route_{round(start_lat, 4)}_{round(start_lng, 4)}_{round(end_lat, 4)}_{round(end_lng, 4)}"
+        try:
+            from django.core.cache import cache
+            cached_route = cache.get(cache_key)
+            if cached_route:
+                return cached_route
+        except Exception:
+            cache = None
+
         import requests
         url = f"https://router.project-osrm.org/route/v1/driving/{start_lng},{start_lat};{end_lng},{end_lat}?overview=full&geometries=geojson"
+        result = None
         try:
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
@@ -70,21 +81,30 @@ class GeoService:
                     distance_km = round(first_route.get("distance", 0) / 1000.0, 2)
                     duration_mins = max(1, round(first_route.get("duration", 0) / 60.0))
                     
-                    return {
+                    result = {
                         "coordinates": leaflet_coords,
                         "distance_km": distance_km,
                         "duration_mins": duration_mins,
                         "provider": "osrm",
                     }
-        except Exception as exc:
+        except Exception:
             pass
 
-        # Fallback to straight line
-        dist = GeoService.haversine_distance(start_lat, start_lng, end_lat, end_lng)
-        duration = max(1, round((dist / 25.0) * 60))
-        return {
-            "coordinates": [[start_lat, start_lng], [end_lat, end_lng]],
-            "distance_km": dist,
-            "duration_mins": duration,
-            "provider": "haversine_fallback",
-        }
+        if not result:
+            # Fallback to straight line
+            dist = GeoService.haversine_distance(start_lat, start_lng, end_lat, end_lng)
+            duration = max(1, round((dist / 25.0) * 60))
+            result = {
+                "coordinates": [[start_lat, start_lng], [end_lat, end_lng]],
+                "distance_km": dist,
+                "duration_mins": duration,
+                "provider": "haversine_fallback",
+            }
+
+        try:
+            if cache:
+                cache.set(cache_key, result, 900)  # 15 minutes TTL
+        except Exception:
+            pass
+
+        return result

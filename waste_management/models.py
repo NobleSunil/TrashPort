@@ -175,8 +175,17 @@ class PickupRequest(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     feedback_comments = models.TextField(blank=True, null=True)
+    user_pickup_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Sequential pickup number for this user starting from 1"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def display_id(self) -> int:
+        return self.user_pickup_number or self.id
 
     @property
     def effective_latitude(self) -> float:
@@ -220,6 +229,18 @@ class PickupRequest(models.Model):
                 self.address.longitude = self.longitude
                 self.address.save(update_fields=["latitude", "longitude"])
         if is_new:
+            # Assign sequential user pickup number starting from 1 for each citizen
+            if not self.user_pickup_number and self.citizen_id:
+                max_num = (
+                    PickupRequest.objects.filter(citizen_id=self.citizen_id)
+                    .aggregate(models.Max("user_pickup_number"))["user_pickup_number__max"]
+                )
+                if max_num:
+                    self.user_pickup_number = max_num + 1
+                else:
+                    count = PickupRequest.objects.filter(citizen_id=self.citizen_id).count()
+                    self.user_pickup_number = count + 1
+
             # Check subscription
             has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()
             if has_sub:
@@ -265,7 +286,7 @@ class PickupRequest(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Pickup #{self.id} ({self.status}) for {self.citizen.email}"
+        return f"Pickup #{self.display_id} ({self.status}) for {self.citizen.email}"
 
 
 class Complaint(models.Model):

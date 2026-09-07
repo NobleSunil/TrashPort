@@ -320,6 +320,15 @@
           </button>
         </li>
         <li class="nav-item" role="presentation">
+          <button class="nav-link" id="invoices-tab" data-bs-toggle="tab" data-bs-target="#invoices-panel"
+            type="button" role="tab">
+            <i class="bi bi-receipt me-2"></i>Invoices &amp; Payments
+            {% if invoice_count > 0 %}
+            <span class="badge bg-secondary rounded-pill ms-2">{{ invoice_count }}</span>
+            {% endif %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
           <button class="nav-link" id="complaints-tab" data-bs-toggle="tab" data-bs-target="#complaints-panel"
             type="button" role="tab">
             <i class="bi bi-exclamation-triangle me-2"></i>Complaints
@@ -361,7 +370,7 @@
                 {% for pickup in active_pickups %}
                 <tr>
                   <td>
-                    <span class="fw-bold text-dark">#{{ pickup.id }}</span>
+                    <span class="fw-bold text-dark">#{{ pickup.display_id }}</span>
                   </td>
                   <td>
                     <span class="fw-semibold">{{ pickup.category.name }}</span>
@@ -406,7 +415,13 @@
                     {% endif %}
                   </td>
                   <td class="text-end">
-                    <div class="d-inline-flex gap-1">
+                    <div class="d-inline-flex gap-1 align-items-center">
+                      {% if pickup.is_paid %}
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-outline-success" title="Download Tax Invoice">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Invoice
+                      </a>
+                      {% endif %}
                       <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
                         class="btn btn-sm btn-outline-secondary">
                         Details
@@ -561,7 +576,7 @@
               <tbody>
                 {% for pickup in past_pickups %}
                 <tr>
-                  <td><span class="fw-bold text-dark">#{{ pickup.id }}</span></td>
+                  <td><span class="fw-bold text-dark">#{{ pickup.display_id }}</span></td>
                   <td>{{ pickup.category.name }}</td>
                   <td>{{ pickup.weight_kg }} kg</td>
                   <td>
@@ -576,10 +591,16 @@
                   </td>
                   <td><i class="bi bi-calendar-check me-1 text-muted"></i>{{ pickup.schedule_date|date:"M d, Y" }}</td>
                   <td class="text-end">
-                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
-                      class="btn btn-sm btn-outline-secondary">
-                      View Receipt
-                    </a>
+                    <div class="d-inline-flex gap-1 align-items-center">
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-outline-success" title="Download Official Tax Invoice">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Invoice
+                      </a>
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
+                        class="btn btn-sm btn-outline-secondary">
+                        Details
+                      </a>
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
@@ -595,7 +616,80 @@
           </div>
         </div>
 
-        <!-- TAB 5: COMPLAINTS -->
+        <!-- TAB 5: INVOICES & PAYMENTS -->
+        <div class="tab-pane fade" id="invoices-panel" role="tabpanel">
+          <div class="mb-3">
+            <h5 class="fw-bold mb-1">Payment Invoices &amp; Receipts</h5>
+            <p class="text-muted small">Official tax invoices and digital payment receipts for all collection services.</p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Invoice No.</th>
+                  <th>Pickup Reference</th>
+                  <th>Waste Stream</th>
+                  <th>Payment Date</th>
+                  <th class="text-end">Amount Paid</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-end">Invoice Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pickup in paid_pickups %}
+                <tr>
+                  <td>
+                    <span class="font-monospace fw-bold text-primary">INV-{{ pickup.created_at|date:"Y" }}-{{ pickup.id|stringformat:"05d" }}</span>
+                  </td>
+                  <td>
+                    <span class="fw-semibold text-dark">Pickup #{{ pickup.display_id }}</span>
+                    <div class="small text-muted">{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span>
+                    <span class="small text-muted ms-1">({{ pickup.weight_kg }} kg)</span>
+                  </td>
+                  <td>
+                    <div class="text-dark"><i class="bi bi-calendar3 me-1 text-muted"></i>{{ pickup.updated_at|date:"M d, Y" }}</div>
+                    <div class="small text-muted">{{ pickup.updated_at|date:"h:i A" }}</div>
+                  </td>
+                  <td class="text-end fw-bold text-dark">
+                    Rs. {{ pickup.fee|floatformat:2 }}
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-success bg-opacity-20 text-success fw-semibold border border-success border-opacity-25">
+                      <i class="bi bi-check-circle me-1"></i>Paid
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-inline-flex gap-1">
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-success fw-semibold text-white shadow-sm">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Download Invoice
+                      </a>
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
+                        class="btn btn-sm btn-outline-secondary">
+                        Details
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-receipt display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    <h6 class="fw-bold text-dark">No Invoices Available Yet</h6>
+                    <p class="text-muted small mb-0">Invoices and payment receipts will be automatically generated whenever you pay a collection fee.</p>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 6: COMPLAINTS -->
         <div class="tab-pane fade" id="complaints-panel" role="tabpanel">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>

@@ -1,0 +1,40 @@
+@echo off
+title TrashPort - Starting Server
+color 0A
+
+echo =========================================
+echo      TrashPort Dev Server Launcher
+echo =========================================
+echo.
+
+:: Activate virtual environment
+if exist .venv\Scripts\activate.bat (
+    call .venv\Scripts\activate.bat
+    echo [OK] Virtual environment activated.
+) else (
+    echo [!] No .venv found. Make sure dependencies are installed.
+    pause
+    exit /b
+)
+echo.
+
+:: Load environment from main .env
+set DJANGO_SETTINGS_MODULE=config.settings.local
+set DJANGO_READ_DOT_ENV_FILE=True
+
+echo [*] Running database migrations...
+python manage.py migrate
+echo.
+
+echo [*] Starting Django development server...
+echo.
+echo =========================================
+echo   Server running at: http://127.0.0.1:8001
+echo   Dashboard URL:     http://127.0.0.1:8001/dashboard/
+echo   Press CTRL+C to stop
+echo =========================================
+echo.
+
+python manage.py runserver 8001
+
+pause

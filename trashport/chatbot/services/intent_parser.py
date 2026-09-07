@@ -17,13 +17,21 @@ def parse_response(raw: str) -> dict:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        return {"type": "text", "message": "Something went wrong. Try again."}
+        import re
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            try:
+                parsed = json.loads(match.group(0))
+            except Exception:
+                return {"type": "text", "message": raw}
+        else:
+            return {"type": "text", "message": raw}
 
     if not isinstance(parsed, dict):
         return {"type": "text", "message": "I can only help with TrashPort-related questions."}
 
     response_type = parsed.get("type")
-    valid_types = {"text", "redirect", "ask", "action_done", "action"}
+    valid_types = {"text", "redirect", "ask", "action_done", "action", "greeting"}
     if response_type not in valid_types:
         return {"type": "text", "message": "I can only help with TrashPort-related questions."}
 

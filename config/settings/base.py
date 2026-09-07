@@ -10,8 +10,8 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "trashport"
 env = environ.Env()
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
-if READ_DOT_ENV_FILE:
+READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
+if READ_DOT_ENV_FILE and (BASE_DIR / ".env").exists():
     # OS environment variables take precedence over variables from .env
     env.read_env(str(BASE_DIR / ".env"))
 
@@ -46,21 +46,23 @@ LOCALE_PATHS = [str(BASE_DIR / "locale")]
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
-if os.getenv("DATABASE_URL", default=None):
+if "DATABASE_URL" in env or os.getenv("DATABASE_URL", default=None):
     DATABASES = {"default": env.db("DATABASE_URL")}
 else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": env.str("POSTGRES_DB", default="trashport"),
-            "USER": env.str("POSTGRES_USER", default="postgres"),
-            "PASSWORD": env.str("POSTGRES_PASSWORD", default="postgres"),
-            "HOST": env.str("POSTGRES_HOST", default="postgres"),
+            "USER": env.str("POSTGRES_USER", default="debug"),
+            "PASSWORD": env.str("POSTGRES_PASSWORD", default="debug"),
+            "HOST": env.str("POSTGRES_HOST", default="127.0.0.1"),
             "PORT": env.str("POSTGRES_PORT", default="5432"),
         },
     }
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# Enable database connection pooling/reuse for low-end hardware & container performance
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -259,13 +261,13 @@ EMAIL_BACKEND = env(
 EMAIL_HOST = env("DJANGO_EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("DJANGO_EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("DJANGO_EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="albertcyriac443@gmail.com")
-EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="REDACTED_EMAIL_KEY")
+EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="TrashPort <albertcyriac443@gmail.com>",
+    default="TrashPort <noreply@trashport.com>",
 )
-SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <albertcyriac443@gmail.com>")
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <noreply@trashport.com>")
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 10
 

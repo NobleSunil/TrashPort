@@ -45,8 +45,8 @@
 
 <!-- Bootstrap JS -->
 <script defer
-        src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.min.js"
-        integrity="sha512-1/RvZTcCDEUjY/CypiMz+iqqtaoQfAITmNSJY17Myp4Ms5mdxPS5UV7iOfdZoxcGhzFbOm6sntTKJppjvuhg4g=="
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js"
+        integrity="sha512-i9cEfJwUwViEPFKdC1enz4ZRGBj8YQo6QByFTF92YXHi7waCqyexvRD75S5NVTsSiTv7rKWqG9Y5eFxmRsOn0A=="
         crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -149,7 +149,7 @@
   {% if user.is_authenticated %}
   <link rel="stylesheet" href="{% static 'css/chatbot/bubble.css' %}">
 
-  <div id="chat-bubble" onclick="openChat()">
+  <div id="chat-bubble" onclick="openChat(event)">
     <svg class="bin-icon" viewBox="0 0 64 64" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
       <!-- Lid -->
       <g class="bin-lid">
@@ -169,7 +169,7 @@
   <div id="chat-sheet">
     <div class="chat-header">
       <span>🗑️ TrashPort Assistant</span>
-      <button onclick="closeChat()">✕</button>
+      <button onclick="closeChat(event)">✕</button>
     </div>
     <div id="chat-messages"></div>
     <div id="chat-chips" class="chip-row">

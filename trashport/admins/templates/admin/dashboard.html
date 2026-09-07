@@ -11,19 +11,35 @@
       <p class="text-muted mb-0">System performance, waste collection analytics, and dispatch management</p>
     </div>
     <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
+      <!-- Merged Generate & Export Reports Button -->
       <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
-          <i class="bi bi-download me-1"></i> Export Reports
+        <button class="btn btn-outline-primary dropdown-toggle shadow-sm" type="button" id="adminReportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-file-earmark-bar-graph me-1"></i> Generate & Export Reports
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="{% url 'waste_management:export_pickups_csv' %}"><i class="bi bi-file-earmark-excel me-2 text-success"></i> Export Pickups (CSV)</a></li>
-          <li><a class="dropdown-item" href="{% url 'waste_management:export_revenue_csv' %}"><i class="bi bi-cash-stack me-2 text-primary"></i> Export Revenue (CSV)</a></li>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" aria-labelledby="adminReportsDropdown">
+          <li>
+            <a class="dropdown-item py-2 fw-semibold" href="{% url 'waste_management:operations_report' %}">
+              <i class="bi bi-graph-up-arrow me-2 text-primary"></i> Operations & Analytics Report (with Graphs)
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><h6 class="dropdown-header text-uppercase small fw-bold text-muted"><i class="bi bi-download me-1"></i> Quick CSV Exports</h6></li>
+          <li>
+            <a class="dropdown-item py-2" href="{% url 'waste_management:export_pickups_csv' %}">
+              <i class="bi bi-file-earmark-excel me-2 text-success"></i> Export Pickups (CSV)
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item py-2" href="{% url 'waste_management:export_revenue_csv' %}">
+              <i class="bi bi-cash-stack me-2 text-primary"></i> Export Revenue (CSV)
+            </a>
+          </li>
         </ul>
       </div>
       <a href="{% url 'waste_management:user_list' %}" class="btn btn-outline-dark shadow-sm">
         <i class="bi bi-people me-1"></i> Users Directory
       </a>
-      <a href="{% url 'waste_management:category_list' %}" class="btn btn-outline-primary shadow-sm">
+      <a href="{% url 'waste_management:category_list' %}" class="btn btn-outline-secondary shadow-sm">
         <i class="bi bi-tag-fill me-1"></i> Pay-As-You-Use Rates
       </a>
       <a href="{% url 'waste_management:category_create' %}" class="btn btn-primary shadow-sm">
@@ -36,6 +52,9 @@
   <div class="row g-2 mb-4">
     <div class="col-12 d-flex flex-wrap gap-2 align-items-center p-3 bg-white rounded shadow-sm">
       <span class="fw-bold me-2 text-secondary"><i class="bi bi-lightning-charge-fill me-1 text-warning"></i> Quick Operations:</span>
+      <a href="{% url 'waste_management:operations_report' %}" class="btn btn-sm btn-primary text-white shadow-sm fw-semibold">
+        <i class="bi bi-file-earmark-bar-graph-fill me-1"></i> Generate & Export Report
+      </a>
       <form method="post" action="{% url 'waste_management:pickup_auto_assign' %}" class="d-inline">
         {% csrf_token %}
         <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" onclick="return confirm('Auto-assign all pending requests to available collectors?')">

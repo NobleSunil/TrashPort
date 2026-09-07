@@ -32,7 +32,12 @@ def _get_user_by_uid(uid):
     return user
 
 def _get_active_pickups(user):
-    return list(PickupRequest.objects.filter(citizen=user).exclude(status="CANCELLED"))
+    return list(
+        PickupRequest.objects.filter(citizen=user)
+        .select_related("address", "category")
+        .exclude(status="CANCELLED")
+        .order_by("-id")[:10]
+    )
 
 class ChatbotConsumer(AsyncWebsocketConsumer):
     """
@@ -70,7 +75,7 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
 
             name = user.name or user.email
             await self.send(json.dumps({
-                "type": "text",
+                "type": "greeting",
                 "message": f"Hi {name}! How can I help you today?"
             }))
 
@@ -104,10 +109,12 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
             # Load user pickups
             pickups = await sync_to_async(_get_active_pickups)(self.user)
 
-            # Load active FAQs
-            faqs = await sync_to_async(
-                lambda: list(FAQ.objects.filter(is_active=True))
-            )()
+            # Load active FAQs (cached in Redis / memory for 10 minutes)
+            def _get_cached_faqs():
+                from django.core.cache import cache
+                return cache.get_or_set("chatbot_active_faqs", lambda: list(FAQ.objects.filter(is_active=True)), 600)
+
+            faqs = await sync_to_async(_get_cached_faqs)()
 
             # Build LLM context window
             system_content = await sync_to_async(build_system_prompt)(self.user, pickups, faqs)

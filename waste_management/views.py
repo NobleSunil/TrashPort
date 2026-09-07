@@ -282,3 +282,48 @@ class ExportRevenueCSVView(LoginRequiredMixin, View):
             return AdminExportRevenueCSVView.as_view()(request, *args, **kwargs)
         return HttpResponseForbidden("Invalid role")
 
+
+class OperationsReportView(LoginRequiredMixin, View):
+    """
+    Dispatches the operations analytics and export report view to AdminOperationsReportView.
+    """
+    def get(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.ADMIN or request.user.is_superuser:
+            from trashport.admins.views import AdminOperationsReportView
+            return AdminOperationsReportView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+
+class PaymentCheckoutView(LoginRequiredMixin, View):
+    """
+    Dispatches the payment checkout page to CitizenPaymentCheckoutView.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.CITIZEN:
+            from trashport.citizens.views import CitizenPaymentCheckoutView
+            return CitizenPaymentCheckoutView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class PaymentSuccessView(LoginRequiredMixin, View):
+    """
+    Dispatches the payment success/receipt page to CitizenPaymentSuccessView.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.CITIZEN:
+            from trashport.citizens.views import CitizenPaymentSuccessView
+            return CitizenPaymentSuccessView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
+
+class PickupInvoiceView(LoginRequiredMixin, View):
+    """
+    Dispatches the official tax invoice / payment receipt view to CitizenInvoiceView.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == User.Roles.CITIZEN or request.user.role == User.Roles.ADMIN or request.user.is_superuser:
+            from trashport.citizens.views import CitizenInvoiceView
+            return CitizenInvoiceView.as_view()(request, *args, **kwargs)
+        return HttpResponseForbidden("Invalid role")
+
