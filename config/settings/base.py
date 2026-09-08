@@ -416,4 +416,19 @@ CHATBOT_MAX_HISTORY = env.int("CHATBOT_MAX_HISTORY", default=10)
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 
-
+# AADHAAR VERIFICATION (DEMO / ACADEMIC PROJECT)
+# ------------------------------------------------------------------------------
+# AADHAAR_MODE controls whether Aadhaar verification is in demo/simulation mode.
+# Allowed values:
+#   "demo"  — Simulated flow only. No UIDAI API calls. Safe for development.
+#             This is the ONLY supported mode for this project.
+#
+# IMPORTANT: Setting this to anything other than "demo" does NOT enable live
+# UIDAI authentication. That requires an AUA/KUA license (Aadhaar Act 2016,
+# Section 4). Private developers cannot legally obtain this license without
+# institutional approval from UIDAI.
+#
+# For production with a licensed provider (Signzy, Surepass, Digio), you would
+# replace the OTP logic in trashport/collectors/aadhaar_service.py with their
+# SDK, not change this flag.
+AADHAAR_MODE = env.str("AADHAAR_MODE", default="demo")

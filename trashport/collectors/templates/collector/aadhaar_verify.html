@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Aadhaar Verification — TrashPort Collector{% endblock %}
+
+{% block content %}
+<!--
+  ============================================================================
+  DEMO / ACADEMIC PROJECT NOTICE
+  ============================================================================
+  This page is part of a college/university project demonstrating a simulated
+  Aadhaar authentication flow. It does NOT connect to:
+    - https://uidai.gov.in  (UIDAI production system)
+    - Any AUA/KUA (Authentication/KYC User Agency) endpoint
+
+  Real Aadhaar authentication for private entities requires a license under
+  the Aadhaar Act 2016, Section 4. This project uses mock/sandbox data only.
+  ============================================================================
+-->
+
+<style>
+  /* ---- Color tokens & base ---- */
+  :root {
+    --aadh-orange:    #ea580c;
+    --aadh-orange-bg: #fff7ed;
+    --aadh-blue:      #2563eb;
+    --aadh-blue-bg:   #eff6ff;
+    --aadh-green:     #16a34a;
+    --aadh-green-bg:  #f0fdf4;
+    --aadh-red:       #dc2626;
+    --aadh-gray:      #6b7280;
+    --aadh-border:    #e5e7eb;
+    --aadh-card-bg:   #ffffff;
+    --aadh-page-bg:   #f8fafc;
+  }
+
+  body { background: var(--aadh-page-bg); }
+
+  /* ---- Demo mode banner ---- */
+  .demo-banner {
+    background: var(--aadh-orange-bg);
+    border-left: 4px solid var(--aadh-orange);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #9a3412;
+    margin-bottom: 1.5rem;
+  }
+  .demo-banner .demo-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+  /* ---- Card ---- */
+  .aadhaar-card {
+    background: var(--aadh-card-bg);
+    border: 1px solid var(--aadh-border);
+    border-radius: 1rem;
+    padding: 2rem;
+    max-width: 520px;
+    margin: 0 auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  }
+
+  /* ---- Consent box ---- */
+  .consent-box {
+    background: var(--aadh-blue-bg);
+    border: 1px solid #bfdbfe;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    font-size: 0.82rem;
+    color: #1e3a5f;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+  .consent-box ul { margin: 0.5rem 0 0.5rem 1.25rem; }
+  .consent-check { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .consent-check input[type=checkbox] { width: 1.1rem; height: 1.1rem; accent-color: var(--aadh-blue); cursor: pointer; }
+
+  /* ---- Steps ---- */
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .step-num {
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    background: var(--aadh-blue);
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-header h2 { font-size: 1.1rem; font-weight: 700; margin: 0; color: #1e293b; }
+
+  /* ---- Form inputs ---- */
+  .aadh-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+  }
+  .aadh-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--aadh-border);
+    border-radius: 0.6rem;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s;
+    outline: none;
+    font-family: 'Courier New', monospace;
+    background: #f9fafb;
+  }
+  .aadh-input:focus { border-color: var(--aadh-blue); background: #fff; }
+  .aadh-input.error { border-color: var(--aadh-red); }
+  .aadh-input.success-input { border-color: var(--aadh-green); }
+
+  .field-hint { font-size: 0.78rem; color: var(--aadh-gray); margin-top: 0.3rem; }
+  .field-error { font-size: 0.8rem; color: var(--aadh-red); margin-top: 0.3rem; display: none; }
+  .field-error.visible { display: block; }
+
+  /* ---- Button ---- */
+  .aadh-btn {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 0.6rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 1rem;
+  }
+  .aadh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .aadh-btn:not(:disabled):hover { opacity: 0.9; transform: translateY(-1px); }
+  .aadh-btn-primary { background: var(--aadh-blue); color: white; }
+  .aadh-btn-green  { background: var(--aadh-green); color: white; }
+
+  /* ---- OTP countdown ---- */
+  .otp-timer {
+    font-size: 0.82rem;
+    color: var(--aadh-gray);
+    margin-top: 0.6rem;
+    text-align: center;
+  }
+  .otp-timer.urgent { color: var(--aadh-red); font-weight: 600; }
+
+  /* ---- Alert ---- */
+  .aadh-alert {
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    margin-top: 0.75rem;
+    display: none;
+  }
+  .aadh-alert.visible { display: block; }
+  .aadh-alert.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .aadh-alert.ok  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+  /* ---- Success state ---- */
+  .success-state {
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+  }
+  .success-icon {
+    width: 4.5rem; height: 4.5rem;
+    border-radius: 50%;
+    background: var(--aadh-green-bg);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2rem;
+  }
+  .masked-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.12em;
+    background: #f1f5f9;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    display: inline-block;
+    margin: 0.75rem auto;
+  }
+
+  /* ---- Demo numbers table ---- */
+  .demo-numbers {
+    background: #fafafa;
+    border: 1px solid var(--aadh-border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+    font-size: 0.82rem;
+  }
+  .demo-numbers h3 { font-size: 0.8rem; font-weight: 700; color: var(--aadh-orange); margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .demo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 0.75rem;
+  }
+  .demo-row:last-child { border-bottom: none; }
+  .demo-num {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    text-decoration: underline dotted;
+  }
+  .demo-num:hover { color: var(--aadh-blue); }
+  .demo-desc { color: var(--aadh-gray); flex-shrink: 0; }
+</style>
+
+<div class="container py-5" style="max-width: 640px; margin: 0 auto;">
+
+  <!-- ================================================================
+       DEMO MODE BANNER (always visible — required per project spec)
+       ================================================================ -->
+  <div class="demo-banner" role="alert" id="demo-mode-banner">
+    <span class="demo-icon">⚠️</span>
+    <div>
+      <strong>SIMULATED AADHAAR FLOW — DEMO MODE</strong><br>
+      This is an academic/college project implementation. It is <em>not</em>
+      connected to UIDAI or any live government authentication system.
+      Real Aadhaar integration requires an AUA/KUA license under the
+      Aadhaar Act 2016. OTPs are printed to the Django server console only.
+    </div>
+  </div>
+
+  <div class="aadhaar-card">
+
+    <!-- Header -->
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <div style="font-size:2.5rem; margin-bottom:0.5rem;">🪪</div>
+      <h1 style="font-size:1.4rem; font-weight:800; color:#1e293b; margin:0;">
+        Aadhaar Verification
+      </h1>
+      <p style="font-size:0.875rem; color:#64748b; margin:0.4rem 0 0;">
+        Required for Collector account activation
+      </p>
+    </div>
+
+    <!-- ============================================================
+         STEP 0 — Consent
+         ============================================================ -->
+    <div id="step-consent" class="step active">
+
+      <div class="consent-box">
+        <strong>📋 Consent Notice — Please Read</strong><br><br>
+        Before proceeding, please understand what data is collected and why:
+        <ul>
+          <li>Your <strong>12-digit Aadhaar number</strong> will be used to
+              generate a simulated OTP verification. It will <strong>NOT</strong>
+              be stored in any database.</li>
+          <li>Only a <strong>SHA-256 hash</strong> (one-way, irreversible) and a
+              <strong>masked display</strong> (e.g., XXXX XXXX 9012) will be saved.</li>
+          <li>This verification confirms your identity as a Collector on
+              the TrashPort platform.</li>
+          <li>This is a <strong>simulated/demo flow</strong> and no data is
+              transmitted to UIDAI or any government system.</li>
+          <li>You may withdraw consent at any time by contacting the platform admin.</li>
+        </ul>
+        <label class="consent-check">
+          <input type="checkbox" id="consent-checkbox">
+          I have read and consent to the above data usage for Aadhaar verification.
+        </label>
+      </div>
+
+      <button class="aadh-btn aadh-btn-primary" id="consent-btn" disabled onclick="acceptConsent()">
+        I Consent — Proceed to Verification →
+      </button>
+
+    </div>
+
+    <!-- ============================================================
+         STEP 1 — Aadhaar Number Input
+         ============================================================ -->
+    <div id="step-aadhaar" class="step">
+
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <h2>Enter your Aadhaar Number</h2>
+      </div>
+
+      <label class="aadh-label" for="aadhaar-input">Aadhaar Number</label>
+      <input
+        type="text"
+        id="aadhaar-input"
+        class="aadh-input"
+        maxlength="12"
+        placeholder="e.g. 3043 3218 1964"
+        inputmode="numeric"
+        autocomplete="off"
+        oninput="onAadhaarInput(this)"
+      >
+      <div class="field-hint">Enter the 12-digit number printed on your Aadhaar card (digits only).</div>
+      <div class="field-error" id="aadhaar-error"></div>
+
+      <div id="aadhaar-alert" class="aadh-alert"></div>
+
+      <button class="aadh-btn aadh-btn-primary" id="send-otp-btn" disabled onclick="sendOtp()">
+        Send OTP →
+      </button>
+
+      <!-- Demo test numbers (for academic demo) -->
+      <div class="demo-numbers">
+        <h3>🧪 Test Aadhaar Numbers (Demo Only)</h3>
+        <p style="color:#9ca3af; margin:0 0 0.5rem; font-size:0.78rem;">
+          Click any number to auto-fill. These are fictional — do not submit to any real system.
+        </p>
+        <div class="demo-row">
+          <span class="demo-num" onclick="fillDemo('304332181964')">3043 3218 1964</span>
+          <span class="demo-desc">Test User Alpha</span>
+        </div>
+        <div class="demo-row">
+          <span class="demo-num" onclick="fillDemo('201338908389')">2013 3890 8389</span>
+          <span class="demo-desc">Test User Beta</span>
+        </div>
+        <div class="demo-row">
+          <span class="demo-num" onclick="fillDemo('837940265421')">8379 4026 5421</span>
+          <span class="demo-desc">Test User Gamma</span>
+        </div>
+        <div class="demo-row">
+          <span class="demo-num" onclick="fillDemo('551161559403')">5511 6155 9403</span>
+          <span class="demo-desc">Test User Delta</span>
+        </div>
+        <div class="demo-row">
+          <span class="demo-num" onclick="fillDemo('981618495938')">9816 1849 5938</span>
+          <span class="demo-desc">Test User Epsilon</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         STEP 2 — OTP Verification
+         ============================================================ -->
+    <div id="step-otp" class="step">
+
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <h2>Enter OTP</h2>
+      </div>
+
+      <p style="font-size:0.875rem; color:#475569; margin-bottom:1rem;">
+        A 6-digit OTP has been generated.
+        Check the <strong>Django server console</strong> for the line:<br>
+        <code style="font-size:0.8rem; background:#f1f5f9; padding:0.2rem 0.5rem; border-radius:4px;">
+          [DEMO MODE - OTP: xxxxxx]
+        </code>
+      </p>
+
+      <p style="font-size:0.85rem; color:#475569; margin-bottom:0.75rem;">
+        Verifying for: <strong id="otp-masked-display" style="font-family:monospace;"></strong>
+      </p>
+
+      <label class="aadh-label" for="otp-input">6-Digit OTP</label>
+      <input
+        type="text"
+        id="otp-input"
+        class="aadh-input"
+        maxlength="6"
+        placeholder="e.g. 042817"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        oninput="onOtpInput(this)"
+      >
+      <div class="field-error" id="otp-error"></div>
+      <div class="otp-timer" id="otp-timer">OTP expires in 5:00</div>
+
+      <div id="otp-alert" class="aadh-alert"></div>
+
+      <button class="aadh-btn aadh-btn-primary" id="verify-btn" disabled onclick="verifyOtp()">
+        Verify OTP ✓
+      </button>
+
+      <button
+        style="background:none; border:none; color:var(--aadh-blue); font-size:0.85rem; cursor:pointer; margin-top:0.75rem; width:100%; text-align:center;"
+        onclick="goBackToStep1()"
+      >
+        ← Re-enter Aadhaar number
+      </button>
+
+    </div>
+
+    <!-- ============================================================
+         STEP 3 — Success
+         ============================================================ -->
+    <div id="step-success" class="step">
+      <div class="success-state">
+        <div class="success-icon">✅</div>
+        <h2 style="font-size:1.3rem; font-weight:800; color:#166534; margin:0;">
+          Aadhaar Verified!
+        </h2>
+        <p style="font-size:0.875rem; color:#64748b; margin:0.5rem 0 0.25rem;">
+          Your masked Aadhaar number:
+        </p>
+        <div class="masked-display" id="success-masked"></div>
+        <p style="font-size:0.8rem; color:#9ca3af; margin-top:0.5rem;">
+          [DEMO MODE — Simulated verification, not connected to UIDAI]
+        </p>
+        <a
+          href="/dashboard/"
+          class="aadh-btn aadh-btn-green"
+          style="display:inline-block; margin-top:1.25rem; text-decoration:none; text-align:center;"
+        >
+          Go to Dashboard →
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /.aadhaar-card -->
+</div><!-- /.container -->
+
+<script>
+  // State
+  let referenceId = null;
+  let timerInterval = null;
+  let secondsLeft = 300; // 5 minutes
+
+  // ── Consent step ──────────────────────────────────────────────────────────
+  document.getElementById('consent-checkbox').addEventListener('change', function() {
+    document.getElementById('consent-btn').disabled = !this.checked;
+  });
+
+  function acceptConsent() {
+    showStep('step-aadhaar');
+  }
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  function showStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function goBackToStep1() {
+    clearInterval(timerInterval);
+    document.getElementById('otp-input').value = '';
+    showStep('step-aadhaar');
+  }
+
+  // ── Aadhaar input formatting & validation ─────────────────────────────────
+  function onAadhaarInput(el) {
+    // Strip non-digits
+    let val = el.value.replace(/\D/g, '');
+    el.value = val;
+
+    // Enable button only when 12 digits entered
+    const btn = document.getElementById('send-otp-btn');
+    const err = document.getElementById('aadhaar-error');
+
+    if (val.length === 12) {
+      btn.disabled = false;
+      err.classList.remove('visible');
+      el.classList.remove('error');
+    } else {
+      btn.disabled = true;
+    }
+  }
+
+  function fillDemo(num) {
+    const el = document.getElementById('aadhaar-input');
+    el.value = num;
+    el.classList.remove('error');
+    document.getElementById('aadhaar-error').classList.remove('visible');
+    document.getElementById('send-otp-btn').disabled = false;
+    el.focus();
+  }
+
+  // ── OTP input ─────────────────────────────────────────────────────────────
+  function onOtpInput(el) {
+    let val = el.value.replace(/\D/g, '');
+    el.value = val;
+    document.getElementById('verify-btn').disabled = val.length !== 6;
+  }
+
+  // ── API: Initiate ─────────────────────────────────────────────────────────
+  async function sendOtp() {
+    const btn = document.getElementById('send-otp-btn');
+    const aadhaarNum = document.getElementById('aadhaar-input').value.replace(/\s/g, '');
+    const alert = document.getElementById('aadhaar-alert');
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    hideAlert(alert);
+
+    try {
+      const res = await fetch('/api/collectors/aadhaar/initiate/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({ aadhaar_number: aadhaarNum }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        referenceId = data.reference_id;
+        document.getElementById('otp-masked-display').textContent = data.masked_aadhaar;
+        document.getElementById('success-masked').textContent = data.masked_aadhaar;
+        startTimer(data.expires_in || 300);
+        showStep('step-otp');
+      } else {
+        showAlert(alert, data.error || 'Failed to initiate. Please try again.', 'err');
+        document.getElementById('aadhaar-input').classList.add('error');
+        btn.disabled = false;
+      }
+    } catch (e) {
+      showAlert(alert, 'Network error. Please try again.', 'err');
+      btn.disabled = false;
+    }
+
+    btn.textContent = 'Send OTP →';
+  }
+
+  // ── Timer ─────────────────────────────────────────────────────────────────
+  function startTimer(seconds) {
+    clearInterval(timerInterval);
+    secondsLeft = seconds;
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      secondsLeft--;
+      updateTimerDisplay();
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        const timerEl = document.getElementById('otp-timer');
+        timerEl.textContent = 'OTP has expired. Please go back and re-enter your Aadhaar.';
+        timerEl.classList.add('urgent');
+        document.getElementById('verify-btn').disabled = true;
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+    const s = (secondsLeft % 60).toString().padStart(2, '0');
+    const el = document.getElementById('otp-timer');
+    el.textContent = `OTP expires in ${m}:${s}`;
+    el.classList.toggle('urgent', secondsLeft <= 60);
+  }
+
+  // ── API: Verify ───────────────────────────────────────────────────────────
+  async function verifyOtp() {
+    const btn = document.getElementById('verify-btn');
+    const otp = document.getElementById('otp-input').value;
+    const alert = document.getElementById('otp-alert');
+
+    btn.disabled = true;
+    btn.textContent = 'Verifying…';
+    hideAlert(alert);
+
+    try {
+      const res = await fetch('/api/collectors/aadhaar/verify/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({ reference_id: referenceId, otp }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.verified) {
+        clearInterval(timerInterval);
+        document.getElementById('success-masked').textContent = data.masked_aadhaar;
+        showStep('step-success');
+      } else {
+        showAlert(alert, data.error || 'Verification failed.', 'err');
+        document.getElementById('otp-input').classList.add('error');
+        btn.disabled = false;
+      }
+    } catch (e) {
+      showAlert(alert, 'Network error. Please try again.', 'err');
+      btn.disabled = false;
+    }
+
+    btn.textContent = 'Verify OTP ✓';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function getCsrf() {
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+  }
+
+  function showAlert(el, msg, type) {
+    el.textContent = msg;
+    el.className = `aadh-alert visible ${type}`;
+  }
+
+  function hideAlert(el) {
+    el.className = 'aadh-alert';
+    el.textContent = '';
+  }
+</script>
+{% endblock %}

@@ -262,3 +262,75 @@ To run the entire test suite locally using the SQLite database:
 $env:DATABASE_URL="sqlite:///db.sqlite3"; $env:DJANGO_READ_DOT_ENV_FILE="True"; uv run pytest
 ```
 
+
+---
+
+## 🪪 Aadhaar Verification (Simulated — Collector Signup Only)
+
+> **⚠ DEMO / ACADEMIC PROJECT** — This is a simulated Aadhaar authentication flow implemented for a college/university project. It does **not** connect to UIDAI or any live government authentication system.
+
+### Why this is a Simulated Flow
+
+Real Aadhaar authentication for private applications requires:
+
+1. **AUA/KUA License** — Under the [Aadhaar Act 2016, Section 4](https://uidai.gov.in/en/ecosystem/authentication-devices-documents/developers-page.html), only licensed Authentication User Agencies (AUAs) or KYC User Agencies (KUAs) may initiate Aadhaar authentication. Private developers and students cannot obtain this license without institutional approval from UIDAI.
+
+2. **Puttaswamy Judgment (2018)** — In *Justice K.S. Puttaswamy v. Union of India*, the Supreme Court of India held that mandatory Aadhaar linkage for private entities is unconstitutional. Voluntary use for government-benefit schemes remains permissible, but blanket private entity authentication was struck down.
+
+3. **UIDAI Developer Sandbox** — UIDAI provides a sandbox environment, but access requires institutional credentials and approval — not available for individual college projects.
+
+### What This Implementation Does
+
+| Feature | Implementation |
+|---|---|
+| Aadhaar format validation | 12 digits, numeric, Verhoeff checksum |
+| OTP generation | 6-digit random OTP, logged to console |
+| OTP delivery | `[DEMO MODE - OTP: xxxxxx]` in Django logs |
+| OTP expiry | 5 minutes |
+| Rate limiting | Max 3 attempts per OTP session |
+| Raw Aadhaar storage | ❌ **Never stored** |
+| Stored data | SHA-256 hash + masked display (`XXXX XXXX 9012`) |
+| Scope | Collector role only — Admin/Citizen flows untouched |
+| Config flag | `AADHAAR_MODE=demo` in `.env` |
+
+### Data Protection Measures
+
+- **No plaintext storage**: The raw 12-digit Aadhaar number is hashed with SHA-256 immediately after input and never written to the database.
+- **Masked display**: Only `XXXX XXXX <last4>` is shown to users and stored — enough for recognition without exposing sensitive digits.
+- **Hashed OTP**: OTPs are also stored as SHA-256 hashes; the plaintext OTP is discarded after generation and comparison.
+- **Single-use OTP**: After successful verification, `otp_hash`, `otp_expires_at`, and `otp_attempts` are cleared — the OTP cannot be reused.
+- **Consent notice**: Users must explicitly consent before their Aadhaar number is accepted.
+- **Collector-scoped model**: `CollectorAadhaarProfile` is a separate table from `users.User`, so adding `aadhaar_verified` to a Collector doesn't affect Admin or Citizen records.
+
+### Demo Test Aadhaar Numbers
+
+The following **fictional** numbers are provided for testing. They satisfy the Verhoeff checksum (same algorithm real Aadhaar numbers use), but are **not registered with UIDAI** and **do not belong to any person**.
+
+| Number | Masked |
+|---|---|
+| `304332181964` | XXXX XXXX 1964 |
+| `201338908389` | XXXX XXXX 8389 |
+| `837940265421` | XXXX XXXX 5421 |
+| `551161559403` | XXXX XXXX 9403 |
+| `981618495938` | XXXX XXXX 5938 |
+
+### How to Upgrade to a Real Licensed Provider
+
+To move to production Aadhaar authentication with a licensed provider (e.g., **Signzy**, **Surepass**, **Digio**), replace the mock logic in [`trashport/collectors/aadhaar_service.py`](trashport/collectors/aadhaar_service.py):
+
+1. Replace `generate_demo_otp()` with an API call to the licensed provider's OTP initiation endpoint.
+2. Replace the `verhoeff_validate()` pre-check (still useful as a client-side guard) with the provider's own validation.
+3. Replace the local OTP hash comparison in `AadhaarVerifyView` with a call to the provider's verification endpoint.
+4. Store provider-issued `txn_id` / `auth_token` in `CollectorAadhaarProfile` instead of the local OTP hash.
+5. Keep all hashing and masking logic — the privacy measures are provider-agnostic.
+6. Remove `AADHAAR_MODE=demo` from `.env` and add provider API keys as environment variables.
+
+### API Endpoints (Collector-Scoped)
+
+| Method | URL | Description |
+|---|---|---|
+| `GET` | `/api/collectors/aadhaar/` | Aadhaar verification page (HTML) |
+| `POST` | `/api/collectors/aadhaar/initiate/` | Validate number, generate OTP |
+| `POST` | `/api/collectors/aadhaar/verify/` | Verify OTP, mark `aadhaar_verified=True` |
+
+All endpoints require `Login` and reject non-Collector roles with HTTP 403.

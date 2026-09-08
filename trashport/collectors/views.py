@@ -110,6 +110,19 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
         )
 
+        # -----------------------------------------------------------------------
+        # Aadhaar verification status (Collector-scoped — reads CollectorAadhaarProfile)
+        # Not touching the shared users.User model; other roles are unaffected.
+        # -----------------------------------------------------------------------
+        from trashport.collectors.models import CollectorAadhaarProfile
+        try:
+            aadhaar_profile = CollectorAadhaarProfile.objects.get(collector=user)
+            context["aadhaar_verified"] = aadhaar_profile.aadhaar_verified
+            context["aadhaar_masked"] = aadhaar_profile.aadhaar_masked or ""
+        except CollectorAadhaarProfile.DoesNotExist:
+            context["aadhaar_verified"] = False
+            context["aadhaar_masked"] = ""
+
         return context
 
 

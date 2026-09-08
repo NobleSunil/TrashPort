@@ -1,0 +1,337 @@
+"""
+trashport/collectors/aadhaar_views.py
+
+JSON API views for the simulated Aadhaar OTP verification flow.
+Scoped exclusively to Collector users — other roles are rejected.
+
+Endpoints:
+  POST /api/collectors/aadhaar/initiate/  — validate Aadhaar, generate OTP
+  POST /api/collectors/aadhaar/verify/    — check OTP, mark verified
+
+DEMO / ACADEMIC PROJECT:
+  AADHAAR_MODE = demo (read from settings)
+  No calls to UIDAI or any live government API are made.
+  OTPs are logged to the Django logger at INFO level as:
+      [DEMO MODE - OTP: xxxxxx]
+"""
+
+import json
+import logging
+
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.generic import TemplateView
+from django.views.decorators.csrf import csrf_exempt
+from datetime import timedelta
+
+from .aadhaar_service import (
+    verhoeff_validate,
+    generate_demo_otp,
+    sha256_hash,
+    mask_aadhaar,
+)
+from .models import CollectorAadhaarProfile
+
+logger = logging.getLogger(__name__)
+
+# OTP validity window in minutes
+OTP_EXPIRY_MINUTES = 5
+
+# Maximum OTP verification attempts before locking
+MAX_OTP_ATTEMPTS = 3
+
+
+class AadhaarVerifyPageView(LoginRequiredMixin, TemplateView):
+    """
+    GET /api/collectors/aadhaar/
+
+    Renders the Aadhaar verification HTML page.
+    Scoped to Collector users — redirects others to dashboard.
+    If already verified, redirects straight to dashboard.
+    """
+    template_name = "collector/aadhaar_verify.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Redirect non-collectors and already-verified collectors."""
+        from trashport.users.models import User
+        if request.user.is_authenticated:
+            if request.user.role != User.Roles.COLLECTOR:
+                return redirect("/dashboard/")
+            # If already verified, skip straight to dashboard
+            try:
+                profile = CollectorAadhaarProfile.objects.get(collector=request.user)
+                if profile.aadhaar_verified:
+                    return redirect("/dashboard/")
+            except CollectorAadhaarProfile.DoesNotExist:
+                pass
+        return super().dispatch(request, *args, **kwargs)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(login_required, name="dispatch")
+class AadhaarInitiateView(View):
+    """
+    POST /api/collectors/aadhaar/initiate/
+
+    Accepts a 12-digit Aadhaar number, validates its format and Verhoeff
+    checksum, generates a simulated 6-digit OTP, and returns a reference ID
+    for the subsequent verify call.
+
+    Request body (JSON):
+        { "aadhaar_number": "304332181964" }
+
+    Responses:
+        200 OK:
+            {
+                "reference_id": "<uuid>",
+                "masked_aadhaar": "XXXX XXXX 1964",
+                "expires_in": 300,
+                "demo_mode": true
+            }
+        400 Bad Request:
+            { "error": "<reason>" }
+        403 Forbidden:
+            { "error": "Only Collector accounts can use Aadhaar verification." }
+    """
+
+    # -------------------------------------------------------------------------
+    # Scope guard — only collectors may use this endpoint
+    # -------------------------------------------------------------------------
+    def _check_collector(self, user):
+        from trashport.users.models import User
+        if user.role != User.Roles.COLLECTOR:
+            return JsonResponse(
+                {"error": "Only Collector accounts can use Aadhaar verification."},
+                status=403,
+            )
+        return None
+
+    def post(self, request, *args, **kwargs):
+        # --- Scope guard -------------------------------------------------
+        scope_err = self._check_collector(request.user)
+        if scope_err:
+            return scope_err
+
+        # --- Parse body --------------------------------------------------
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+        aadhaar_number = str(data.get("aadhaar_number", "")).strip()
+
+        # --- Format validation -------------------------------------------
+        if not aadhaar_number:
+            return JsonResponse({"error": "aadhaar_number is required."}, status=400)
+
+        if not aadhaar_number.isdigit() or len(aadhaar_number) != 12:
+            return JsonResponse(
+                {"error": "Aadhaar number must be exactly 12 numeric digits."},
+                status=400,
+            )
+
+        # --- Verhoeff checksum validation --------------------------------
+        if not verhoeff_validate(aadhaar_number):
+            return JsonResponse(
+                {
+                    "error": (
+                        "Invalid Aadhaar number (checksum failed). "
+                        "Please enter a valid 12-digit Aadhaar number. "
+                        "Use one of the provided demo numbers for testing."
+                    )
+                },
+                status=400,
+            )
+
+        # --- Compute hash & mask (never store raw number) ----------------
+        aadhaar_h = sha256_hash(aadhaar_number)
+        aadhaar_masked = mask_aadhaar(aadhaar_number)
+
+        # --- Check if already verified -----------------------------------
+        profile, _ = CollectorAadhaarProfile.objects.get_or_create(
+            collector=request.user
+        )
+
+        if profile.aadhaar_verified:
+            return JsonResponse(
+                {
+                    "error": "Your Aadhaar is already verified.",
+                    "masked_aadhaar": profile.aadhaar_masked,
+                },
+                status=400,
+            )
+
+        # --- Generate OTP (demo) -----------------------------------------
+        otp = generate_demo_otp()  # also logs [DEMO MODE - OTP: xxxxxx]
+        otp_h = sha256_hash(otp)
+        expiry = timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES)
+
+        # --- Persist hashed data only ------------------------------------
+        profile.aadhaar_hash = aadhaar_h
+        profile.aadhaar_masked = aadhaar_masked
+        profile.otp_hash = otp_h
+        profile.otp_expires_at = expiry
+        profile.otp_attempts = 0  # reset counter on new OTP
+        profile.save(update_fields=[
+            "aadhaar_hash", "aadhaar_masked",
+            "otp_hash", "otp_expires_at", "otp_attempts", "updated_at",
+        ])
+
+        logger.info(
+            "Aadhaar initiate: collector=%s, masked=%s, ref=%s [DEMO MODE]",
+            request.user.email, aadhaar_masked, profile.reference_id,
+        )
+
+        # --- Return reference ID to front-end ----------------------------
+        return JsonResponse({
+            "reference_id": str(profile.reference_id),
+            "masked_aadhaar": aadhaar_masked,
+            "expires_in": OTP_EXPIRY_MINUTES * 60,  # seconds
+            "demo_mode": True,
+            "message": (
+                f"[DEMO] OTP has been generated. Check the Django server console "
+                f"for the OTP value (labelled [DEMO MODE - OTP: xxxxxx])."
+            ),
+        })
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(login_required, name="dispatch")
+class AadhaarVerifyView(View):
+    """
+    POST /api/collectors/aadhaar/verify/
+
+    Verifies the OTP entered by the collector. On success, sets
+    CollectorAadhaarProfile.aadhaar_verified = True and clears the OTP
+    (single-use). Enforces a 5-minute expiry and max 3 attempts.
+
+    Request body (JSON):
+        { "reference_id": "<uuid>", "otp": "042817" }
+
+    Responses:
+        200 OK:
+            { "verified": true, "masked_aadhaar": "XXXX XXXX 1964" }
+        400 Bad Request:
+            { "error": "<reason>", "attempts_remaining": <int> }
+        403 Forbidden:
+            { "error": "Only Collector accounts can use Aadhaar verification." }
+    """
+
+    def _check_collector(self, user):
+        from trashport.users.models import User
+        if user.role != User.Roles.COLLECTOR:
+            return JsonResponse(
+                {"error": "Only Collector accounts can use Aadhaar verification."},
+                status=403,
+            )
+        return None
+
+    def post(self, request, *args, **kwargs):
+        # --- Scope guard -------------------------------------------------
+        scope_err = self._check_collector(request.user)
+        if scope_err:
+            return scope_err
+
+        # --- Parse body --------------------------------------------------
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+        reference_id = str(data.get("reference_id", "")).strip()
+        otp_entered = str(data.get("otp", "")).strip()
+
+        if not reference_id or not otp_entered:
+            return JsonResponse(
+                {"error": "reference_id and otp are required."},
+                status=400,
+            )
+
+        # --- Load profile by reference_id --------------------------------
+        try:
+            profile = CollectorAadhaarProfile.objects.get(
+                reference_id=reference_id,
+                collector=request.user,
+            )
+        except CollectorAadhaarProfile.DoesNotExist:
+            return JsonResponse(
+                {"error": "Invalid or expired reference ID. Please restart the verification."},
+                status=400,
+            )
+
+        # --- Already verified? -------------------------------------------
+        if profile.aadhaar_verified:
+            return JsonResponse({
+                "verified": True,
+                "masked_aadhaar": profile.aadhaar_masked,
+                "message": "Already verified.",
+            })
+
+        # --- Rate limit check --------------------------------------------
+        if profile.is_otp_locked():
+            return JsonResponse(
+                {
+                    "error": (
+                        "Maximum OTP attempts reached. "
+                        "Please restart verification with your Aadhaar number."
+                    ),
+                    "attempts_remaining": 0,
+                },
+                status=400,
+            )
+
+        # --- Expiry check ------------------------------------------------
+        if profile.is_otp_expired():
+            return JsonResponse(
+                {"error": "OTP has expired. Please request a new one.", "attempts_remaining": 0},
+                status=400,
+            )
+
+        # --- OTP match check (compare hashes — never compare plaintext) --
+        if not profile.otp_hash:
+            return JsonResponse(
+                {"error": "No pending OTP found. Please initiate verification first."},
+                status=400,
+            )
+
+        entered_hash = sha256_hash(otp_entered)
+
+        if entered_hash != profile.otp_hash:
+            # Increment attempt counter
+            profile.otp_attempts += 1
+            profile.save(update_fields=["otp_attempts", "updated_at"])
+
+            attempts_remaining = max(0, MAX_OTP_ATTEMPTS - profile.otp_attempts)
+            logger.warning(
+                "Aadhaar OTP mismatch: collector=%s, ref=%s, attempts=%d [DEMO MODE]",
+                request.user.email, reference_id, profile.otp_attempts,
+            )
+            return JsonResponse(
+                {
+                    "error": f"Incorrect OTP. {attempts_remaining} attempt(s) remaining.",
+                    "attempts_remaining": attempts_remaining,
+                },
+                status=400,
+            )
+
+        # --- SUCCESS — mark verified and clear OTP (single-use) ----------
+        profile.aadhaar_verified = True
+        profile.reset_otp()  # clears otp_hash, otp_expires_at, otp_attempts
+
+        logger.info(
+            "Aadhaar verified: collector=%s, masked=%s [DEMO MODE]",
+            request.user.email, profile.aadhaar_masked,
+        )
+
+        return JsonResponse({
+            "verified": True,
+            "masked_aadhaar": profile.aadhaar_masked,
+            "message": "Aadhaar verification successful (DEMO MODE).",
+            "demo_mode": True,
+        })
