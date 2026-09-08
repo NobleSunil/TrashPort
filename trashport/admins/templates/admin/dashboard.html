@@ -142,22 +142,25 @@
 
     <!-- Active Complaints & Users -->
     <div class="col-xl col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-white" style="border-left: 4px solid {% if active_complaints > 0 %}#dc3545{% else %}#6c757d{% endif %} !important;">
+      <a href="#pending-complaints" class="card border-0 shadow-sm h-100 bg-white text-decoration-none text-dark card-hover-link" style="border-left: 4px solid {% if active_complaints > 0 %}#dc3545{% else %}#6c757d{% endif %} !important; cursor: pointer;">
         <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Active Issues</span>
             {% if active_complaints > 0 %}
-              <span class="badge bg-danger rounded-pill">{{ active_complaints }} Urgent</span>
+              <span class="badge bg-danger rounded-pill d-inline-flex align-items-center gap-1">{{ active_complaints }} Urgent <i class="bi bi-arrow-down-short"></i></span>
             {% else %}
-              <span class="badge bg-secondary rounded-pill">All Clear</span>
+              <span class="badge bg-secondary rounded-pill d-inline-flex align-items-center gap-1">All Clear <i class="bi bi-arrow-down-short"></i></span>
             {% endif %}
           </div>
-          <h3 class="fw-bold mb-1">{{ active_complaints }} <span class="fs-6 text-muted">Issues</span></h3>
-          <div class="text-muted small">
-            <span>{{ total_citizens }} Citizens</span> • <span>{{ total_collectors }} Collectors</span>
+          <h3 class="fw-bold mb-1 text-dark">{{ active_complaints }} <span class="fs-6 text-muted">Issues</span></h3>
+          <div class="text-muted small d-flex justify-content-between align-items-center gap-2">
+            <span>{{ total_citizens }} Citizens • {{ total_collectors }} Collectors</span>
+            <span class="text-primary fw-semibold small d-inline-flex align-items-center gap-1 text-nowrap">
+              View Pending <i class="bi bi-arrow-down-circle-fill fs-6"></i>
+            </span>
           </div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 
@@ -247,7 +250,7 @@
     </div>
 
     <!-- Active Complaints -->
-    <div class="col-md-4">
+    <div class="col-md-4" id="pending-complaints">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0 fw-bold text-danger">Pending Complaints ({{ active_complaints }})</h5>
