@@ -13,8 +13,8 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, T
 
 from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
-from trashport.payments.services import PaymentGatewayService
-from trashport.payments.models import PaymentTransaction
+from trashport.payments.services import PaymentGatewayService, WalletService
+from trashport.payments.models import PaymentTransaction, WalletHistory
 
 
 class CitizenDashboardView(LoginRequiredMixin, TemplateView):
@@ -372,11 +372,18 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
         wallet_points = getattr(request.user, "wallet_points", 0)
         # 100 pts = Rs. 1 — calculate whether wallet covers the fee
         wallet_value_inr = Decimal(str(wallet_points)) * Decimal("0.01")
+        # Check for active coupon in session
+        coupon = request.session.get("wallet_coupon")
+        discount = Decimal(str(coupon["discount"])) if coupon else Decimal("0.00")
+        discounted_fee = max(Decimal("0.00"), Decimal(str(pickup.fee)) - discount)
         context = {
             "pickup": pickup,
             "wallet_points": wallet_points,
             "wallet_value_inr": wallet_value_inr,
-            "wallet_covers_fee": wallet_value_inr >= pickup.fee,
+            "wallet_covers_fee": wallet_value_inr >= discounted_fee,
+            "coupon": coupon,
+            "discount": discount,
+            "discounted_fee": discounted_fee,
             "test_cards": [
                 {"number": "4242 4242 4242 4242", "brand": "Visa", "result": "Always succeeds"},
                 {"number": "5555 5555 5555 4444", "brand": "Mastercard", "result": "Always succeeds"},
@@ -391,7 +398,16 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
         method = request.POST.get("payment_method", "card")
         result = None
 
+        # Apply coupon discount if present
+        coupon = request.session.get("wallet_coupon")
+        discount = Decimal(str(coupon["discount"])) if coupon else Decimal("0.00")
+        # Create a temporary pickup-like object with discounted fee for payment processing
+        original_fee = Decimal(str(pickup.fee))
+        discounted_fee = max(Decimal("0.00"), original_fee - discount)
+
         if method == "card":
+            # Temporarily override fee for discounted payment
+            pickup.fee = discounted_fee
             result = PaymentGatewayService.process_card_payment(
                 user=request.user,
                 pickup=pickup,
@@ -401,6 +417,7 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                 cvv=request.POST.get("cvv", ""),
             )
         elif method == "upi":
+            pickup.fee = discounted_fee
             result = PaymentGatewayService.process_upi_payment(
                 user=request.user,
                 pickup=pickup,
@@ -416,6 +433,9 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
             return redirect("waste_management:payment_checkout", pk=pk)
 
         if result and result["success"]:
+            # Clear coupon from session on success
+            if coupon and method in ("card", "upi"):
+                request.session.pop("wallet_coupon", None)
             # Attach result data to session for the success page
             request.session[f"payment_result_{pk}"] = {
                 "transaction_id": result["transaction_id"],
@@ -424,6 +444,8 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                 "card_last4": result.get("card_last4"),
                 "upi_id": result.get("upi_id"),
                 "points_used": result.get("points_used"),
+                "coupon_discount": float(discount) if coupon else None,
+                "coupon_code": coupon["code"] if coupon else None,
             }
             return redirect("waste_management:payment_success", pk=pk)
         else:
@@ -434,7 +456,10 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                 "pickup": pickup,
                 "wallet_points": wallet_points,
                 "wallet_value_inr": wallet_value_inr,
-                "wallet_covers_fee": wallet_value_inr >= pickup.fee,
+                "wallet_covers_fee": wallet_value_inr >= discounted_fee,
+                "coupon": coupon,
+                "discount": discount,
+                "discounted_fee": discounted_fee,
                 "error": error_msg,
                 "active_method": method,
                 "test_cards": [
@@ -532,3 +557,58 @@ class CitizenInvoiceView(LoginRequiredMixin, View):
             "total_amount": total_amount,
         })
 
+
+# ==============================================================================
+# Wallet Views
+# ==============================================================================
+
+class CitizenWalletView(LoginRequiredMixin, TemplateView):
+    """
+    Displays the citizen's wallet: point history and a coupon redemption option.
+    When the user has >= 100 points, they can redeem 100 pts for a Rs. 10 coupon.
+    """
+    template_name = "citizen/wallet.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context["wallet_points"] = getattr(user, "wallet_points", 0)
+        context["can_redeem"] = context["wallet_points"] >= 100
+        context["history"] = WalletHistory.objects.filter(user=user).order_by("-created_at")[:50]
+        # Check if there's an active coupon in session
+        context["active_coupon"] = self.request.session.get("wallet_coupon")
+        return context
+
+
+class CitizenRedeemCouponView(LoginRequiredMixin, View):
+    """
+    POST — Deducts 100 wallet points and stores a Rs. 10 coupon in the session.
+    The coupon can then be applied at any pickup payment checkout.
+    """
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        wallet_points = getattr(user, "wallet_points", 0)
+
+        if wallet_points < 100:
+            messages.error(request, "You need at least 100 wallet points to redeem a coupon.")
+            return redirect("citizens:wallet")
+
+        # Check if user already has an active coupon
+        if request.session.get("wallet_coupon"):
+            messages.warning(request, "You already have an active coupon. Use it before redeeming another.")
+            return redirect("citizens:wallet")
+
+        # Deduct 100 points and issue coupon
+        import uuid
+        coupon_code = f"TP{uuid.uuid4().hex[:8].upper()}"
+        WalletService.adjust_points(
+            user=user,
+            points_delta=-100,
+            reason=f"Redeemed 100 pts for Rs.10 coupon ({coupon_code})",
+        )
+        request.session["wallet_coupon"] = {
+            "code": coupon_code,
+            "discount": 10,
+        }
+        messages.success(request, f"Coupon {coupon_code} activated! You get Rs.10 off your next pickup payment.")
+        return redirect("citizens:wallet")

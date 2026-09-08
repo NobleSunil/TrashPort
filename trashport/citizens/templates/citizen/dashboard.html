@@ -209,22 +209,25 @@
   <div class="row g-3 mb-4">
     <!-- Wallet Points -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card stat-card h-100 p-3">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div>
-            <span class="text-uppercase text-muted fw-bold small">Wallet Points</span>
-            <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ request.user.wallet_points }}</h2>
+      <a href="{% url 'citizens:wallet' %}" class="text-decoration-none" style="display:block;">
+        <div class="card stat-card h-100 p-3" style="cursor:pointer;transition:transform .18s,box-shadow .18s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="text-uppercase text-muted fw-bold small">Wallet Points</span>
+              <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ request.user.wallet_points }}</h2>
+            </div>
+            <div class="stat-icon icon-emerald">
+              <i class="bi bi-wallet2"></i>
+            </div>
           </div>
-          <div class="stat-icon icon-emerald">
-            <i class="bi bi-wallet2"></i>
+          <div class="d-flex align-items-center gap-1 text-success small mt-2">
+            <i class="bi bi-lightning-charge-fill"></i>
+            <span>Click to view history & redeem</span>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-1 text-success small mt-2">
-          <i class="bi bi-lightning-charge-fill"></i>
-          <span>Earn points by recycling metal & e-waste</span>
-        </div>
-      </div>
+      </a>
     </div>
+
 
     <!-- Active Plan -->
     <div class="col-sm-6 col-lg-3">

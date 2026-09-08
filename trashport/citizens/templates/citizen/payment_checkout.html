@@ -126,6 +126,18 @@
           </div>
           {% endif %}
 
+          <!-- Coupon applied banner -->
+          {% if coupon %}
+          <div class="alert d-flex align-items-center gap-2 py-2 mb-3"
+               style="background:#dcfce7;border:1.5px solid #86efac;color:#15803d;border-radius:12px;">
+            <i class="bi bi-ticket-perforated-fill fs-5"></i>
+            <div>
+              <strong>Coupon Applied!</strong> Code <code class="fw-bold">{{ coupon.code }}</code> —
+              Rs. {{ coupon.discount }} discount applied to your total.
+            </div>
+          </div>
+          {% endif %}
+
           <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
 
@@ -352,10 +364,21 @@
                 <span class="fw-semibold text-warning">+ Rs. {{ pickup.extra_fee }}</span>
               </div>
               {% endif %}
+              {% if coupon %}
+              <div class="summary-item" style="color:#15803d;">
+                <span><i class="bi bi-ticket-perforated-fill me-1"></i>Coupon ({{ coupon.code }})</span>
+                <span class="fw-bold">- Rs. {{ discount }}</span>
+              </div>
+              <div class="summary-item total-row">
+                <span>Total Due</span>
+                <span>Rs. {{ discounted_fee }}</span>
+              </div>
+              {% else %}
               <div class="summary-item total-row">
                 <span>Total Due</span>
                 <span>Rs. {{ pickup.fee }}</span>
               </div>
+              {% endif %}
 
               <hr class="my-3">
 
