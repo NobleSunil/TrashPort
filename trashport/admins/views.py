@@ -448,11 +448,13 @@ class AdminWalletAdjustView(LoginRequiredMixin, View):
         form = WalletPointAdjustmentForm(request.POST)
         if form.is_valid():
             points = form.cleaned_data["points"]
-            reason = form.cleaned_data.get("reason", "")
-            target.wallet_points += points
-            if target.wallet_points < 0:
-                target.wallet_points = 0
-            target.save()
+            reason = form.cleaned_data.get("reason", "").strip()
+            from trashport.payments.services import WalletService
+            WalletService.adjust_points(
+                user=target,
+                points_delta=points,
+                reason=reason or f"Admin point adjustment ({points:+d} pts)"
+            )
             reason_msg = f" ({reason})" if reason else ""
             messages.success(request, f"Adjusted wallet points by {points:+d} for {target.email}{reason_msg}.")
         else:

@@ -19,8 +19,8 @@ DUMMY_CARDS = {
     "4000000000000127": (False, "incorrect_cvc"),
 }
 
-# Points to INR conversion rate: 100 points = Rs. 1
-POINTS_TO_INR_RATE = Decimal("0.01")
+# Points to INR conversion rate: 100 points = Rs. 10 (1 point = Rs. 0.10)
+POINTS_TO_INR_RATE = Decimal("0.10")
 
 
 class StripePaymentService:
@@ -193,8 +193,29 @@ class PaymentGatewayService:
     @staticmethod
     @db_transaction.atomic
     def process_wallet_payment(user, pickup):
-        """Redeem wallet points to pay the pickup fee (100 pts = Rs. 1)."""
+        """Redeem wallet points to pay the pickup fee (100 pts = Rs. 10)."""
         fee = Decimal(str(pickup.fee))
+        if fee <= Decimal("0.00"):
+            PaymentGatewayService._mark_pickup_paid(pickup)
+            txn_id = f"wlt_{uuid.uuid4().hex[:20]}"
+            txn = PaymentTransaction.objects.create(
+                user=user,
+                amount=Decimal("0.00"),
+                currency="INR",
+                payment_method=PaymentTransaction.PaymentMethods.WALLET,
+                status=PaymentTransaction.Statuses.COMPLETED,
+                transaction_id=txn_id,
+                description=f"Pickup #{pickup.id} — Fully covered by coupon / wallet points",
+            )
+            return {
+                "success": True,
+                "transaction_id": txn_id,
+                "amount": 0.0,
+                "method": "wallet",
+                "points_used": 0,
+                "transaction": txn,
+            }
+
         required_points = int((fee / POINTS_TO_INR_RATE).to_integral_value())
         current_points = getattr(user, "wallet_points", 0)
 

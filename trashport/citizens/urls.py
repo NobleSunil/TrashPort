@@ -8,7 +8,7 @@ from waste_management.views import (
     ComplaintListView,
     ComplaintCreateView,
 )
-from trashport.citizens.views import CitizenWalletView, CitizenRedeemCouponView
+from trashport.citizens.views import CitizenWalletView, CitizenRedeemCouponView, CitizenRemoveCouponView
 
 app_name = "citizens"
 
@@ -22,4 +22,5 @@ urlpatterns = [
     path("complaints/new/", ComplaintCreateView.as_view(), name="complaint_create"),
     path("wallet/", CitizenWalletView.as_view(), name="wallet"),
     path("wallet/redeem-coupon/", CitizenRedeemCouponView.as_view(), name="redeem_coupon"),
+    path("wallet/remove-coupon/", CitizenRemoveCouponView.as_view(), name="remove_coupon"),
 ]
