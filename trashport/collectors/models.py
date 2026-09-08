@@ -74,6 +74,16 @@ class CollectorAadhaarProfile(models.Model):
             "Admin, Citizen, or any other role."
         ),
     )
+    linked_email = models.EmailField(
+        "Aadhaar-Linked Email",
+        blank=True,
+        null=True,
+        help_text=(
+            "Email address the collector claims is linked to their Aadhaar. "
+            "In demo mode, the OTP is 'sent' to this address (logged to console). "
+            "Voluntarily provided — not verified against UIDAI."
+        ),
+    )
 
     # -------------------------------------------------------------------------
     # OTP session state (single-use, 5-minute expiry)
@@ -142,4 +152,4 @@ class CollectorAadhaarProfile(models.Model):
         self.otp_hash = None
         self.otp_expires_at = None
         self.otp_attempts = 0
-        self.save(update_fields=["otp_hash", "otp_expires_at", "otp_attempts", "updated_at"])
+        self.save(update_fields=["aadhaar_verified", "otp_hash", "otp_expires_at", "otp_attempts", "updated_at"])

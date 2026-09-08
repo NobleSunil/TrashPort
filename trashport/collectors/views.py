@@ -119,6 +119,9 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
             aadhaar_profile = CollectorAadhaarProfile.objects.get(collector=user)
             context["aadhaar_verified"] = aadhaar_profile.aadhaar_verified
             context["aadhaar_masked"] = aadhaar_profile.aadhaar_masked or ""
+            if aadhaar_profile.aadhaar_verified:
+                context["is_verified"] = True
+                context["verification_status"] = "APPROVED"
         except CollectorAadhaarProfile.DoesNotExist:
             context["aadhaar_verified"] = False
             context["aadhaar_masked"] = ""

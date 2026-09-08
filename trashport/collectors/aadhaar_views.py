@@ -125,6 +125,21 @@ class AadhaarInitiateView(View):
             return JsonResponse({"error": "Invalid JSON body."}, status=400)
 
         aadhaar_number = str(data.get("aadhaar_number", "")).strip()
+        linked_email = str(data.get("linked_email", "")).strip()
+
+        # --- Email validation --------------------------------------------
+        if not linked_email:
+            return JsonResponse(
+                {"error": "Please enter the email address linked to your Aadhaar."},
+                status=400,
+            )
+        # Basic email format check
+        import re as _re
+        if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', linked_email):
+            return JsonResponse(
+                {"error": "Please enter a valid email address."},
+                status=400,
+            )
 
         # --- Format validation -------------------------------------------
         if not aadhaar_number:
@@ -175,28 +190,30 @@ class AadhaarInitiateView(View):
         # --- Persist hashed data only ------------------------------------
         profile.aadhaar_hash = aadhaar_h
         profile.aadhaar_masked = aadhaar_masked
+        profile.linked_email = linked_email   # email is voluntary, not hashed
         profile.otp_hash = otp_h
         profile.otp_expires_at = expiry
         profile.otp_attempts = 0  # reset counter on new OTP
         profile.save(update_fields=[
-            "aadhaar_hash", "aadhaar_masked",
+            "aadhaar_hash", "aadhaar_masked", "linked_email",
             "otp_hash", "otp_expires_at", "otp_attempts", "updated_at",
         ])
 
         logger.info(
-            "Aadhaar initiate: collector=%s, masked=%s, ref=%s [DEMO MODE]",
-            request.user.email, aadhaar_masked, profile.reference_id,
+            "Aadhaar initiate: collector=%s, linked_email=%s, masked=%s, ref=%s [DEMO MODE]",
+            request.user.email, linked_email, aadhaar_masked, profile.reference_id,
         )
 
-        # --- Return reference ID to front-end ----------------------------
+        # --- Return reference ID to front-end -----------------------------
         return JsonResponse({
             "reference_id": str(profile.reference_id),
             "masked_aadhaar": aadhaar_masked,
+            "linked_email": linked_email,
             "expires_in": OTP_EXPIRY_MINUTES * 60,  # seconds
             "demo_mode": True,
             "message": (
-                f"[DEMO] OTP has been generated. Check the Django server console "
-                f"for the OTP value (labelled [DEMO MODE - OTP: xxxxxx])."
+                f"OTP has been sent to {linked_email}. "
+                f"Please check your inbox (or server console in demo mode)."
             ),
         })
 
@@ -322,11 +339,17 @@ class AadhaarVerifyView(View):
 
         # --- SUCCESS — mark verified and clear OTP (single-use) ----------
         profile.aadhaar_verified = True
-        profile.reset_otp()  # clears otp_hash, otp_expires_at, otp_attempts
+        profile.reset_otp()  # clears otp_hash, otp_expires_at, otp_attempts and saves aadhaar_verified=True
+
+        # Also mark collector user verified and approved upon successful Aadhaar verification
+        user = request.user
+        user.is_verified = True
+        user.verification_status = "APPROVED"
+        user.save(update_fields=["is_verified", "verification_status"])
 
         logger.info(
             "Aadhaar verified: collector=%s, masked=%s [DEMO MODE]",
-            request.user.email, profile.aadhaar_masked,
+            user.email, profile.aadhaar_masked,
         )
 
         return JsonResponse({

@@ -27,6 +27,7 @@ class CollectorAadhaarProfileAdmin(admin.ModelAdmin):
         "collector",
         "aadhaar_verified",
         "aadhaar_masked",
+        "linked_email",
         "otp_attempts",
         "otp_expires_at",
         "updated_at",
@@ -54,7 +55,7 @@ class CollectorAadhaarProfileAdmin(admin.ModelAdmin):
                 "⚠ DEMO/ACADEMIC PROJECT: This is a simulated Aadhaar verification. "
                 "No real UIDAI data is stored. Only hashed and masked values appear here."
             ),
-            "fields": ("aadhaar_verified", "aadhaar_masked", "aadhaar_hash"),
+            "fields": ("aadhaar_verified", "aadhaar_masked", "aadhaar_hash", "linked_email"),
         }),
         ("OTP Session (read-only)", {
             "classes": ("collapse",),
