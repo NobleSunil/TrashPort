@@ -273,9 +273,18 @@ class PickupRequest(models.Model):
             # Check if status has transitioned to COMPLETED
             orig = PickupRequest.objects.get(pk=self.pk)
             if orig.status != self.StatusChoices.COMPLETED and self.status == self.StatusChoices.COMPLETED:
-                # 1. Credit Citizen Recycling Points
-                self.citizen.wallet_points += self.points_earned
-                self.citizen.save()
+                # 1. Credit Citizen Recycling Points & Log to Wallet History
+                if self.points_earned > 0:
+                    from trashport.payments.services import WalletService
+                    cat_name = self.category.name if self.category else "Waste"
+                    WalletService.adjust_points(
+                        user=self.citizen,
+                        points_delta=self.points_earned,
+                        reason=f"Recycling reward: {self.weight_kg}kg {cat_name} (Pickup #{self.display_id})"
+                    )
+                else:
+                    self.citizen.wallet_points += self.points_earned
+                    self.citizen.save(update_fields=["wallet_points"])
 
                 # 2. Credit Collector Wallet Earnings: 35% fee + Rs. 0.25/km
                 if self.collector:

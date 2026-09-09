@@ -23,6 +23,8 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
     path("", include("waste_management.urls")),
+    # Citizen-facing pages (wallet, etc.)
+    path("citizen/", include("trashport.citizens.urls", namespace="citizens")),
     # ...
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),

@@ -13,12 +13,14 @@ from .views import (
     OperationsReportView,
     PaymentCheckoutView, PaymentSuccessView, PickupInvoiceView,
 )
+from trashport.citizens.views import CitizenWalletView
 
 app_name = "waste_management"
 
 urlpatterns = [
-    # Dashboard & Wallet Payouts
+    # Dashboard & Wallet
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    path("wallet/", CitizenWalletView.as_view(), name="wallet"),
     path("wallet/redeem-upi/", CollectorRedeemUPIView.as_view(), name="collector_redeem_upi"),
     
     # Subscriptions

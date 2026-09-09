@@ -28,6 +28,8 @@ class UserAdminCreationForm(admin_forms.AdminUserCreationForm):
         }
 
 
+from allauth.account.adapter import get_adapter
+
 class UserSignupForm(SignupForm):
     """
     Form rendered on user sign up section.
@@ -50,10 +52,12 @@ class UserSignupForm(SignupForm):
         return name
 
     def save(self, request):
-        user = super().save(request)
+        adapter = get_adapter(request)
+        user = adapter.new_user(request)
         user.role = self.cleaned_data["role"]
         user.name = self.cleaned_data["name"]
-        user.save()
+        adapter.save_user(request, user, self)
+        self.custom_signup(request, user)
         return user
 
 
