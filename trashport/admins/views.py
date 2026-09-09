@@ -301,38 +301,70 @@ class AdminSubscriptionTierUpdateView(LoginRequiredMixin, UpdateView):
 
 class AdminUserListView(LoginRequiredMixin, ListView):
     """
-    Lists all users (Citizens, Collectors, Admins) with role filtering, verification status filtering, and search.
+    Lists all users (Citizens, Collectors, Admins) with role filtering,
+    verified vs unverified sorting & filtering, and search.
     """
     model = User
     template_name = "admin/user_list.html"
     context_object_name = "users_list"
 
     def get_queryset(self):
-        qs = User.objects.all().order_by("-date_joined")
+        qs = User.objects.all()
         role_filter = self.request.GET.get("role", "").strip()
         verification_filter = self.request.GET.get("verification", "").strip()
+        is_verified_filter = self.request.GET.get("is_verified", "").strip()
+        sort_by = self.request.GET.get("sort", "").strip()
         search_query = self.request.GET.get("q", "").strip()
 
         if role_filter:
             qs = qs.filter(role=role_filter)
         if verification_filter:
             qs = qs.filter(verification_status=verification_filter)
+        if is_verified_filter in ["true", "1"]:
+            qs = qs.filter(is_verified=True)
+        elif is_verified_filter in ["false", "0"]:
+            qs = qs.filter(is_verified=False)
+
         if search_query:
             qs = qs.filter(
                 Q(email__icontains=search_query) | Q(name__icontains=search_query)
             )
+
+        # Sorting logic
+        if sort_by == "verified_first":
+            qs = qs.order_by("-is_verified", "-date_joined")
+        elif sort_by == "unverified_first":
+            qs = qs.order_by("is_verified", "-date_joined")
+        elif sort_by == "name":
+            qs = qs.order_by("name", "email")
+        else:
+            qs = qs.order_by("-date_joined")
+
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["selected_role"] = self.request.GET.get("role", "")
         context["selected_verification"] = self.request.GET.get("verification", "")
+        context["selected_is_verified"] = self.request.GET.get("is_verified", "")
+        context["selected_sort"] = self.request.GET.get("sort", "")
         context["search_query"] = self.request.GET.get("q", "")
         context["role_choices"] = User.Roles.choices
         context["verification_choices"] = User.VerificationStatus.choices
         context["pending_collectors_count"] = User.objects.filter(
             role=User.Roles.COLLECTOR,
             verification_status=User.VerificationStatus.PENDING
+        ).count()
+        context["verified_collectors_count"] = User.objects.filter(
+            role=User.Roles.COLLECTOR,
+            is_verified=True
+        ).count()
+        context["unverified_collectors_count"] = User.objects.filter(
+            role=User.Roles.COLLECTOR,
+            is_verified=False
+        ).count()
+        context["total_citizens_count"] = User.objects.filter(
+            role=User.Roles.CITIZEN
         ).count()
         return context
 

@@ -132,10 +132,9 @@
       let defaultLat = parseFloat(latInput?.value) || 12.9716;
       let defaultLng = parseFloat(lngInput?.value) || 77.5946;
 
-      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; CartoDB &copy; OpenStreetMap'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
 
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -143,21 +142,15 @@
         attribution: 'Tiles &copy; Esri'
       });
 
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      });
-
       let baseMaps = {
-        "🗺️ Carto Clean Vector": positronLayer,
-        "🛰️ Satellite View": satelliteLayer,
-        "📍 Street Map": streetLayer
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
       };
 
       let map = L.map('mapPicker', {
         center: [defaultLat, defaultLng],
         zoom: 15,
-        layers: [positronLayer]
+        layers: [streetLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);

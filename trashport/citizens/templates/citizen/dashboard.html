@@ -231,7 +231,7 @@
 
     <!-- Active Plan -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card stat-card h-100 p-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('plans-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <span class="text-uppercase text-muted fw-bold small">Active Plan</span>
@@ -242,14 +242,14 @@
           </div>
         </div>
         <div class="small mt-2">
-          <span class="text-primary fw-semibold">Charged per kg by category</span>
+          <span class="text-primary fw-semibold">Charged per kg by category &rarr;</span>
         </div>
       </div>
     </div>
 
     <!-- Active Requests & Action Items -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card stat-card h-100 p-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('active-pickups-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <span class="text-uppercase text-muted fw-bold small">Active Pickups</span>
@@ -271,7 +271,7 @@
 
     <!-- Eco Impact & Total Recycled -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card stat-card h-100 p-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('history-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <span class="text-uppercase text-muted fw-bold small">Total Recycled</span>
@@ -283,7 +283,7 @@
         </div>
         <div class="d-flex align-items-center gap-1 text-teal small mt-2" style="color: #0d9488;">
           <i class="bi bi-tree-fill"></i>
-          <span>Eco-hero! Completed {{ completed_count }} pickups</span>
+          <span>Eco-hero! {{ completed_count }} pickups</span>
         </div>
       </div>
     </div>

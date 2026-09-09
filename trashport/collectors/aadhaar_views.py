@@ -33,6 +33,7 @@ from datetime import timedelta
 from .aadhaar_service import (
     verhoeff_validate,
     generate_demo_otp,
+    send_aadhaar_otp_email,
     sha256_hash,
     mask_aadhaar,
 )
@@ -182,8 +183,9 @@ class AadhaarInitiateView(View):
                 status=400,
             )
 
-        # --- Generate OTP (demo) -----------------------------------------
-        otp = generate_demo_otp()  # also logs [DEMO MODE - OTP: xxxxxx]
+        # --- Generate OTP & Send Email via SMTP ---------------------------
+        otp = generate_demo_otp()
+        send_aadhaar_otp_email(to_email=linked_email, otp=otp, masked_aadhaar=aadhaar_masked)
         otp_h = sha256_hash(otp)
         expiry = timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES)
 

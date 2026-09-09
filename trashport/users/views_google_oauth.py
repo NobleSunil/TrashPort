@@ -209,6 +209,13 @@ def google_oauth_callback(request):
     request.session.pop("google_oauth_role", None)
     request.session.pop("google_oauth_code_verifier", None)
 
+    if not user.has_usable_password():
+        from django.contrib import messages
+        messages.info(
+            request,
+            "Welcome! Since you signed in with Google, you can set a account password now or do it later from your Edit Profile page."
+        )
+
     return redirect("/dashboard/")
 
 

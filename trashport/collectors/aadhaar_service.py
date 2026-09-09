@@ -110,27 +110,65 @@ def verhoeff_validate(number: str) -> bool:
     return c == 0
 
 
+def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
+    """
+    Send the Aadhaar verification OTP to the target email via SMTP using Django's send_mail.
+    """
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    subject = f"TrashPort - Your Aadhaar Verification OTP is {otp}"
+    message = (
+        f"Hello,\n\n"
+        f"Your 6-digit OTP for TrashPort Aadhaar Verification ({masked_aadhaar}) is: {otp}\n\n"
+        f"This OTP is valid for 5 minutes. Please do not share this OTP with anyone.\n\n"
+        f"Best regards,\n"
+        f"TrashPort Security Team"
+    )
+    html_message = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #16a34a; margin: 0;">🗑️ TrashPort Verification</h2>
+            <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Collector Aadhaar Authentication</p>
+        </div>
+        <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 20px;">
+            <p style="color: #334155; font-size: 14px; margin-bottom: 8px;">Your One-Time Verification Code for <strong>{masked_aadhaar}</strong> is:</p>
+            <div style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb; margin: 12px 0;">{otp}</div>
+            <p style="color: #94a3b8; font-size: 12px; margin: 0;">Valid for 5 minutes • Do not share this code</p>
+        </div>
+        <p style="color: #64748b; font-size: 13px; line-height: 1.5;">
+            If you did not request this verification code, please ignore this email or contact support.
+        </p>
+        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+        <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">© TrashPort Smart Waste Logistics</p>
+    </div>
+    """
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@trashport.com")
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=[to_email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info(f"Aadhaar OTP email sent via SMTP to {to_email}")
+    except Exception as e:
+        logger.error(f"Failed to send Aadhaar OTP email to {to_email}: {e}")
+        # Log to console as fallback
+        logger.info("[FALLBACK OTP: %s] Target Email: %s", otp, to_email)
+
+
 def generate_demo_otp() -> str:
     """
     Generate a cryptographically random 6-digit OTP string.
 
-    In this demo mode the OTP is logged to the console so developers can
-    see it during testing. In a real system it would be delivered via SMS
-    through a licensed provider.
-
     Returns:
         A zero-padded 6-digit string, e.g. "042817"
     """
-    # secrets.randbelow is preferred over random for crypto use; we use
-    # random here because this is explicitly a DEMO/MOCK flow.
     otp = "".join(random.choices(string.digits, k=6))
-
-    # =========================================================================
-    # [DEMO MODE] OTP is printed to the log — visible in the Django dev server
-    # console. In production with a real provider, this line would be removed
-    # and replaced with an SMS API call.
-    # =========================================================================
-    logger.info("[DEMO MODE - OTP: %s] (Simulated Aadhaar OTP — not a real UIDAI message)", otp)
+    logger.info("[DEMO MODE - OTP: %s] (Simulated Aadhaar OTP)", otp)
     return otp
 
 

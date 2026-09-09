@@ -80,6 +80,7 @@ class User(AbstractUser):
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
     email = EmailField(_("email address"), unique=True)
+    phone_number = CharField(_("Phone Number"), max_length=20, blank=True, null=True)
     username = None  # type: ignore[assignment]
 
     USERNAME_FIELD = "email"

@@ -19,6 +19,8 @@
         <!-- Details Info -->
         <div class="mb-4">
           <h5 class="text-uppercase text-muted small fw-bold mb-2">Account Information</h5>
+          <p class="mb-1 text-secondary"><strong>Email:</strong> {{ object.email }}</p>
+          <p class="mb-1 text-secondary"><strong>Phone Number:</strong> {{ object.phone_number|default:"Not specified" }}</p>
           <p class="mb-1 text-secondary"><strong>Status:</strong> Active</p>
           <p class="mb-0 text-muted small">Joined: {{ object.date_joined|date:"M d, Y" }}</p>
         </div>
@@ -26,16 +28,8 @@
         {% if object == request.user %}
           <!-- Action Buttons -->
           <div class="d-grid gap-2">
-            <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">Edit Profile Info</a>
-            
-            <div class="row g-2 mt-1">
-              <div class="col-6">
-                <a class="btn btn-outline-secondary w-100" href="{% url 'account_email' %}" role="button">Email Settings</a>
-              </div>
-              <div class="col-6">
-                <a class="btn btn-outline-secondary w-100" href="{% url 'mfa_index' %}" role="button">MFA Security</a>
-              </div>
-            </div>
+            <a class="btn btn-primary btn-lg" href="{% url 'users:update' %}" role="button">✏️ Edit Profile & Password</a>
+            <a class="btn btn-outline-secondary" href="{% url 'account_email' %}" role="button">📧 Manage Email Addresses</a>
             
             <hr class="my-3">
             

@@ -25,13 +25,25 @@ class UserDetailView(LoginRequiredMixin, DetailView):
 user_detail_view = UserDetailView.as_view()
 
 
+from django.contrib.auth import update_session_auth_hash
+from .forms import UserProfileUpdateForm
+
+
 class UserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
-    Allows a user to update their name.
+    Allows a user to update profile details (name, email, phone_number, and set/change password).
     """
     model = User
-    fields = ["name"]
-    success_message = _("Information successfully updated")
+    form_class = UserProfileUpdateForm
+    success_message = _("Profile details successfully updated.")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Keep user logged in if password was changed
+        if form.cleaned_data.get("new_password"):
+            update_session_auth_hash(self.request, self.object)
+            messages.info(self.request, _("Password updated successfully."))
+        return response
 
     def get_success_url(self) -> str:
         assert self.request.user.is_authenticated  # type guard

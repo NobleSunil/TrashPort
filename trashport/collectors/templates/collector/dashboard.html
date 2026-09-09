@@ -484,7 +484,7 @@
       
       <!-- Active Assigned Jobs -->
       <div class="col-6 col-md-2 anim-fade-up anim-delay-2">
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="document.querySelector('.section-card').scrollIntoView({behavior: 'smooth'})">
           <div class="stat-icon-wrap stat-icon-blue">
             <i class="fas fa-clipboard-list"></i>
           </div>
@@ -497,7 +497,7 @@
       </div>
       <!-- Completed Jobs -->
       <div class="col-6 col-md-3 anim-fade-up anim-delay-3">
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="const el = document.getElementById('completedHistoryTable'); if(el){ new bootstrap.Collapse(el, {toggle: true}); el.scrollIntoView({behavior: 'smooth'}); }">
           <div class="stat-icon-wrap stat-icon-green">
             <i class="fas fa-check-circle"></i>
           </div>
@@ -510,7 +510,7 @@
       </div>
       <!-- Available Jobs -->
       <div class="col-12 col-md-3 anim-fade-up anim-delay-4">
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('availableJobsTable').scrollIntoView({behavior: 'smooth'})">
           <div class="stat-icon-wrap stat-icon-amber">
             <i class="fas fa-hourglass-half"></i>
           </div>
@@ -948,10 +948,9 @@
     const isVerified = {{ is_verified|yesno:"true,false" }};
     const csrfToken = "{{ csrf_token }}";
 
-    let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; CartoDB &copy; OpenStreetMap'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     });
 
     let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -964,11 +963,11 @@
       zoom: 12,
       minZoom: 2,
       maxZoom: 19,
-      layers: [positronLayer]
+      layers: [streetLayer]
     });
 
     L.control.layers({
-      "🗺️ Carto Clean Vector": positronLayer,
+      "📍 Street Map (OSM)": streetLayer,
       "🛰️ Satellite View": satelliteLayer
     }).addTo(map);
 

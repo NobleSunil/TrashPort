@@ -65,3 +65,61 @@ class UserSocialSignupForm(SocialSignupForm):
     """
     Renders the form when user signs up using social accounts.
     """
+
+
+class UserProfileUpdateForm(forms.ModelForm):
+    """
+    Form for updating User profile: name, email, phone_number, and set/change password.
+    """
+    new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Enter new password"}),
+        required=False,
+        label=_("New Password (leave blank to keep current password)"),
+        help_text=_("At least 8 characters if changing or setting for the first time."),
+    )
+
+    class Meta:
+        model = User
+        fields = ["name", "email", "phone_number"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "phone_number": forms.TextInput(attrs={"class": "form-control", "placeholder": "+91 9876543210"}),
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if name and not re.match(r'^[a-zA-Z\s]+$', name):
+            raise forms.ValidationError(_("Name must contain only letters and spaces."))
+        return name
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get("phone_number")
+        if phone:
+            phone_stripped = phone.strip()
+            if not re.match(r'^\+?[0-9\s\-]{7,15}$', phone_stripped):
+                raise forms.ValidationError(_("Enter a valid phone number (7 to 15 digits)."))
+            return phone_stripped
+        return phone
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email", "").strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError(_("This email is already in use by another account."))
+        return email
+
+    def clean_new_password(self):
+        password = self.cleaned_data.get("new_password")
+        if password and len(password) < 8:
+            raise forms.ValidationError(_("Password must be at least 8 characters long."))
+        return password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        new_password = self.cleaned_data.get("new_password")
+        if new_password:
+            user.set_password(new_password)
+        if commit:
+            user.save()
+        return user
+

@@ -34,6 +34,25 @@
     </div>
   {% endif %}
 
+  <!-- Quick Filter Pills -->
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{% url 'waste_management:user_list' %}" class="btn btn-sm {% if not selected_role and not selected_is_verified and not selected_verification %}btn-dark{% else %}btn-outline-secondary{% endif %} rounded-pill">
+      All Users ({{ users_list|length }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR" class="btn btn-sm {% if selected_role == 'COLLECTOR' and not selected_is_verified %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill">
+      Collectors
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR&is_verified=true" class="btn btn-sm {% if selected_role == 'COLLECTOR' and selected_is_verified == 'true' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill">
+      <i class="bi bi-patch-check-fill me-1"></i> Verified Collectors ({{ verified_collectors_count }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR&is_verified=false" class="btn btn-sm {% if selected_role == 'COLLECTOR' and selected_is_verified == 'false' %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-pill">
+      <i class="bi bi-clock-history me-1"></i> Unverified Collectors ({{ unverified_collectors_count }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=CITIZEN" class="btn btn-sm {% if selected_role == 'CITIZEN' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill">
+      <i class="bi bi-people-fill me-1"></i> Citizens ({{ total_citizens_count }})
+    </a>
+  </div>
+
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
       <div class="d-flex align-items-center gap-2">
@@ -43,27 +62,42 @@
 
       <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
         <!-- Role filter -->
-        <select name="role" class="form-select form-select-sm" style="width: 140px;" onchange="this.form.submit()">
+        <select name="role" class="form-select form-select-sm" style="width: 130px;" onchange="this.form.submit()">
           <option value="">All Roles</option>
           {% for val, label in role_choices %}
             <option value="{{ val }}" {% if selected_role == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
 
-        <!-- Verification status filter -->
-        <select name="verification" class="form-select form-select-sm" style="width: 170px;" onchange="this.form.submit()">
-          <option value="">All Verifications</option>
+        <!-- Verification Status filter -->
+        <select name="verification" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
           {% for val, label in verification_choices %}
             <option value="{{ val }}" {% if selected_verification == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
 
-        <div class="input-group input-group-sm" style="width: 200px;">
-          <input type="text" name="q" class="form-control" placeholder="Search name/email..." value="{{ search_query }}">
-          <button type="submit" class="btn btn-primary">Search</button>
+        <!-- Is Verified Check filter -->
+        <select name="is_verified" class="form-select form-select-sm" style="width: 140px;" onchange="this.form.submit()">
+          <option value="">Verified State</option>
+          <option value="true" {% if selected_is_verified == 'true' %}selected{% endif %}>Verified Only</option>
+          <option value="false" {% if selected_is_verified == 'false' %}selected{% endif %}>Unverified Only</option>
+        </select>
+
+        <!-- Sorting -->
+        <select name="sort" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+          <option value="">Sort: Joined (Newest)</option>
+          <option value="verified_first" {% if selected_sort == 'verified_first' %}selected{% endif %}>Verified First</option>
+          <option value="unverified_first" {% if selected_sort == 'unverified_first' %}selected{% endif %}>Unverified First</option>
+          <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Sort: Name</option>
+        </select>
+
+        <div class="input-group input-group-sm" style="width: 180px;">
+          <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ search_query }}">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
         </div>
 
-        {% if selected_role or selected_verification or search_query %}
+        {% if selected_role or selected_verification or selected_is_verified or selected_sort or search_query %}
           <a href="{% url 'waste_management:user_list' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
         {% endif %}
       </form>

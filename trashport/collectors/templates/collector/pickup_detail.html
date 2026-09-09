@@ -238,10 +238,9 @@
       let currentColLat = pickupLat - 0.015;
       let currentColLng = pickupLng - 0.015;
 
-      let positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
 
       let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -249,21 +248,15 @@
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
       });
 
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      });
-
       let baseMaps = {
-        "🗺️ Carto Clean Vector": positronLayer,
-        "🛰️ Satellite View": satelliteLayer,
-        "📍 Street Map": streetLayer
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
       };
 
       let map = L.map('collectorMap', {
         center: [pickupLat, pickupLng],
         zoom: 14,
-        layers: [positronLayer] // Default to Carto Clean Vector!
+        layers: [streetLayer]
       });
 
       L.control.layers(baseMaps).addTo(map);
