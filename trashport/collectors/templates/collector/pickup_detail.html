@@ -18,12 +18,12 @@
             <h4 class="mb-1 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Pickup Navigation &amp; Live Location</h4>
             <span class="text-muted small">Use layer control (top-right) to toggle 🛰️ Satellite / 🗺️ Street view.</span>
           </div>
-          <div class="mt-2 mt-md-0 d-flex gap-2">
-            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success">
-              <i class="fas fa-broadcast-tower me-1"></i> <span id="gpsStatusText">Enable Live GPS</span>
+          <div class="mt-2 mt-md-0 d-flex gap-2 align-items-center">
+            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success shadow-sm">
+              <i class="fas fa-crosshairs me-1"></i> <span id="gpsStatusText">Enable Real-Time GPS</span>
             </button>
             <button id="simDriveBtn" class="btn btn-sm btn-primary shadow-sm">
-              <i class="fas fa-play me-1"></i> Simulate Driving to Pickup
+              <i class="fas fa-play me-1"></i> Simulate Driving
             </button>
           </div>
         </div>
@@ -362,30 +362,56 @@
         }, 400);
       });
 
-      // Geolocation Watcher
+      // Geolocation Watcher with explicit permission handling
       let watchId = null;
-      document.getElementById('broadcastGpsBtn').addEventListener('click', function () {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-          watchId = null;
-          document.getElementById('gpsStatusText').textContent = "Enable Live GPS";
-          this.classList.remove('btn-success');
-          this.classList.add('btn-outline-success');
-        } else if (navigator.geolocation) {
-          watchId = navigator.geolocation.watchPosition(pos => {
-            let lat = pos.coords.latitude;
-            let lng = pos.coords.longitude;
-            updateMapAndHUD(lat, lng);
-            fetchRoadRoute(lat, lng);
-          });
-          document.getElementById('gpsStatusText').textContent = "GPS Active";
-          this.classList.remove('btn-outline-success');
-          this.classList.add('btn-success');
-        }
-      });
+      const gpsBtn = document.getElementById('broadcastGpsBtn');
+      const gpsStatus = document.getElementById('gpsStatusText');
+
+      if (gpsBtn) {
+        gpsBtn.addEventListener('click', function () {
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            gpsStatus.textContent = "Enable Real-Time GPS";
+            this.classList.remove('btn-success');
+            this.classList.add('btn-outline-success');
+            return;
+          }
+
+          if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+          }
+
+          gpsStatus.textContent = "Requesting Permission...";
+          gpsBtn.className = 'btn btn-sm btn-warning shadow-sm';
+
+          watchId = navigator.geolocation.watchPosition(
+            pos => {
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              gpsStatus.textContent = "Real-Time GPS Active";
+              gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
+
+              updateMapAndHUD(lat, lng);
+              fetchRoadRoute(lat, lng);
+            },
+            err => {
+              gpsStatus.textContent = "Enable Real-Time GPS";
+              gpsBtn.className = 'btn btn-sm btn-outline-danger shadow-sm';
+              if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+              }
+              alert("Location permission was denied or timed out. Please allow location access in your browser to enable real-time tracking.");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+          );
+        });
+      }
 
       window.addEventListener('beforeunload', () => {
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
         if (simInterval) clearInterval(simInterval);
         map.remove();
       });
