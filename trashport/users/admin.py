@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .forms import UserAdminChangeForm
 from .forms import UserAdminCreationForm
-from .models import User
+from .models import User, CitizenProfile, CollectorProfile
 
 if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
@@ -15,13 +15,25 @@ if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     admin.site.login = secure_admin_login(admin.site.login)  # type: ignore[method-assign]
 
 
+@admin.register(CitizenProfile)
+class CitizenProfileAdmin(admin.ModelAdmin):
+    list_display = ["user", "wallet_points"]
+    search_fields = ["user__email", "user__name"]
+
+
+@admin.register(CollectorProfile)
+class CollectorProfileAdmin(admin.ModelAdmin):
+    list_display = ["user", "wallet_balance", "vehicle_number", "license_number"]
+    search_fields = ["user__email", "user__name", "vehicle_number", "license_number"]
+
+
 @admin.register(User)
 class UserAdmin(auth_admin.UserAdmin):
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        (_("Personal info"), {"fields": ("name", "role", "wallet_points")}),
+        (_("Personal info"), {"fields": ("name", "role", "verification_status")}),
         (
             _("Permissions"),
             {
@@ -36,8 +48,8 @@ class UserAdmin(auth_admin.UserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
-    list_display = ["email", "name", "role", "wallet_points", "is_superuser"]
-    search_fields = ["name"]
+    list_display = ["email", "name", "role", "verification_status", "is_superuser"]
+    search_fields = ["name", "email"]
     ordering = ["id"]
     add_fieldsets = (
         (
@@ -48,3 +60,4 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
     )
+

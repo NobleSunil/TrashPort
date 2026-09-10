@@ -57,6 +57,25 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         context["total_earned"] = total_earned
 
         # Available jobs in system (with proximity calculation & nearest-first sorting)
+        unassigned_list, col_lat, col_lng, pickups_json = self._get_unassigned_pickup_data(user)
+        context["unassigned_pickups"] = unassigned_list
+        context["collector_lat"] = col_lat
+        context["collector_lng"] = col_lng
+        context["unassigned_pickups_json"] = pickups_json
+
+        # UPI Payout / Redemption history
+        context["upi_payouts"] = UPIPayoutRequest.objects.filter(collector=user).order_by("-created_at")[:10]
+        context["total_redeemed_upi"] = (
+            UPIPayoutRequest.objects.filter(collector=user, status=UPIPayoutRequest.Statuses.COMPLETED)
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        )
+
+        # Aadhaar verification status sync
+        self._sync_aadhaar_status(user, context)
+        return context
+
+    def _get_unassigned_pickup_data(self, user):
+        """Helper to fetch, calculate distance, and format unassigned pickups as JSON for Leaflet maps."""
         import json
         from trashport.maps.models import CollectorLocation
         from trashport.maps.services import GeoService
@@ -71,6 +90,7 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         ).select_related("citizen", "address", "category")
 
         unassigned_list = list(unassigned_qs)
+        pickups_json_data = []
         for p in unassigned_list:
             plat = float(p.effective_latitude)
             plng = float(p.effective_longitude)
@@ -78,16 +98,9 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
             p.calculated_distance_km = dist
             p.calculated_earnings = p.calculate_collector_earnings()
 
-        # Sort nearest first and cap to closest 50 opportunities for smooth mobile rendering
         unassigned_list.sort(key=lambda item: item.calculated_distance_km)
         unassigned_list = unassigned_list[:50]
 
-        context["unassigned_pickups"] = unassigned_list
-        context["collector_lat"] = col_lat
-        context["collector_lng"] = col_lng
-
-        # JSON data for interactive Leaflet map & radius filter
-        pickups_json_data = []
         for p in unassigned_list:
             pickups_json_data.append({
                 "id": p.id,
@@ -101,19 +114,10 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
                 "weight_kg": float(p.weight_kg),
                 "schedule_date": p.schedule_date.strftime("%b %d, %Y") if p.schedule_date else "",
             })
-        context["unassigned_pickups_json"] = json.dumps(pickups_json_data)
+        return unassigned_list, col_lat, col_lng, json.dumps(pickups_json_data)
 
-        # UPI Payout / Redemption history
-        context["upi_payouts"] = UPIPayoutRequest.objects.filter(collector=user).order_by("-created_at")[:10]
-        context["total_redeemed_upi"] = (
-            UPIPayoutRequest.objects.filter(collector=user, status=UPIPayoutRequest.Statuses.COMPLETED)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-        )
-
-        # -----------------------------------------------------------------------
-        # Aadhaar verification status (Collector-scoped — reads CollectorAadhaarProfile)
-        # Not touching the shared users.User model; other roles are unaffected.
-        # -----------------------------------------------------------------------
+    def _sync_aadhaar_status(self, user, context):
+        """Helper to sync CollectorAadhaarProfile state with User verification status."""
         from trashport.collectors.models import CollectorAadhaarProfile
         try:
             aadhaar_profile = CollectorAadhaarProfile.objects.get(collector=user)
@@ -124,13 +128,10 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
                 context["verification_status"] = "APPROVED"
                 if not user.is_verified:
                     user.is_verified = True
-                    user.verification_status = "APPROVED"
-                    user.save(update_fields=["is_verified", "verification_status"])
+                    user.save(update_fields=["verification_status"])
         except CollectorAadhaarProfile.DoesNotExist:
             context["aadhaar_verified"] = False
             context["aadhaar_masked"] = ""
-
-        return context
 
 
 class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
@@ -150,7 +151,6 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
         user = self.request.user
         pickup = self.object
         context["is_verified"] = getattr(user, "is_verified", False)
-        # Pre-calculated earnings preview
         context["preview_earnings"] = pickup.calculate_collector_earnings()
         return context
 
@@ -171,7 +171,6 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
         action = request.POST.get("action")
         user = request.user
 
-        # Verification check
         if not getattr(user, "is_verified", False):
             messages.error(
                 request,
@@ -193,7 +192,6 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
             pickup.save()
             messages.success(request, "Status updated to In Transit.")
         elif action == "complete" and pickup.collector == user:
-            # Measure actual weight and apply verification
             actual_weight_input = request.POST.get("actual_weight_kg", "").strip()
             if actual_weight_input:
                 try:
@@ -207,7 +205,6 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
                     messages.error(request, "Invalid weight format entered.")
                     return redirect("waste_management:pickup_detail", pk=pk)
             else:
-                # Default to estimated weight if not provided
                 pickup.actual_weight_kg = pickup.weight_kg
                 pickup.is_weight_verified = True
 
@@ -273,7 +270,7 @@ class CollectorRedeemUPIView(LoginRequiredMixin, View):
 
         # Create UPI payout record
         ref_id = f"UPI-{uuid.uuid4().hex[:8].upper()}"
-        payout = UPIPayoutRequest.objects.create(
+        UPIPayoutRequest.objects.create(
             collector=user,
             amount=amount,
             upi_id=upi_id,

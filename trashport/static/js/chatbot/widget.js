@@ -1,7 +1,21 @@
+/**
+ * ==============================================================================
+ * TrashPort AI Assistant Widget Controller
+ * ==============================================================================
+ * Manages the floating chatbot widget interface:
+ * - Establishes resilient WebSocket communication with Django Channels backend.
+ * - Enforces client-side memory safety and DOM pruning for mobile devices.
+ * - Handles interactive message rendering (user bubble, bot responses, quick actions).
+ * - Restores chat history from sessionStorage across page navigations.
+ * - Submits thumbs-up / thumbs-down user feedback with CSRF protection.
+ */
+
+// Generate or retrieve a persistent session UUID for conversation grouping
 const sessionKey = (window.crypto && typeof window.crypto.randomUUID === "function")
   ? window.crypto.randomUUID()
   : (Math.random().toString(36).substring(2) + Date.now().toString(36));
 
+// Determine secure WebSocket scheme based on current page protocol
 const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(typeof FIREBASE_TOKEN !== "undefined" ? FIREBASE_TOKEN : "")}`;
 
@@ -11,11 +25,11 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let messageQueue = [];
 
-const history = []; // in-memory, max 20 items
+const history = []; // In-memory message history buffer (max 20 items)
 let lastUserMessage = "";
 let greetingRendered = false;
 
-// DOM Memory Cap for low-end mobile devices (max 40 messages retained in DOM)
+// DOM Memory Cap: Limits message nodes in DOM to prevent slowdowns on mobile devices
 const MAX_DOM_MESSAGES = 40;
 function pruneOldMessages() {
   const container = document.getElementById("chat-messages");

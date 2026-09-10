@@ -81,6 +81,12 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         ).select_related("category", "address").order_by("-updated_at")
         context["invoice_count"] = context["paid_pickups"].count()
 
+        # In-app notifications for the citizen
+        from trashport.notifications.models import Notification
+        user_notifications = Notification.objects.filter(user=user).order_by("-created_at")
+        context["notifications"] = user_notifications[:20]
+        context["unread_notifications_count"] = user_notifications.filter(is_read=False).count()
+
         return context
 
 
@@ -367,12 +373,10 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
             is_paid=False,
         )
 
-    def get(self, request, pk, *args, **kwargs):
-        pickup = self._get_pickup(request, pk)
+    def _build_checkout_context(self, request, pickup, error_msg=None, active_method="card"):
+        """Construct checkout page context including wallet points, coupons, and test cards (DRY pattern)."""
         wallet_points = getattr(request.user, "wallet_points", 0)
-        # 100 pts = Rs. 10 (1 pt = Rs. 0.10)
         wallet_value_inr = Decimal(str(wallet_points)) * Decimal("0.10")
-        # Check for active coupon in session
         coupon = request.session.get("wallet_coupon")
         discount = Decimal(str(coupon["discount"])) if coupon else Decimal("0.00")
         discounted_fee = max(Decimal("0.00"), Decimal(str(pickup.fee)) - discount)
@@ -394,6 +398,14 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                 {"number": "4000 0000 0000 9995", "brand": "Visa", "result": "Insufficient funds"},
             ],
         }
+        if error_msg:
+            context["error"] = error_msg
+            context["active_method"] = active_method
+        return context
+
+    def get(self, request, pk, *args, **kwargs):
+        pickup = self._get_pickup(request, pk)
+        context = self._build_checkout_context(request, pickup)
         return self._render(request, context)
 
     def post(self, request, pk, *args, **kwargs):
@@ -408,14 +420,12 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
         discounted_fee = max(Decimal("0.00"), original_fee - discount)
 
         if discounted_fee == Decimal("0.00"):
-            # If total is Rs. 0 due to discount, mark pickup paid immediately without charging card/upi
             pickup.fee = Decimal("0.00")
             result = PaymentGatewayService.process_wallet_payment(
                 user=request.user,
                 pickup=pickup,
             )
         elif method == "card":
-            # Temporarily override fee for discounted payment
             pickup.fee = discounted_fee
             result = PaymentGatewayService.process_card_payment(
                 user=request.user,
@@ -443,10 +453,8 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
             return redirect("waste_management:payment_checkout", pk=pk)
 
         if result and result["success"]:
-            # Clear coupon from session on success
             if coupon:
                 request.session.pop("wallet_coupon", None)
-            # Attach result data to session for the success page
             request.session[f"payment_result_{pk}"] = {
                 "transaction_id": result["transaction_id"],
                 "amount": result["amount"],
@@ -460,27 +468,7 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
             return redirect("waste_management:payment_success", pk=pk)
         else:
             error_msg = result.get("error_message", "Payment failed. Please try again.") if result else "Payment processing error."
-            wallet_points = getattr(request.user, "wallet_points", 0)
-            wallet_value_inr = Decimal(str(wallet_points)) * Decimal("0.10")
-            can_redeem_points = (wallet_points >= 100 and not coupon)
-            context = {
-                "pickup": pickup,
-                "wallet_points": wallet_points,
-                "wallet_value_inr": wallet_value_inr,
-                "wallet_covers_fee": wallet_value_inr >= discounted_fee,
-                "coupon": coupon,
-                "discount": discount,
-                "discounted_fee": discounted_fee,
-                "can_redeem_points": can_redeem_points,
-                "error": error_msg,
-                "active_method": method,
-                "test_cards": [
-                    {"number": "4242 4242 4242 4242", "brand": "Visa", "result": "Always succeeds"},
-                    {"number": "5555 5555 5555 4444", "brand": "Mastercard", "result": "Always succeeds"},
-                    {"number": "4000 0000 0000 0002", "brand": "Visa", "result": "Card declined"},
-                    {"number": "4000 0000 0000 9995", "brand": "Visa", "result": "Insufficient funds"},
-                ],
-            }
+            context = self._build_checkout_context(request, pickup, error_msg=error_msg, active_method=method)
             return self._render(request, context)
 
     def _render(self, request, context):
@@ -594,7 +582,6 @@ class CitizenWalletView(LoginRequiredMixin, TemplateView):
             WalletHistory.objects.create(
                 user=user,
                 points_delta=points,
-                balance_after=points,
                 reason="Initial Green Wallet Bonus & Recycling Incentive",
             )
             history_qs = WalletHistory.objects.filter(user=user).order_by("-created_at")

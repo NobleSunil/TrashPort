@@ -1,3 +1,16 @@
+/**
+ * ==============================================================================
+ * Chatbot Floating Bubble & Sheet Toggle Controller
+ * ==============================================================================
+ * Handles the opening, closing, keyboard navigation (Escape), and outside-click
+ * dismissal for the floating AI assistant widget.
+ */
+
+/**
+ * Expands the chat interface sheet and hides the floating launcher bubble.
+ * Restores input focus with a transition delay.
+ * @param {Event} [event] Optional triggering event
+ */
 function openChat(event) {
   if (event && typeof event.stopPropagation === "function") {
     event.stopPropagation();
@@ -15,6 +28,10 @@ function openChat(event) {
   }
 }
 
+/**
+ * Collapses the chat interface sheet and restores the launcher bubble.
+ * @param {Event} [event] Optional triggering event
+ */
 function closeChat(event) {
   if (event && typeof event.stopPropagation === "function") {
     event.stopPropagation();
@@ -26,6 +43,7 @@ function closeChat(event) {
   if (bubble) bubble.style.display = "flex";
   sessionStorage.removeItem("trashport_chat_open");
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   // Restore open state if previously opened

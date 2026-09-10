@@ -68,7 +68,6 @@ class WalletService:
         record = WalletHistory.objects.create(
             user=user,
             points_delta=points_delta,
-            balance_after=new_balance,
             reason=reason,
         )
         return record
@@ -125,7 +124,7 @@ class PaymentGatewayService:
                 transaction_id=txn_id,
                 description=f"Pickup #{pickup.id} — Card payment by {card_name}",
             )
-            PaymentGatewayService._mark_pickup_paid(pickup)
+            PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
             logger.info(f"[Gateway] Card payment SUCCESS — {txn_id} — Rs. {amount} for pickup #{pickup.id}")
             return {
                 "success": True,
@@ -179,7 +178,7 @@ class PaymentGatewayService:
             transaction_id=txn_id,
             description=f"Pickup #{pickup.id} — UPI payment via {upi_id}",
         )
-        PaymentGatewayService._mark_pickup_paid(pickup)
+        PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
         logger.info(f"[Gateway] UPI payment SUCCESS — {txn_id} — Rs. {amount} for pickup #{pickup.id}")
         return {
             "success": True,
@@ -196,7 +195,6 @@ class PaymentGatewayService:
         """Redeem wallet points to pay the pickup fee (100 pts = Rs. 10)."""
         fee = Decimal(str(pickup.fee))
         if fee <= Decimal("0.00"):
-            PaymentGatewayService._mark_pickup_paid(pickup)
             txn_id = f"wlt_{uuid.uuid4().hex[:20]}"
             txn = PaymentTransaction.objects.create(
                 user=user,
@@ -207,6 +205,7 @@ class PaymentGatewayService:
                 transaction_id=txn_id,
                 description=f"Pickup #{pickup.id} — Fully covered by coupon / wallet points",
             )
+            PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
             return {
                 "success": True,
                 "transaction_id": txn_id,
@@ -251,7 +250,7 @@ class PaymentGatewayService:
             reason=f"Redeemed for Pickup #{pickup.id} payment (Rs. {fee:.2f})",
         )
 
-        PaymentGatewayService._mark_pickup_paid(pickup)
+        PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
         logger.info(f"[Gateway] Wallet payment SUCCESS — {txn_id} — {required_points} pts for pickup #{pickup.id}")
         return {
             "success": True,
@@ -263,9 +262,26 @@ class PaymentGatewayService:
         }
 
     @staticmethod
-    def _mark_pickup_paid(pickup):
-        """Mark a pickup as paid and transition it to PENDING status."""
+    def _mark_pickup_paid(pickup, transaction=None):
+        """Mark a pickup as paid, transition it to PENDING status, and notify citizen."""
         from waste_management.models import PickupRequest
         pickup.is_paid = True
         pickup.status = PickupRequest.StatusChoices.PENDING
         pickup.save(update_fields=["is_paid", "status"])
+
+        try:
+            from django.urls import reverse
+            invoice_url = reverse("waste_management:invoice", kwargs={"pk": pickup.pk})
+        except Exception:
+            invoice_url = f"/waste-management/pickups/{pickup.pk}/invoice/"
+
+        try:
+            from waste_management.notifications import send_payment_completed_notification
+            send_payment_completed_notification(
+                user=pickup.citizen,
+                pickup=pickup,
+                transaction=transaction,
+                invoice_url=invoice_url,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send payment receipt notification: {e}")

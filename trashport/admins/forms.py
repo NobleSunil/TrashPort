@@ -1,3 +1,12 @@
+"""
+Admin and Operations Forms.
+
+Defines form structures for administrators to:
+- Configure Waste Categories (pricing per kg and green reward points).
+- Manage Subscription Tiers (pricing, billing cycles, active toggles).
+- Register verified waste collector accounts directly with encrypted credentials.
+"""
+
 from django import forms
 from django.contrib.auth import get_user_model
 
@@ -7,6 +16,7 @@ User = get_user_model()
 
 
 class WasteCategoryForm(forms.ModelForm):
+    """Form for creating and editing waste categories and their pricing rules."""
     class Meta:
         model = WasteCategory
         fields = ["name", "description", "fee_per_kg", "points_per_kg"]
@@ -19,6 +29,7 @@ class WasteCategoryForm(forms.ModelForm):
 
 
 class SubscriptionTierForm(forms.ModelForm):
+    """Form for managing monthly/annual citizen subscription plans."""
     class Meta:
         model = SubscriptionTier
         fields = ["name", "price", "description", "is_active"]
@@ -31,6 +42,7 @@ class SubscriptionTierForm(forms.ModelForm):
 
 
 class CollectorCreationForm(forms.ModelForm):
+    """Administrative form to directly provision and onboard a collector user account."""
     password = forms.CharField(widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Password"}))
     confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Confirm Password"}))
 
@@ -43,6 +55,7 @@ class CollectorCreationForm(forms.ModelForm):
         }
 
     def clean(self):
+        """Validates that password and confirm_password match."""
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm_password = cleaned_data.get("confirm_password")
@@ -51,12 +64,14 @@ class CollectorCreationForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
+        """Hashes password and sets the user role to COLLECTOR upon creation."""
         user = super().save(commit=False)
         user.role = User.Roles.COLLECTOR
         user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
         return user
+
 
 
 class WalletPointAdjustmentForm(forms.Form):

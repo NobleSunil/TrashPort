@@ -76,8 +76,15 @@ class ChatFeedback(models.Model):
         null=True,
         blank=True,
     )
-    user_message = models.TextField()
-    bot_message = models.TextField()
+    session = models.ForeignKey(
+        ChatSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="feedbacks",
+    )
+    user_message = models.TextField(blank=True)
+    bot_message = models.TextField(blank=True)
     rating = models.CharField(max_length=20, choices=RATING_CHOICES)
     session_key = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -51,15 +51,20 @@ class WalletHistory(models.Model):
         related_name="wallet_records",
     )
     points_delta = models.IntegerField(help_text="Positive for additions, negative for deductions")
-    balance_after = models.IntegerField()
     reason = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
+    @property
+    def balance_after(self) -> int:
+        """3NF Computed Property: derived from user wallet_points."""
+        return getattr(self.user, "wallet_points", 0)
+
     def __str__(self):
         return f"{self.user}: {self.points_delta:+d} pts ({self.reason})"
+
 
 
 class UPIPayoutRequest(models.Model):

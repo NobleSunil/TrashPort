@@ -1,6 +1,7 @@
 Hello {{ user_name }},
 
-Payment of ${{ amount }} {{ currency }} received.
+Payment of {% if currency == 'INR' or not currency %}₹{% elif currency == 'USD' %}${% else %}{{ currency }} {% endif %}{{ amount }} received.
 Transaction ID: {{ transaction_id }}
+{% if invoice_url %}Invoice: {{ invoice_url }}{% endif %}
 
 TrashPort Team

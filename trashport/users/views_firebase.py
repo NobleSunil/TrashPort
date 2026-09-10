@@ -1,3 +1,14 @@
+"""
+Firebase Authentication & Session Bridge Views.
+
+Bridges client-side Firebase Auth (Google OAuth, Phone, Email/Password) with the
+server-side Django session framework:
+- Verifies Firebase JWT tokens cryptographically.
+- Maps or creates User model entities linked by Firebase UID.
+- Authenticates and establishes secure Django session cookies (CSRF & HTTP-only).
+- Directs users to their role-specific dashboard or initial profile setup.
+"""
+
 import json
 import logging
 from django.http import JsonResponse
@@ -11,9 +22,9 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def firebase_session_login(request):
     """
-    Accepts a Firebase ID token via POST, verifies it,
-    logs the corresponding user into the Django session,
-    and returns a redirect URL.
+    Accepts a Firebase ID token via POST, verifies it cryptographically,
+    maps or initializes the corresponding Django User record,
+    logs the user into the standard Django session, and returns a redirect target.
     """
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
@@ -25,9 +36,10 @@ def firebase_session_login(request):
         if not token:
             return JsonResponse({"status": "error", "message": "Missing Firebase token"}, status=400)
 
-        # Handle mock tokens for tests/development
+        # Handle mock tokens for automated tests and isolated development
         if token.startswith("mock-token-"):
             uid = token.replace("mock-token-", "")
+
             email = f"{uid}@example.com"
             decoded = {
                 "uid": uid,

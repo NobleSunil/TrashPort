@@ -1,15 +1,17 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+# -----------------------------------------------------------------------------
+# Stage 1: Builder (Installs compiler tools & builds virtualenv)
+# -----------------------------------------------------------------------------
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_PROJECT_ENVIRONMENT=/venv \
-    PATH="/venv/bin:$PATH"
+    UV_PROJECT_ENVIRONMENT=/venv
 
 WORKDIR /app
 
-# Install system dependencies required for psycopg and Django
+# Install build dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     libpq-dev \
@@ -17,17 +19,33 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies first (leveraging Docker layer cache)
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
-# Copy project source code
 COPY . .
-
-# Finalize uv sync
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen
+
+# -----------------------------------------------------------------------------
+# Stage 2: Final Minimal Runtime Image
+# -----------------------------------------------------------------------------
+FROM python:3.13-slim-bookworm AS runner
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/venv/bin:$PATH"
+
+WORKDIR /app
+
+# Install only minimal runtime libraries (libpq5 for postgres)
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /venv /venv
+COPY --from=builder /app /app
 
 EXPOSE 8001
 

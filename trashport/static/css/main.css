@@ -1,6 +1,12 @@
-/* TrashPort Global Stylesheet */
+/* ==========================================================================
+   TrashPort Global Design Tokens & Theme Stylesheet
+   Provides core typography, color variables, glassmorphism, and scrollbars.
+   ========================================================================== */
+
+/* Modern Google Font Import (Plus Jakarta Sans) */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
+/* CSS Custom Properties (Theme Design Tokens) */
 :root {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --color-brand-50: #f0fdf4;
@@ -10,6 +16,7 @@
   --color-dark: #0f172a;
 }
 
+/* Base Document Reset & Typography Settings */
 body {
   font-family: var(--font-sans);
   background-color: #f8fafc;
@@ -19,6 +26,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Glassmorphism Backdrop Blur Utility Class (Used in Modals & Floating Cards) */
 .glassmorphism {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
@@ -26,6 +34,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Custom Sleek Scrollbar Styling for Scrollable Containers & Chat Logs */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

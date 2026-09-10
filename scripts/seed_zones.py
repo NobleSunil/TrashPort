@@ -1,3 +1,13 @@
+"""
+Database Seeding Script: Geographic Service Zones.
+
+Initializes default urban coverage zones for TrashPort collection vehicles,
+defining central coordinates, operation codes, and service radii in kilometers.
+
+Usage:
+    python scripts/seed_zones.py
+"""
+
 import os
 import sys
 from pathlib import Path
@@ -12,8 +22,10 @@ django.setup()
 from trashport.maps.models import ServiceZone
 
 def seed_zones():
+    """Seeds predefined geographic circular service zones into the database."""
     print("Seeding geographic zones for TrashPort...")
     zones = [
+
         ("Central Eco Zone", "BLR-C01", 12.9716, 77.5946, 6.5),
         ("South Green Belt", "BLR-S02", 12.9250, 77.5890, 8.0),
         ("Tech Corridor East", "BLR-E03", 12.9850, 77.7200, 10.0),

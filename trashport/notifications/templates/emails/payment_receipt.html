@@ -2,8 +2,11 @@
 {% block content %}
     <h3>Payment Receipt</h3>
     <p>Hello {{ user_name }},</p>
-    <p>We received your payment of <strong>${{ amount }} {{ currency }}</strong>.</p>
+    <p>We received your payment of <strong>{% if currency == 'INR' or not currency %}₹{% elif currency == 'USD' %}${% else %}{{ currency }} {% endif %}{{ amount }}</strong>.</p>
     <p>Transaction ID: <code>{{ transaction_id }}</code></p>
     <p>Description: {{ description }}</p>
+    {% if invoice_url %}
+        <p><a href="{{ invoice_url }}" class="btn">View & Download Invoice</a></p>
+    {% endif %}
     <p>Thank you for supporting sustainable waste logistics.</p>
 {% endblock %}

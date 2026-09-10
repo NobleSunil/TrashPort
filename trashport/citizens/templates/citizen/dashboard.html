@@ -337,6 +337,15 @@
             <i class="bi bi-exclamation-triangle me-2"></i>Complaints
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications-panel"
+            type="button" role="tab">
+            <i class="bi bi-bell me-2"></i>Notifications
+            {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-2">{{ unread_notifications_count }}</span>
+            {% endif %}
+          </button>
+        </li>
       </ul>
     </div>
 
@@ -758,6 +767,44 @@
             </table>
           </div>
         </div>
+
+        <!-- TAB 7: NOTIFICATIONS -->
+        <div class="tab-pane fade" id="notifications-panel" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Recent Notifications &amp; Alerts</h5>
+              <p class="text-muted small mb-0">Updates on your pickups, payments, invoices, and service notices.</p>
+            </div>
+          </div>
+          <div class="list-group shadow-sm border-0">
+            {% for notif in notifications %}
+            <div class="list-group-item list-group-item-action p-3 mb-2 rounded border {% if not notif.is_read %}border-primary bg-light{% endif %}">
+              <div class="d-flex w-100 justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                  {% if notif.notification_type == 'PICKUP' %}
+                    <span class="badge bg-primary"><i class="bi bi-truck me-1"></i>Pickup</span>
+                  {% elif notif.notification_type == 'PAYMENT' %}
+                    <span class="badge bg-success"><i class="bi bi-credit-card me-1"></i>Payment</span>
+                  {% elif notif.notification_type == 'COMPLAINT' %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Complaint</span>
+                  {% else %}
+                    <span class="badge bg-secondary"><i class="bi bi-bell me-1"></i>System</span>
+                  {% endif %}
+                  <h6 class="mb-0 fw-bold text-dark">{{ notif.title }}</h6>
+                </div>
+                <small class="text-muted">{{ notif.created_at|date:"M d, Y h:i A" }}</small>
+              </div>
+              <p class="mb-1 mt-2 text-secondary">{{ notif.message }}</p>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-bell-slash display-4 text-muted opacity-50 mb-3 d-block"></i>
+              No notifications yet. You'll receive real-time updates as your pickups and payments progress!
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

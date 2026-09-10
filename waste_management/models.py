@@ -270,8 +270,20 @@ class PickupRequest(models.Model):
             # Recalculate collector earnings based on final total fee and distance
             self.collector_earnings = self.calculate_collector_earnings()
 
-            # Check if status has transitioned to COMPLETED
+            # Check status and collector transitions
             orig = PickupRequest.objects.get(pk=self.pk)
+            
+            # Check if collector was assigned
+            if orig.collector != self.collector and self.collector is not None:
+                from .notifications import send_pickup_assigned_notification
+                send_pickup_assigned_notification(self, collector=self.collector)
+
+            # Check if status has transitioned to CANCELLED
+            if orig.status != self.StatusChoices.CANCELLED and self.status == self.StatusChoices.CANCELLED:
+                from .notifications import send_pickup_cancelled_notification
+                send_pickup_cancelled_notification(self)
+
+            # Check if status has transitioned to COMPLETED
             if orig.status != self.StatusChoices.COMPLETED and self.status == self.StatusChoices.COMPLETED:
                 # 1. Credit Citizen Recycling Points & Log to Wallet History
                 if self.points_earned > 0:
@@ -293,6 +305,11 @@ class PickupRequest(models.Model):
                     self.collector.save()
 
         super().save(*args, **kwargs)
+
+        if is_new:
+            # Send notification to citizen that pickup request has been booked/confirmed
+            from .notifications import send_pickup_requested_notification
+            send_pickup_requested_notification(self)
 
     def __str__(self):
         return f"Pickup #{self.display_id} ({self.status}) for {self.citizen.email}"

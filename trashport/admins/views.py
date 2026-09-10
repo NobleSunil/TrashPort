@@ -321,9 +321,9 @@ class AdminUserListView(LoginRequiredMixin, ListView):
         if verification_filter:
             qs = qs.filter(verification_status=verification_filter)
         if is_verified_filter in ["true", "1"]:
-            qs = qs.filter(is_verified=True)
+            qs = qs.filter(verification_status=User.VerificationStatus.APPROVED)
         elif is_verified_filter in ["false", "0"]:
-            qs = qs.filter(is_verified=False)
+            qs = qs.exclude(verification_status=User.VerificationStatus.APPROVED)
 
         if search_query:
             qs = qs.filter(
@@ -332,9 +332,9 @@ class AdminUserListView(LoginRequiredMixin, ListView):
 
         # Sorting logic
         if sort_by == "verified_first":
-            qs = qs.order_by("-is_verified", "-date_joined")
+            qs = qs.order_by("-verification_status", "-date_joined")
         elif sort_by == "unverified_first":
-            qs = qs.order_by("is_verified", "-date_joined")
+            qs = qs.order_by("verification_status", "-date_joined")
         elif sort_by == "name":
             qs = qs.order_by("name", "email")
         else:
@@ -357,11 +357,12 @@ class AdminUserListView(LoginRequiredMixin, ListView):
         ).count()
         context["verified_collectors_count"] = User.objects.filter(
             role=User.Roles.COLLECTOR,
-            is_verified=True
+            verification_status=User.VerificationStatus.APPROVED
         ).count()
         context["unverified_collectors_count"] = User.objects.filter(
-            role=User.Roles.COLLECTOR,
-            is_verified=False
+            role=User.Roles.COLLECTOR
+        ).exclude(
+            verification_status=User.VerificationStatus.APPROVED
         ).count()
         context["total_citizens_count"] = User.objects.filter(
             role=User.Roles.CITIZEN

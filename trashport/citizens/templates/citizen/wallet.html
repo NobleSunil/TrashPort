@@ -4,7 +4,9 @@
 
 {% block css %}
 {{ block.super }}
+<!-- Custom Styling for Citizen Green Recycling Wallet & Coupons -->
 <style>
+  /* Hero card with dark gradient background for recycling points display */
   .wallet-hero {
     background: linear-gradient(135deg, #0f2027 0%, #203a43 45%, #2c5364 100%);
     border-radius: 24px;
@@ -14,6 +16,7 @@
     color: #fff;
     box-shadow: 0 20px 60px rgba(0,0,0,.35);
   }
+  /* Decorative circular glow overlays */
   .wallet-hero::before {
     content: "";
     position: absolute;
@@ -31,6 +34,7 @@
     background: rgba(255,255,255,.03);
   }
   .wallet-hero .hero-content { position: relative; z-index: 1; }
+  /* Typography for big green points text with gradient text fill */
   .wallet-big-pts {
     font-size: 4rem;
     font-weight: 800;
@@ -41,6 +45,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  /* Active coupon card with vibrant emerald gradient */
   .coupon-card {
     background: linear-gradient(135deg, #11998e, #38ef7d);
     border-radius: 18px;

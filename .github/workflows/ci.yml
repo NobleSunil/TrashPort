@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: [ "master", "main", "albert" ]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: [ "master", "main", "albert" ]
 
 jobs:
   test:
@@ -23,14 +23,17 @@ jobs:
         run: uv sync --frozen
       - name: Run checks & migrations
         env:
-          DATABASE_URL: "sqlite:///db.sqlite3"
-          DJANGO_READ_DOT_ENV_FILE: "True"
+          DATABASE_URL: "sqlite:///test_db.sqlite3"
+          DJANGO_READ_DOT_ENV_FILE: "False"
+          DJANGO_SETTINGS_MODULE: "config.settings.test"
           DJANGO_DEBUG: "True"
         run: |
           uv run python manage.py check
           uv run python manage.py migrate --noinput
       - name: Run Pytest
         env:
-          DATABASE_URL: "sqlite:///db.sqlite3"
-          DJANGO_READ_DOT_ENV_FILE: "True"
-        run: uv run pytest
+          DATABASE_URL: "sqlite:///test_db.sqlite3"
+          DJANGO_READ_DOT_ENV_FILE: "False"
+          DJANGO_SETTINGS_MODULE: "config.settings.test"
+        run: uv run pytest trashport waste_management
+

@@ -59,8 +59,11 @@ class ChatFeedbackView(APIView):
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
+        session_obj = ChatSession.objects.filter(session_key=session_key).first() if session_key else None
+
         ChatFeedback.objects.create(
             user=request.user,
+            session=session_obj,
             user_message=user_message,
             bot_message=bot_message,
             rating=rating,
