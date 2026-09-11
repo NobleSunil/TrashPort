@@ -126,7 +126,7 @@ class AadhaarInitiateView(View):
             return JsonResponse({"error": "Invalid JSON body."}, status=400)
 
         aadhaar_number = str(data.get("aadhaar_number", "")).strip()
-        linked_email = str(data.get("linked_email", "")).strip()
+        linked_email = str(data.get("linked_email", "") or getattr(request.user, "email", "")).strip()
 
         # --- Email validation --------------------------------------------
         if not linked_email:

@@ -28,9 +28,14 @@ SESSION_ENGINE = "django.contrib.sessions.backends.db"
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
-)
+if env("DJANGO_EMAIL_HOST_USER", default="") and env("DJANGO_EMAIL_HOST_PASSWORD", default=""):
+    EMAIL_BACKEND = env(
+        "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+    )
+else:
+    EMAIL_BACKEND = env(
+        "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+    )
 
 # WhiteNoise
 # ------------------------------------------------------------------------------

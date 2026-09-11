@@ -297,11 +297,12 @@
         type="email"
         id="email-input"
         class="aadh-input"
+        value="{{ request.user.email|default:'' }}"
         placeholder="e.g. yourname@gmail.com"
         autocomplete="email"
         oninput="onEmailInput(this)"
       >
-      <div class="field-hint">Enter the email address registered with your Aadhaar card.</div>
+      <div class="field-hint">Enter the email address registered with your Aadhaar card (OTP will be sent here).</div>
       <div class="field-error" id="email-error"></div>
 
       <div style="margin-top:1rem;"></div>
@@ -452,6 +453,10 @@
   let referenceId = null;
   let timerInterval = null;
   let secondsLeft = 300; // 5 minutes
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkSendBtn();
+  });
 
   // ── Consent step ──────────────────────────────────────────────────────────
   document.getElementById('consent-checkbox').addEventListener('change', function() {

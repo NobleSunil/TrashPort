@@ -17,13 +17,17 @@ class Address(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_default = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(
+        default=False,
+        help_text="Soft-delete flag — hidden from citizen view but retained in the database."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            # Mark all other addresses of this user as not default
-            Address.objects.filter(user=self.user).update(is_default=False)
+            # Mark all other visible addresses of this user as not default
+            Address.objects.filter(user=self.user, is_hidden=False).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -103,7 +107,7 @@ class PickupRequest(models.Model):
         null=True,
         related_name="assigned_pickups"
     )
-    address = models.ForeignKey(Address, on_delete=models.PROTECT)
+    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     category = models.ForeignKey(WasteCategory, on_delete=models.PROTECT)

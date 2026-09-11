@@ -13,16 +13,24 @@
     <!-- Navigation & GPS Broadcaster Card -->
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
           <div>
-            <h4 class="mb-1 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Pickup Navigation &amp; Live Location</h4>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+              <h4 class="mb-0 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Pickup Navigation &amp; Live Location</h4>
+              <span id="colDetailAccuracyBadge" class="badge bg-success-subtle text-success border border-success-subtle d-none">
+                <i class="fas fa-satellite-dish me-1"></i> <span id="colDetailAccuracyText">GPS: Accurate</span>
+              </span>
+            </div>
             <span class="text-muted small">Use layer control (top-right) to toggle 🛰️ Satellite / 🗺️ Street view.</span>
           </div>
-          <div class="mt-2 mt-md-0 d-flex gap-2 align-items-center">
-            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success shadow-sm">
-              <i class="fas fa-crosshairs me-1"></i> <span id="gpsStatusText">Enable Real-Time GPS</span>
+          <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2">
+            <button id="btnLocateCollector" class="btn btn-sm btn-success text-white fw-semibold shadow-sm" title="Center map to my accurate live location">
+              <i class="fas fa-crosshairs me-1"></i> <span id="btnLocateText">My Live Location</span>
             </button>
-            <button id="simDriveBtn" class="btn btn-sm btn-primary shadow-sm">
+            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success fw-semibold shadow-sm">
+              <i class="fas fa-broadcast-tower me-1"></i> <span id="gpsStatusText">Enable Live GPS</span>
+            </button>
+            <button id="simDriveBtn" class="btn btn-sm btn-primary shadow-sm fw-semibold">
               <i class="fas fa-play me-1"></i> Simulate Driving
             </button>
           </div>
@@ -234,7 +242,7 @@
       const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
       const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
 
-      // Default Collector Start: ~2 km away from pickup
+      // Default fallback: ~2 km offset from pickup (replaced immediately when live GPS resolves)
       let currentColLat = pickupLat - 0.015;
       let currentColLng = pickupLng - 0.015;
 
@@ -273,6 +281,28 @@
       let colMarker = L.marker([currentColLat, currentColLng]).addTo(map)
         .bindPopup("<b>🚛 Your Location (Collector)</b>");
 
+      let liveAccuracyCircle = null;
+
+      // In-map Floating Locate Button
+      const LocateControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function () {
+          const container = L.DomUtil.create('div', 'leaflet-bar');
+          const link = L.DomUtil.create('a', 'leaflet-control-locate-btn', container);
+          link.innerHTML = '<i class="fas fa-crosshairs" style="color:#198754; font-size:15px; display:flex; align-items:center; justify-content:center; width:34px; height:34px; background:white; cursor:pointer;"></i>';
+          link.title = 'Center to My Live GPS Location';
+          link.href = '#';
+          link.role = 'button';
+          L.DomEvent.disableClickPropagation(container);
+          L.DomEvent.on(link, 'click', function (e) {
+            L.DomEvent.preventDefault(e);
+            locateCollectorLive(true);
+          });
+          return container;
+        }
+      });
+      map.addControl(new LocateControl());
+
       let routePolyline = L.polyline([], {
         color: '#16a34a',
         weight: 6,
@@ -304,10 +334,22 @@
           });
       }
 
-      function updateMapAndHUD(lat, lng) {
+      function updateMapAndHUD(lat, lng, accuracy = 10) {
         currentColLat = lat;
         currentColLng = lng;
         colMarker.setLatLng([lat, lng]);
+
+        if (liveAccuracyCircle) {
+          liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+        } else {
+          liveAccuracyCircle = L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#16a34a',
+            fillColor: '#22c55e',
+            fillOpacity: 0.15,
+            weight: 1.5
+          }).addTo(map);
+        }
 
         // Send to Backend API
         fetch('/api/maps/locations/update/', {
@@ -320,12 +362,80 @@
             latitude: lat,
             longitude: lng,
             speed: 25.0,
-            heading: 0.0
+            heading: 0.0,
+            accuracy: accuracy
           })
         }).catch(err => console.log("Location update error:", err));
       }
 
-      fetchRoadRoute(currentColLat, currentColLng);
+      function locateCollectorLive(flyTo = true, silent = false) {
+        const btn = document.getElementById('btnLocateCollector');
+        const btnText = document.getElementById('btnLocateText');
+        const badge = document.getElementById('colDetailAccuracyBadge');
+        const text = document.getElementById('colDetailAccuracyText');
+
+        if (!navigator.geolocation) {
+          if (!silent) alert("Geolocation is not supported by your browser.");
+          return;
+        }
+
+        if (btn && btnText) {
+          btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Locating...';
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy || 10;
+
+            updateMapAndHUD(lat, lng, accuracy);
+            fetchRoadRoute(lat, lng);
+
+            if (flyTo) {
+              map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 1.2 });
+            }
+
+            if (badge && text) {
+              badge.classList.remove('d-none');
+              text.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+            }
+
+            if (btn && btnText) {
+              btnText.innerHTML = '<i class="fas fa-check me-1"></i> Located';
+              setTimeout(() => {
+                btnText.innerHTML = 'My Live Location';
+              }, 3000);
+            }
+          },
+          (err) => {
+            console.warn("GPS error:", err);
+            if (btn && btnText) {
+              btnText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> GPS Error';
+              setTimeout(() => {
+                btnText.innerHTML = 'My Live Location';
+              }, 3000);
+            }
+            if (!silent && err.code === 1) {
+              alert("Location permission was denied. Please allow location access to show your live location.");
+            }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
+      const locateBtn = document.getElementById('btnLocateCollector');
+      if (locateBtn) {
+        locateBtn.addEventListener('click', () => locateCollectorLive(true, false));
+      }
+
+      // Auto-locate on page load — use live GPS as the default starting position
+      // Falls back to the offset position silently if GPS is unavailable
+      if (navigator.geolocation) {
+        locateCollectorLive(true, true);
+      } else {
+        fetchRoadRoute(currentColLat, currentColLng);
+      }
 
       // Simulation Driver Mode (Animates along real road waypoints!)
       let simInterval = null;
@@ -372,7 +482,7 @@
           if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
-            gpsStatus.textContent = "Enable Real-Time GPS";
+            if (gpsStatus) gpsStatus.textContent = "Enable Live GPS";
             this.classList.remove('btn-success');
             this.classList.add('btn-outline-success');
             return;
@@ -383,29 +493,35 @@
             return;
           }
 
-          gpsStatus.textContent = "Requesting Permission...";
+          if (gpsStatus) gpsStatus.textContent = "Requesting GPS...";
           gpsBtn.className = 'btn btn-sm btn-warning shadow-sm';
 
           watchId = navigator.geolocation.watchPosition(
-            pos => {
+            (pos) => {
               let lat = pos.coords.latitude;
               let lng = pos.coords.longitude;
-              gpsStatus.textContent = "Real-Time GPS Active";
-              gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
-
-              updateMapAndHUD(lat, lng);
+              let accuracy = pos.coords.accuracy || 10;
+              updateMapAndHUD(lat, lng, accuracy);
               fetchRoadRoute(lat, lng);
+              if (gpsStatus) gpsStatus.textContent = "Live GPS Active";
+              gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
+              const badge = document.getElementById('colDetailAccuracyBadge');
+              const text = document.getElementById('colDetailAccuracyText');
+              if (badge && text) {
+                badge.classList.remove('d-none');
+                text.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+              }
             },
-            err => {
-              gpsStatus.textContent = "Enable Real-Time GPS";
+            (err) => {
+              if (gpsStatus) gpsStatus.textContent = "Enable Live GPS";
               gpsBtn.className = 'btn btn-sm btn-outline-danger shadow-sm';
               if (watchId !== null) {
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
               }
-              alert("Location permission was denied or timed out. Please allow location access in your browser to enable real-time tracking.");
+              alert("Location permission was denied or timed out. Please allow location access in your browser to enable live tracking.");
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
         });
       }

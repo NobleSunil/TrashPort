@@ -199,6 +199,47 @@
     border-radius: 50px;
   }
 
+  /* Live GPS Radar Animation & In-map Controls */
+  @keyframes liveGpsPulse {
+    0% { transform: scale(0.95); opacity: 0.9; }
+    50% { transform: scale(1.4); opacity: 0.25; }
+    100% { transform: scale(0.95); opacity: 0.9; }
+  }
+  .live-truck-marker {
+    position: relative;
+  }
+  .live-truck-marker::after {
+    content: '';
+    position: absolute;
+    top: -6px; left: -6px; right: -6px; bottom: -6px;
+    border-radius: 50%;
+    border: 3px solid #16a34a;
+    animation: liveGpsPulse 2s infinite ease-in-out;
+  }
+  .leaflet-bar .leaflet-control-locate-btn {
+    background-color: #ffffff !important;
+    border: none !important;
+    color: #16a34a !important;
+    font-size: 15px !important;
+    width: 34px !important;
+    height: 34px !important;
+    line-height: 34px !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+  }
+  .leaflet-bar .leaflet-control-locate-btn:hover {
+    background-color: #dcfce7 !important;
+    color: #15803d !important;
+  }
+  .leaflet-bar .leaflet-control-locate-btn.active {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+  }
+
   /* ── Data Table ── */
   .data-table {
     width: 100%;
@@ -716,9 +757,21 @@
 
       <!-- Interactive Opportunity Map -->
       <div class="p-3 bg-light border-bottom">
-        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-          <span class="small fw-bold text-dark"><i class="fas fa-map-marked-alt text-success me-1"></i> Interactive Pickup Map &amp; Route Previewer</span>
-          <small class="text-muted">Click any pickup pin to preview turn-by-turn road route and claim job</small>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2 px-1">
+          <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="small fw-bold text-dark"><i class="fas fa-map-marked-alt text-success me-1"></i> Interactive Pickup Map &amp; Route Previewer</span>
+            <span id="liveLocationAccuracyBadge" class="badge bg-success-subtle text-success border border-success-subtle d-none">
+              <i class="fas fa-satellite-dish me-1"></i> <span id="accuracyText">GPS: Accurate</span>
+            </span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-success text-white shadow-sm fw-semibold" id="btnCollectorLiveLocation" title="Get accurate live GPS location">
+              <i class="fas fa-crosshairs me-1"></i> <span id="btnLiveLocationText">My Live Location</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success shadow-sm fw-semibold" id="btnToggleLiveGpsTracking" title="Continuous Live GPS Tracking">
+              <i class="fas fa-broadcast-tower me-1"></i> <span id="btnTrackingText">Track Vehicle</span>
+            </button>
+          </div>
         </div>
         <div id="collectorOpportunityMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #16a34a; position: relative; z-index: 1;"></div>
       </div>
@@ -979,22 +1032,218 @@
     setTimeout(() => map.invalidateSize(), 300);
 
     // Custom Icons
-    function createIcon(iconClass, bgClass) {
+    function createIcon(iconClass, bgClass, isLive = false) {
+      const liveClass = isLive ? 'live-truck-marker' : '';
       return L.divIcon({
         className: 'custom-map-icon',
-        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white ${bgClass}" style="width: 34px; height: 34px; font-size: 15px; border: 2px solid white;">
+        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white ${bgClass} ${liveClass}" style="width: 36px; height: 36px; font-size: 16px; border: 2px solid white;">
                 <i class="fas ${iconClass}"></i>
                </div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-        popupAnchor: [0, -17]
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18]
       });
     }
 
+    let currentCollectorLat = collectorLat;
+    let currentCollectorLng = collectorLng;
+    let liveAccuracyCircle = null;
+    let liveWatchId = null;
+
     // Collector Truck Marker
     let colMarker = L.marker([collectorLat, collectorLng], {
-      icon: createIcon("fa-truck", "bg-success")
+      icon: createIcon("fa-truck", "bg-success", true)
     }).addTo(map).bindPopup("<b>🚛 Your Live Location</b><br>Collector Vehicle Position");
+
+    // In-map Floating Locate Button
+    const LocateControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function () {
+        const container = L.DomUtil.create('div', 'leaflet-bar');
+        const link = L.DomUtil.create('a', 'leaflet-control-locate-btn', container);
+        link.innerHTML = '<i class="fas fa-crosshairs"></i>';
+        link.title = 'Show My Live Location (Accurate GPS)';
+        link.href = '#';
+        link.role = 'button';
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(link, 'click', function (e) {
+          L.DomEvent.preventDefault(e);
+          locateCollectorLive(true);
+        });
+        return container;
+      }
+    });
+    map.addControl(new LocateControl());
+
+    // High-Accuracy Live Location Handler
+    function locateCollectorLive(flyTo = true) {
+      const btn = document.getElementById('btnCollectorLiveLocation');
+      const btnText = document.getElementById('btnLiveLocationText');
+      const badge = document.getElementById('liveLocationAccuracyBadge');
+      const accuracyText = document.getElementById('accuracyText');
+
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        if (btnText) btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Locating...';
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy || 10;
+
+          currentCollectorLat = lat;
+          currentCollectorLng = lng;
+
+          // Update Collector Marker
+          colMarker.setLatLng([lat, lng]);
+          colMarker.bindPopup(`<b>🚛 Your Live Location</b><br>Collector Position (±${Math.round(accuracy)}m accuracy)`).openPopup();
+
+          // Pulse & Accuracy Circle
+          if (liveAccuracyCircle) {
+            liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+          } else {
+            liveAccuracyCircle = L.circle([lat, lng], {
+              radius: accuracy,
+              color: '#16a34a',
+              fillColor: '#22c55e',
+              fillOpacity: 0.18,
+              weight: 1.5
+            }).addTo(map);
+          }
+
+          if (flyTo) {
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 14), { duration: 1.2 });
+          }
+
+          if (badge && accuracyText) {
+            badge.classList.remove('d-none');
+            accuracyText.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+          }
+
+          if (btn) {
+            btn.disabled = false;
+            if (btnText) btnText.innerHTML = '<i class="fas fa-check me-1"></i> Location Updated';
+            setTimeout(() => {
+              if (btnText) btnText.innerHTML = '<i class="fas fa-crosshairs me-1"></i> My Live Location';
+            }, 3000);
+          }
+
+          // Transmit location to server in background
+          fetch('/api/maps/locations/update/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+              latitude: lat,
+              longitude: lng,
+              speed: pos.coords.speed || 0.0,
+              heading: pos.coords.heading || 0.0,
+              accuracy: accuracy
+            })
+          }).catch(err => console.log('Location sync:', err));
+        },
+        (err) => {
+          console.warn('Geolocation error:', err);
+          if (btn) {
+            btn.disabled = false;
+            if (btnText) btnText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> GPS Unavailable';
+            setTimeout(() => {
+              if (btnText) btnText.innerHTML = '<i class="fas fa-crosshairs me-1"></i> My Live Location';
+            }, 3000);
+          }
+          if (err.code === 1) {
+            alert("Location access was denied. Please allow location access in your browser to view your live GPS position.");
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    // Connect Live Location Buttons
+    const liveBtn = document.getElementById('btnCollectorLiveLocation');
+    if (liveBtn) {
+      liveBtn.addEventListener('click', () => locateCollectorLive(true));
+    }
+
+    const trackBtn = document.getElementById('btnToggleLiveGpsTracking');
+    const trackText = document.getElementById('btnTrackingText');
+
+    if (trackBtn) {
+      trackBtn.addEventListener('click', function () {
+        if (liveWatchId !== null) {
+          navigator.geolocation.clearWatch(liveWatchId);
+          liveWatchId = null;
+          trackBtn.classList.remove('btn-success', 'text-white');
+          trackBtn.classList.add('btn-outline-success');
+          if (trackText) trackText.innerHTML = '<i class="fas fa-broadcast-tower me-1"></i> Track Vehicle';
+        } else if (navigator.geolocation) {
+          liveWatchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const accuracy = pos.coords.accuracy || 10;
+              currentCollectorLat = lat;
+              currentCollectorLng = lng;
+              colMarker.setLatLng([lat, lng]);
+              if (liveAccuracyCircle) {
+                liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+              } else {
+                liveAccuracyCircle = L.circle([lat, lng], {
+                  radius: accuracy,
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.18,
+                  weight: 1.5
+                }).addTo(map);
+              }
+              const badge = document.getElementById('liveLocationAccuracyBadge');
+              const accuracyText = document.getElementById('accuracyText');
+              if (badge && accuracyText) {
+                badge.classList.remove('d-none');
+                accuracyText.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+              }
+              fetch('/api/maps/locations/update/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                  latitude: lat,
+                  longitude: lng,
+                  speed: pos.coords.speed || 0.0,
+                  heading: pos.coords.heading || 0.0,
+                  accuracy: accuracy
+                })
+              }).catch(err => console.log('Location update error:', err));
+            },
+            (err) => console.warn('Watch GPS error:', err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+          trackBtn.classList.remove('btn-outline-success');
+          trackBtn.classList.add('btn-success', 'text-white');
+          if (trackText) trackText.innerHTML = '<i class="fas fa-spinner fa-pulse me-1"></i> Tracking Live';
+        }
+      });
+    }
+
+    // Auto-locate collector on page load — use live GPS as the default position
+    if (navigator.geolocation) {
+      locateCollectorLive(true);
+    }
 
     let pickupMarkers = [];
     let previewPolyline = null;
@@ -1004,7 +1253,7 @@
       pickupMarkers.forEach(m => map.removeLayer(m));
       pickupMarkers = [];
 
-      let bounds = [[collectorLat, collectorLng]];
+      let bounds = [[currentCollectorLat, currentCollectorLng]];
 
       unassignedPickups.forEach(p => {
         if (p.distance_km <= maxDist) {
@@ -1048,11 +1297,11 @@
 
           // Click marker to preview OSRM turn-by-turn road route!
           marker.on('click', () => {
-            let directWaypoints = [[collectorLat, collectorLng], [p.latitude, p.longitude]];
+            let directWaypoints = [[currentCollectorLat, currentCollectorLng], [p.latitude, p.longitude]];
             if (previewPolyline) map.removeLayer(previewPolyline);
             previewPolyline = L.polyline(directWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
 
-            fetch(`/api/maps/route/?start_lat=${collectorLat}&start_lng=${collectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
+            fetch(`/api/maps/route/?start_lat=${currentCollectorLat}&start_lng=${currentCollectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
               .then(res => res.json())
               .then(routeData => {
                 if (routeData && routeData.coordinates && routeData.coordinates.length > 0 && previewPolyline) {
@@ -1127,8 +1376,8 @@
           function (pos) {
             const liveLat = pos.coords.latitude;
             const liveLng = pos.coords.longitude;
-            collectorLat = liveLat;
-            collectorLng = liveLng;
+            currentCollectorLat = liveLat;
+            currentCollectorLng = liveLng;
 
             gpsLabel.textContent = 'Live GPS Active';
             gpsBtn.className = 'btn btn-sm btn-success shadow-sm';

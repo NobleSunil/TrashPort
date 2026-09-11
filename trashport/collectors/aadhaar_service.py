@@ -153,11 +153,13 @@ def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
             html_message=html_message,
             fail_silently=False,
         )
-        logger.info(f"Aadhaar OTP email sent via SMTP to {to_email}")
+        logger.info("Aadhaar OTP email sent successfully to %s", to_email)
+        return True, None
     except Exception as e:
-        logger.error(f"Failed to send Aadhaar OTP email to {to_email}: {e}")
-        # Log to console as fallback
+        logger.error("Failed to send Aadhaar OTP email to %s: %s", to_email, e)
+        # Log to console as fallback for offline/demo development
         logger.info("[FALLBACK OTP: %s] Target Email: %s", otp, to_email)
+        return False, str(e)
 
 
 def generate_demo_otp() -> str:

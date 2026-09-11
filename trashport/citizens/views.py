@@ -5,11 +5,13 @@ Citizen-specific views for managing user addresses, booking pickup requests, pay
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models as db_models
 from django.db.models import Sum
-from django.shortcuts import get_object_or_404, redirect
+from django.db.utils import IntegrityError
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View
+from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
 from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
@@ -47,7 +49,7 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
             status=PickupRequest.StatusChoices.COMPLETED
         ).select_related("category", "address", "collector").order_by("-created_at")
         
-        context["addresses"] = Address.objects.filter(user=user)
+        context["addresses"] = Address.objects.filter(user=user, is_hidden=False)
         context["complaints"] = Complaint.objects.filter(citizen=user).select_related("pickup_request").order_by("-created_at")[:10]
         
         # Subscription details
@@ -105,7 +107,7 @@ class AddressListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # Filter addresses to only show those belonging to the current user
-        return Address.objects.filter(user=self.request.user).order_by("-is_default", "-created_at")
+        return Address.objects.filter(user=self.request.user, is_hidden=False).order_by("-is_default", "-created_at")
 
 
 class AddressCreateView(LoginRequiredMixin, CreateView):
@@ -133,27 +135,33 @@ class AddressUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy("waste_management:address_list")
 
     def get_queryset(self):
-        return Address.objects.filter(user=self.request.user)
+        return Address.objects.filter(user=self.request.user, is_hidden=False)
 
     def form_valid(self, form):
         messages.success(self.request, "Address updated successfully!")
         return super().form_valid(form)
 
 
-class AddressDeleteView(LoginRequiredMixin, DeleteView):
+class AddressDeleteView(LoginRequiredMixin, View):
     """
-    Allows a citizen to delete a saved address.
+    Soft-deletes an address by setting is_hidden=True.
+    The record is retained in the database (for historical pickup data) but
+    disappears from all citizen-facing views.
     """
-    model = Address
-    template_name = "citizen/address_confirm_delete.html"
-    success_url = reverse_lazy("waste_management:address_list")
 
-    def get_queryset(self):
-        return Address.objects.filter(user=self.request.user)
+    def get(self, request, pk):
+        address = get_object_or_404(Address, pk=pk, user=request.user, is_hidden=False)
+        return render(request, "citizen/address_confirm_delete.html", {"object": address})
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Address deleted successfully!")
-        return super().delete(request, *args, **kwargs)
+    def post(self, request, pk):
+        address = get_object_or_404(Address, pk=pk, user=request.user, is_hidden=False)
+        # If this was the default address, clear the flag before hiding
+        if address.is_default:
+            address.is_default = False
+        address.is_hidden = True
+        address.save(update_fields=["is_hidden", "is_default"])
+        messages.success(request, "Address removed successfully.")
+        return redirect("waste_management:address_list")
 
 
 # ==============================================================================
@@ -178,7 +186,7 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user_addresses = Address.objects.filter(user=self.request.user)
+        user_addresses = Address.objects.filter(user=self.request.user, is_hidden=False)
         context["addresses"] = user_addresses
         import json
         addresses_data = {}

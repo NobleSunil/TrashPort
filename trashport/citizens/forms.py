@@ -56,7 +56,7 @@ class PickupRequestForm(forms.ModelForm):
         self.fields["address"].required = False
         if user:
             # Only display addresses belonging to the logged-in citizen
-            self.fields["address"].queryset = Address.objects.filter(user=user)
+            self.fields["address"].queryset = Address.objects.filter(user=user, is_hidden=False)
 
         # Enforce minimum schedule date: at least 3 hours from current time
         min_datetime = timezone.localtime(timezone.now() + timedelta(hours=3))
