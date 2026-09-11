@@ -128,3 +128,26 @@ class TestNotificationService:
         assert cancel_notif is not None
         assert any("Pickup Request Cancelled" in m.subject for m in mail.outbox)
 
+    def test_clear_all_and_mark_all_read_notifications(self):
+        from django.test import Client
+        from django.urls import reverse
+
+        user = User.objects.create_user(email="clear_user@trashport.local", name="Clear User")
+        Notification.objects.create(user=user, title="Notice 1", message="Msg 1", is_read=False)
+        Notification.objects.create(user=user, title="Notice 2", message="Msg 2", is_read=False)
+
+        client = Client()
+        client.force_login(user)
+
+        # Mark all read
+        res_read = client.post(reverse("notifications:mark_all_read"))
+        assert res_read.status_code == 200
+        assert Notification.objects.filter(user=user, is_read=False).count() == 0
+        assert Notification.objects.filter(user=user).count() == 2
+
+        # Clear all
+        res_clear = client.post(reverse("notifications:clear_all"))
+        assert res_clear.status_code == 200
+        assert Notification.objects.filter(user=user).count() == 0
+
+

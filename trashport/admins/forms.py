@@ -19,12 +19,13 @@ class WasteCategoryForm(forms.ModelForm):
     """Form for creating and editing waste categories and their pricing rules."""
     class Meta:
         model = WasteCategory
-        fields = ["name", "description", "fee_per_kg", "points_per_kg"]
+        fields = ["name", "description", "fee_per_kg", "points_per_kg", "max_weight_kg"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Category Name"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
             "fee_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00"}),
             "points_per_kg": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "max_weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01", "placeholder": "Maximum allowed weight in kg (e.g. 100)"}),
         }
 
 
@@ -83,4 +84,29 @@ class WalletPointAdjustmentForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Reason for adjustment"}),
         required=False
     )
+
+
+from waste_management.models import CollectorPayoutSetting
+
+class CollectorPayoutSettingForm(forms.ModelForm):
+    """Form for admins to configure collector payout rates and commissions."""
+    class Meta:
+        model = CollectorPayoutSetting
+        fields = ["base_min_payout", "rate_per_km", "extra_weight_commission_percent"]
+        widgets = {
+            "base_min_payout": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00", "placeholder": "e.g. 25.00"}),
+            "rate_per_km": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00", "placeholder": "e.g. 2.00"}),
+            "extra_weight_commission_percent": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00", "max": "100.00", "placeholder": "e.g. 20.00"}),
+        }
+        labels = {
+            "base_min_payout": "Minimum Base Payout (Rs.)",
+            "rate_per_km": "Rate per Kilometer (Rs./km)",
+            "extra_weight_commission_percent": "Extra Weight Commission (%)",
+        }
+        help_texts = {
+            "base_min_payout": "Minimum guaranteed payment to the collector for every completed pickup job.",
+            "rate_per_km": "Additional compensation paid per kilometer of pickup travel distance.",
+            "extra_weight_commission_percent": "Percentage share given to collector from excess weight penalty fees.",
+        }
+
 

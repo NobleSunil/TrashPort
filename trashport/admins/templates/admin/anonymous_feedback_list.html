@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Anonymous Feedback Submissions | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
+    <div>
+      <h1 class="h2 mb-1 text-dark fw-bold">
+        <i class="bi bi-shield-lock-fill text-primary me-2"></i>Anonymous Feedback Box
+      </h1>
+      <p class="text-muted mb-0">Confidential suggestions, service issues, and bugs reported anonymously by citizens and visitors</p>
+    </div>
+    <div class="mt-3 mt-md-0 d-flex gap-2">
+      <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary shadow-sm">
+        <i class="bi bi-arrow-left me-1"></i> Control Center
+      </a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0 fw-bold">
+        <i class="bi bi-chat-quote-fill text-primary me-2"></i>All Anonymous Feedback Entries ({{ feedbacks|length }})
+      </h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 table-hover">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">ID</th>
+            <th>Category</th>
+            <th>Subject / Summary</th>
+            <th>Feedback Message</th>
+            <th>Date Received</th>
+            <th>Review Status</th>
+            <th class="pe-3 text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fb in feedbacks %}
+            <tr class="{% if not fb.is_reviewed %}table-light fw-semibold{% endif %}">
+              <td class="ps-3"><strong>#{{ fb.id }}</strong></td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border">
+                  {{ fb.get_category_display }}
+                </span>
+              </td>
+              <td class="text-dark">{{ fb.subject|default:"(No Subject)" }}</td>
+              <td style="max-width: 360px;">
+                <div class="text-muted small text-break">{{ fb.message }}</div>
+              </td>
+              <td class="text-muted small">{{ fb.created_at|date:"M d, Y H:i" }}</td>
+              <td>
+                {% if fb.is_reviewed %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Reviewed</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>New / Unreviewed</span>
+                {% endif %}
+              </td>
+              <td class="pe-3 text-end">
+                <form method="post" action="{% url 'waste_management:anonymous_feedback_list' %}" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="feedback_id" value="{{ fb.id }}">
+                  <input type="hidden" name="action" value="toggle_review">
+                  {% if fb.is_reviewed %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Mark Unread</button>
+                  {% else %}
+                    <button type="submit" class="btn btn-sm btn-success">Mark Reviewed</button>
+                  {% endif %}
+                </form>
+                <form method="post" action="{% url 'waste_management:anonymous_feedback_list' %}" class="d-inline ms-1" onsubmit="return confirm('Delete this feedback entry?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="feedback_id" value="{{ fb.id }}">
+                  <input type="hidden" name="action" value="delete">
+                  <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox display-4 text-muted opacity-50 mb-3 d-block"></i>
+                <h6 class="fw-bold text-dark">No Anonymous Feedback Yet</h6>
+                <p class="small text-muted mb-0">Messages submitted from the home page anonymous feedback box will appear here.</p>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

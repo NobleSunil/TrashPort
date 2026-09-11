@@ -22,6 +22,7 @@
             <th>Description</th>
             <th>Collection Fee / kg</th>
             <th>Points / kg</th>
+            <th>Max Weight Limit</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -33,13 +34,14 @@
               <td class="text-muted">{{ cat.description|default:"-" }}</td>
               <td>Rs. {{ cat.fee_per_kg }}</td>
               <td>{{ cat.points_per_kg }} pts</td>
+              <td><span class="badge bg-secondary">{{ cat.max_weight_kg|default:"100.00" }} kg</span></td>
               <td>
                 <a href="{% url 'waste_management:category_update' cat.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="5" class="text-center py-4 text-muted">No waste categories defined.</td>
+              <td colspan="7" class="text-center py-4 text-muted">No waste categories defined.</td>
             </tr>
           {% endfor %}
         </tbody>

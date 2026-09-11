@@ -30,9 +30,9 @@
                 </div>
               </div>
             </div>
-            <div class="text-muted small mb-3">
-              Selected Coordinates: <strong id="coordsDisplay" class="text-dark">12.971600, 77.594600</strong>
-            </div>
+            <span class="badge bg-light text-dark border px-2 py-1">
+              Selected Coordinates: <strong id="coordsDisplay" class="text-dark">9.931200, 76.267300</strong>
+            </span>
 
             <!-- Address Input / Selection Panel -->
             <div class="p-3 bg-light rounded-3 border">
@@ -73,6 +73,9 @@
               <div class="col-md-6">
                 <label class="form-label fw-bold small text-dark">Estimated Weight (kg):*</label>
                 {{ form.weight_kg }}
+                <div class="form-text small" id="weightLimitHelp">
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Maximum limit: <strong id="maxWeightDisplay">100 kg</strong> per pickup request.
+                </div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-bold small text-dark">Quantity Estimate (Optional):</label>
@@ -80,8 +83,27 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-bold small text-dark">Schedule Date &amp; Time:*</label>
+                <!-- Hidden real field submitted with model form -->
                 {{ form.schedule_date }}
-                <div class="form-text small">Pickups must be scheduled at least 3 hours in advance.</div>
+                <div class="row g-2">
+                  <div class="col-sm-6">
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fas fa-calendar-alt"></i></span>
+                      <input type="date" id="pickup_date_picker" class="form-control" required>
+                    </div>
+                  </div>
+                  <div class="col-sm-6">
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fas fa-clock"></i></span>
+                      <select id="pickup_time_picker" class="form-select" required>
+                        <option value="">Select Time Slot...</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-text small text-muted mt-1">
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM – 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
+                </div>
               </div>
             </div>
             {{ form.latitude }}
@@ -138,11 +160,11 @@
       let cityInput = document.getElementById("id_new_city");
       let postalInput = document.getElementById("id_new_postal_code");
 
-      let defaultLat = parseFloat(latInput?.value) || 12.9716;
-      let defaultLng = parseFloat(lngInput?.value) || 77.5946;
+      let defaultLat = parseFloat(latInput?.value) || 9.9312;
+      let defaultLng = parseFloat(lngInput?.value) || 76.2673;
 
       // Define Base Map Tile Layers
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
@@ -282,27 +304,52 @@
         updateCoords(e.latlng.lat, e.latlng.lng, true, true);
       });
 
-      // Geolocation button function
+      // Geolocation button function with high accuracy GPS
+      let accuracyCircle = null;
+
       function geolocateUser(forceOverwrite = true) {
         if (navigator.geolocation) {
           showMapLoading(true);
-          navigator.geolocation.getCurrentPosition(function (pos) {
-            showMapLoading(false);
-            let lat = pos.coords.latitude;
-            let lng = pos.coords.longitude;
-            map.setView([lat, lng], 17);
-            marker.setLatLng([lat, lng]);
-            updateCoords(lat, lng, true, forceOverwrite);
-          }, function (err) {
-            showMapLoading(false);
-            if (forceOverwrite) {
-              setTimeout(function () {
-                alert("Unable to fetch current GPS location. Please select manually on the map.");
-              }, 50);
-            } else {
-              console.log("Auto-geolocation declined or failed on page load.", err);
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              showMapLoading(false);
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              let accuracy = pos.coords.accuracy || 15;
+
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+
+              if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+              } else {
+                accuracyCircle = L.circle([lat, lng], {
+                  radius: accuracy,
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.15,
+                  weight: 1.5
+                }).addTo(map);
+              }
+
+              updateCoords(lat, lng, true, forceOverwrite);
+            },
+            function (err) {
+              showMapLoading(false);
+              if (forceOverwrite) {
+                setTimeout(function () {
+                  alert("Unable to fetch current GPS location. Please ensure location services are enabled or select manually on the map.");
+                }, 50);
+              } else {
+                console.log("Auto-geolocation notice:", err);
+              }
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
             }
-          });
+          );
         }
       }
 
@@ -312,7 +359,7 @@
 
       // Auto-locate on load if no saved address is selected and coordinates are default
       if (!addressSelect || !addressSelect.value) {
-        if (latInput && (!latInput.value || parseFloat(latInput.value) === 12.9716)) {
+        if (latInput && (!latInput.value || parseFloat(latInput.value) === 9.9312 || parseFloat(latInput.value) === 12.9716)) {
           // Attempt silent auto-locate
           geolocateUser(false);
         }
@@ -326,6 +373,180 @@
       if (!latInput?.value) {
         updateCoords(defaultLat, defaultLng, false);
       }
+
+      // Schedule Date & Time: Restrict date and generate only valid time slots (7:00 AM - 8:30 PM, >= 3h in advance)
+      const hiddenScheduleInput = document.querySelector('input[name="schedule_date"]');
+      const datePicker = document.getElementById('pickup_date_picker');
+      const timePicker = document.getElementById('pickup_time_picker');
+
+      if (hiddenScheduleInput && datePicker && timePicker) {
+        hiddenScheduleInput.style.display = 'none';
+
+        function padZero(n) {
+          return n < 10 ? '0' + n : '' + n;
+        }
+
+        function formatDisplayTime(hour, minute) {
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+          return `${displayHour}:${padZero(minute)} ${ampm}`;
+        }
+
+        // Calculate earliest selectable date and time (now + 3 hours)
+        const now = new Date();
+        const earliestAllowed = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+
+        // Format today's minimum date YYYY-MM-DD
+        const minYear = earliestAllowed.getFullYear();
+        const minMonth = padZero(earliestAllowed.getMonth() + 1);
+        const minDay = padZero(earliestAllowed.getDate());
+        const minDateStr = `${minYear}-${minMonth}-${minDay}`;
+
+        // Set min attribute on date picker so past days cannot be selected
+        datePicker.min = minDateStr;
+
+        // If today is already past 8:30 PM after +3 hours, default date is tomorrow
+        const isPastEveningToday = (earliestAllowed.getHours() * 60 + earliestAllowed.getMinutes()) > (20 * 60 + 30);
+        let defaultDateObj = earliestAllowed;
+        if (isPastEveningToday) {
+          defaultDateObj = new Date(earliestAllowed.getTime() + (24 * 60 * 60 * 1000));
+        }
+
+        const defaultDateStr = `${defaultDateObj.getFullYear()}-${padZero(defaultDateObj.getMonth() + 1)}-${padZero(defaultDateObj.getDate())}`;
+
+        // Initialize from existing hidden value if present, otherwise default
+        let initialDateStr = defaultDateStr;
+        let initialTimeStr = "";
+
+        if (hiddenScheduleInput.value) {
+          const parts = hiddenScheduleInput.value.split('T');
+          if (parts.length === 2) {
+            initialDateStr = parts[0];
+            initialTimeStr = parts[1].substring(0, 5);
+          }
+        }
+        datePicker.value = initialDateStr;
+
+        function populateTimeSlots(selectedDateStr) {
+          timePicker.innerHTML = '<option value="">Select Time Slot...</option>';
+          if (!selectedDateStr) return;
+
+          const selParts = selectedDateStr.split('-');
+          const selYear = parseInt(selParts[0], 10);
+          const selMonth = parseInt(selParts[1], 10) - 1;
+          const selDay = parseInt(selParts[2], 10);
+
+          // Working hours: 07:00 (7:00 AM) to 20:30 (8:30 PM) in 15-minute intervals
+          const startMinutes = 7 * 60;          // 420 (07:00)
+          const endMinutes = (20 * 60) + 30;    // 1230 (20:30)
+
+          let availableSlotsCount = 0;
+
+          for (let m = startMinutes; m <= endMinutes; m += 15) {
+            const h = Math.floor(m / 60);
+            const min = m % 60;
+            const slotDate = new Date(selYear, selMonth, selDay, h, min, 0);
+
+            // Must be at least 3 hours from now
+            if (slotDate.getTime() >= earliestAllowed.getTime()) {
+              const timeVal = `${padZero(h)}:${padZero(min)}`;
+              const timeLabel = formatDisplayTime(h, min);
+              const option = document.createElement('option');
+              option.value = timeVal;
+              option.textContent = timeLabel;
+              timePicker.appendChild(option);
+              availableSlotsCount++;
+            }
+          }
+
+          if (availableSlotsCount === 0) {
+            const opt = document.createElement('option');
+            opt.value = "";
+            opt.textContent = "No available slots today (past 8:30 PM or <3h). Please select tomorrow.";
+            opt.disabled = true;
+            timePicker.appendChild(opt);
+          }
+        }
+
+        function updateHiddenSchedule() {
+          if (datePicker.value && timePicker.value) {
+            hiddenScheduleInput.value = `${datePicker.value}T${timePicker.value}`;
+          } else {
+            hiddenScheduleInput.value = "";
+          }
+        }
+
+        datePicker.addEventListener('change', function () {
+          populateTimeSlots(this.value);
+          timePicker.value = "";
+          updateHiddenSchedule();
+        });
+
+        timePicker.addEventListener('change', function () {
+          updateHiddenSchedule();
+        });
+
+        // Initial population
+        populateTimeSlots(datePicker.value);
+
+        // Pre-select initial time slot if valid
+        if (initialTimeStr) {
+          timePicker.value = initialTimeStr;
+        }
+        if (!timePicker.value && timePicker.options.length > 1) {
+          // Select the first available valid time slot
+          timePicker.selectedIndex = 1;
+        }
+        updateHiddenSchedule();
+      }
+
+      // ── Dynamic Category Weight Limit ──
+      const categoriesData = {{ categories_json|safe|default:"{}" }};
+      const categorySelect = document.getElementById("id_category");
+      const weightInput = document.getElementById("id_weight_kg");
+      const maxWeightDisplay = document.getElementById("maxWeightDisplay");
+      const weightHelp = document.getElementById("weightLimitHelp");
+
+      function updateCategoryWeightLimit() {
+        if (!categorySelect || !weightInput) return;
+        const catId = categorySelect.value;
+        let maxLimit = 100.00;
+        let catName = "";
+
+        if (catId && categoriesData[catId]) {
+          maxLimit = parseFloat(categoriesData[catId].max_weight_kg) || 100.00;
+          catName = categoriesData[catId].name;
+        }
+
+        weightInput.max = maxLimit;
+        if (maxWeightDisplay) {
+          maxWeightDisplay.textContent = `${maxLimit} kg` + (catName ? ` (${catName})` : "");
+        }
+
+        // Validate current value if already typed
+        const curVal = parseFloat(weightInput.value);
+        if (!isNaN(curVal) && curVal > maxLimit) {
+          weightInput.classList.add("is-invalid");
+          if (weightHelp) {
+            weightHelp.className = "form-text small text-danger";
+            weightHelp.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>Weight exceeds allowed limit of <strong>${maxLimit} kg</strong>!`;
+          }
+        } else {
+          weightInput.classList.remove("is-invalid");
+          if (weightHelp) {
+            weightHelp.className = "form-text small text-muted";
+            weightHelp.innerHTML = `<i class="fas fa-info-circle me-1 text-primary"></i>Maximum limit: <strong id="maxWeightDisplay">${maxLimit} kg${catName ? ' (' + catName + ')' : ''}</strong> per pickup request.`;
+          }
+        }
+      }
+
+      if (categorySelect) {
+        categorySelect.addEventListener("change", updateCategoryWeightLimit);
+      }
+      if (weightInput) {
+        weightInput.addEventListener("input", updateCategoryWeightLimit);
+      }
+      updateCategoryWeightLimit();
     });
   </script>
 {% endblock inline_javascript %}

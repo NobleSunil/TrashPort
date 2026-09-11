@@ -113,17 +113,120 @@
       </div>
     </div>
 
-    <!-- Citizen Actions -->
+    <!-- Cancellation Status & Refund Banner -->
+    {% if pickup.status == 'CANCELLED' %}
+      <div class="card border-0 shadow-sm mb-4 border-start border-danger border-4 bg-white">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-circle bg-danger bg-opacity-10 text-danger p-3 fs-4">
+              <i class="fas fa-ban"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="fw-bold text-danger mb-1">This Pickup Request is Cancelled</h5>
+              <p class="text-muted small mb-2">Cancelled on {{ pickup.cancelled_at|default:pickup.updated_at|date:"M d, Y \a\t h:i A" }}</p>
+              {% if pickup.cancellation_reason %}
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                  <div class="small fw-bold text-dark mb-1"><i class="fas fa-quote-left me-2 text-muted"></i>Reason for Cancellation:</div>
+                  <div class="text-secondary small">{{ pickup.cancellation_reason }}</div>
+                </div>
+              {% endif %}
+
+              {% if pickup.is_paid %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 border border-warning" role="alert">
+                  <i class="fas fa-undo-alt fs-5 text-warning"></i>
+                  <div class="small">
+                    <strong>Payment Refund Notice:</strong> Since collection fee of <strong>Rs. {{ pickup.fee }}</strong> was already paid, your full refund has been initiated and will be credited to your original payment method within <strong>3 to 7 business days</strong>.
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Citizen Actions: Cancel or Locked Message -->
     {% if pickup.status in 'PENDING AWAITING_PAYMENT' %}
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-          <h5 class="card-title text-danger">Cancel Request</h5>
-          <p class="text-muted small">You can cancel this pickup request as long as it has not been assigned to a collector.</p>
-          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="cancel">
-            <button type="submit" class="btn btn-outline-danger">Cancel Pickup Request</button>
-          </form>
+      {% if not pickup.collector %}
+        <div class="card border-0 shadow-sm mb-4 border-start border-warning border-4 bg-white">
+          <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <h5 class="fw-bold text-dark mb-1">Need to Cancel this Pickup?</h5>
+                <p class="text-muted small mb-0">You can cancel this request anytime before a collector is assigned. You will be asked to provide a reason.</p>
+                {% if pickup.is_paid %}
+                  <div class="small text-success fw-semibold mt-1">
+                    <i class="fas fa-shield-alt me-1"></i>Refund guarantee: 100% refund will be returned to your original payment method within 3 to 7 business days.
+                  </div>
+                {% endif %}
+              </div>
+              <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#cancelPickupModal">
+                <i class="fas fa-times-circle me-1"></i>Cancel Request
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cancellation Modal -->
+        <div class="modal fade" id="cancelPickupModal" tabindex="-1" aria-labelledby="cancelPickupModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="cancelPickupModalLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Cancel Pickup Request #{{ pickup.display_id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <div class="modal-body p-4">
+                  <p class="text-muted mb-3">Please specify why you are cancelling this pickup request:</p>
+                  
+                  <div class="mb-3">
+                    <label for="cancelReasonPreset" class="form-label fw-bold small">Reason Category:*</label>
+                    <select class="form-select" id="cancelReasonPreset" onchange="handlePresetReasonChange(this)" required>
+                      <option value="" disabled selected>-- Select a reason --</option>
+                      <option value="Change of plans / No longer needed">Change of plans / No longer needed</option>
+                      <option value="Scheduled wrong date or time">Scheduled wrong date or time</option>
+                      <option value="Waste already disposed / cleared">Waste already disposed / cleared</option>
+                      <option value="Entered wrong location or address">Entered wrong location or address</option>
+                      <option value="Other">Other reason...</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="cancellation_reason" class="form-label fw-bold small">Explanation / Details:*</label>
+                    <textarea name="cancellation_reason" id="cancellation_reason" class="form-control" rows="3" placeholder="Provide brief explanation for cancellation..." required></textarea>
+                  </div>
+
+                  {% if pickup.is_paid %}
+                    <div class="alert alert-info py-2 px-3 small mb-0 border">
+                      <i class="fas fa-info-circle me-1 text-primary"></i><strong>Payment Refund Notice:</strong> Your payment of <strong>Rs. {{ pickup.fee }}</strong> will be refunded to your original payment method within <strong>3 to 7 business days</strong> upon cancellation.
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="modal-footer bg-light">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Pickup</button>
+                  <button type="submit" class="btn btn-danger fw-bold px-4">Confirm Cancellation</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-secondary d-flex align-items-center gap-3 p-3 mb-4 rounded-3 border">
+          <i class="fas fa-lock fs-4 text-primary"></i>
+          <div class="small">
+            <strong>Cancellation Locked:</strong> A waste collector (<strong>{{ pickup.collector.name|default:pickup.collector.email }}</strong>) has already been assigned to this pickup request and is preparing for collection. Pickups cannot be cancelled once assigned.
+          </div>
+        </div>
+      {% endif %}
+    {% elif pickup.status in 'ASSIGNED IN_TRANSIT' %}
+      <div class="alert alert-secondary d-flex align-items-center gap-3 p-3 mb-4 rounded-3 border">
+        <i class="fas fa-lock fs-4 text-primary"></i>
+        <div class="small">
+          <strong>Cancellation Locked:</strong> This pickup is currently in progress with collector <strong>{{ pickup.collector.name|default:pickup.collector.email }}</strong> and cannot be cancelled.
         </div>
       </div>
     {% endif %}
@@ -133,11 +236,9 @@
         <div class="card-body">
           <h5 class="card-title text-danger">Pending Payment Required</h5>
           <p class="text-muted small">A collection fee of <strong>Rs. {{ pickup.fee }}</strong> is required for this collection request.</p>
-          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="pay">
-            <button type="submit" class="btn btn-success btn-lg">Pay collection fee</button>
-          </form>
+          <a href="{% url 'waste_management:payment_checkout' pickup.id %}" class="btn btn-success btn-lg">
+            <i class="fas fa-credit-card me-1"></i>Pay collection fee (Rs. {{ pickup.fee }})
+          </a>
         </div>
       </div>
     {% endif %}
@@ -198,7 +299,7 @@
       const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
       const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
 
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
@@ -354,5 +455,17 @@
         map.remove();
       });
     });
+
+    function handlePresetReasonChange(select) {
+      const textarea = document.getElementById("cancellation_reason");
+      if (!textarea) return;
+      if (select.value === "Other") {
+        textarea.value = "";
+        textarea.placeholder = "Please explain why you need to cancel this pickup...";
+        textarea.focus();
+      } else {
+        textarea.value = select.value;
+      }
+    }
   </script>
 {% endblock inline_javascript %}

@@ -35,3 +35,22 @@ class ComplaintAdmin(admin.ModelAdmin):
     list_display = ["id", "citizen", "pickup_request", "title", "status", "created_at"]
     list_filter = ["status"]
     search_fields = ["citizen__email", "title", "description"]
+
+
+from .models import CollectorPayoutSetting
+
+@admin.register(CollectorPayoutSetting)
+class CollectorPayoutSettingAdmin(admin.ModelAdmin):
+    list_display = ["id", "base_min_payout", "rate_per_km", "extra_weight_commission_percent", "updated_at"]
+
+
+from .models import AnonymousFeedback
+
+@admin.register(AnonymousFeedback)
+class AnonymousFeedbackAdmin(admin.ModelAdmin):
+    list_display = ["id", "category", "subject", "is_reviewed", "created_at"]
+    list_filter = ["category", "is_reviewed", "created_at"]
+    search_fields = ["subject", "message"]
+    list_editable = ["is_reviewed"]
+
+

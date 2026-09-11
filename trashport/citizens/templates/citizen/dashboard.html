@@ -319,7 +319,7 @@
           <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-panel" type="button"
             role="tab">
             <i class="bi bi-journal-check me-2"></i>Pickup History
-            <span class="badge bg-secondary rounded-pill ms-2">{{ completed_count }}</span>
+            <span class="badge bg-secondary rounded-pill ms-2">{{ history_count|default:completed_count }}</span>
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -567,47 +567,90 @@
 
         <!-- TAB 4: PICKUP HISTORY -->
         <div class="tab-pane fade" id="history-panel" role="tabpanel">
-          <div class="mb-3">
-            <h5 class="fw-bold mb-1">Completed Pickup History</h5>
-            <p class="text-muted small">Record of all successfully completed waste collections.</p>
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Pickup History</h5>
+              <p class="text-muted small mb-0">Record of all completed and cancelled waste collections.</p>
+            </div>
+            <!-- Filter Pills -->
+            <div class="btn-group btn-group-sm" role="group" id="historyFilterGroup" aria-label="Pickup history filters">
+              <button type="button" class="btn btn-outline-primary active" data-filter="all">
+                All <span class="badge bg-primary text-white ms-1">{{ history_count|default:"0" }}</span>
+              </button>
+              <button type="button" class="btn btn-outline-success" data-filter="COMPLETED">
+                Completed <span class="badge bg-success text-white ms-1">{{ completed_count|default:"0" }}</span>
+              </button>
+              <button type="button" class="btn btn-outline-danger" data-filter="CANCELLED">
+                Cancelled <span class="badge bg-danger text-white ms-1">{{ cancelled_count|default:"0" }}</span>
+              </button>
+            </div>
           </div>
 
           <div class="table-responsive">
-            <table class="table table-custom table-hover align-middle mb-0">
+            <table class="table table-custom table-hover align-middle mb-0" id="historyTable">
               <thead>
                 <tr>
                   <th>Request ID</th>
                   <th>Waste Category</th>
                   <th>Weight (kg)</th>
                   <th>Fee Paid</th>
-                  <th>Points Rewarded</th>
-                  <th>Date Completed</th>
+                  <th>Status</th>
+                  <th>Date &amp; Details</th>
                   <th class="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {% for pickup in past_pickups %}
-                <tr>
+                {% for pickup in history_pickups %}
+                <tr class="history-row" data-status="{{ pickup.status }}">
                   <td><span class="fw-bold text-dark">#{{ pickup.display_id }}</span></td>
                   <td>{{ pickup.category.name }}</td>
                   <td>{{ pickup.weight_kg }} kg</td>
                   <td>
                     {% if pickup.fee > 0 %}
-                    Rs. {{ pickup.fee }}
+                      Rs. {{ pickup.fee }}
+                      {% if pickup.status == 'CANCELLED' and pickup.is_paid %}
+                        <div class="small text-danger fw-semibold" style="font-size:0.75rem;">
+                          <i class="fas fa-undo-alt me-1"></i>Refund in 3–7 days
+                        </div>
+                      {% endif %}
                     {% else %}
-                    <span class="badge bg-success bg-opacity-10 text-success">Free</span>
+                      <span class="badge bg-success bg-opacity-10 text-success">Free</span>
                     {% endif %}
                   </td>
                   <td>
-                    <span class="badge bg-warning bg-opacity-20 text-dark fw-bold">+{{ pickup.points_earned }} pts</span>
+                    {% if pickup.status == 'COMPLETED' %}
+                      <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                    {% elif pickup.status == 'CANCELLED' %}
+                      <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Cancelled</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ pickup.get_status_display }}</span>
+                    {% endif %}
                   </td>
-                  <td><i class="bi bi-calendar-check me-1 text-muted"></i>{{ pickup.schedule_date|date:"M d, Y" }}</td>
+                  <td>
+                    {% if pickup.status == 'COMPLETED' %}
+                      <div><i class="bi bi-calendar-check me-1 text-muted"></i>{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                      {% if pickup.points_earned %}
+                        <div class="badge bg-warning bg-opacity-20 text-dark fw-bold mt-1">+{{ pickup.points_earned }} pts</div>
+                      {% endif %}
+                    {% elif pickup.status == 'CANCELLED' %}
+                      <div><i class="bi bi-calendar-x me-1 text-muted"></i>{{ pickup.cancelled_at|default:pickup.updated_at|date:"M d, Y" }}</div>
+                      {% if pickup.cancellation_reason %}
+                        <div class="small text-muted text-truncate mt-1" style="max-width: 220px;" title="{{ pickup.cancellation_reason }}">
+                          <i class="fas fa-info-circle me-1 text-secondary"></i>"{{ pickup.cancellation_reason }}"
+                        </div>
+                      {% endif %}
+                    {% else %}
+                      <div>{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                    {% endif %}
+                  </td>
                   <td class="text-end">
                     <div class="d-inline-flex gap-1 align-items-center">
+                      {% if pickup.status == 'COMPLETED' and pickup.is_paid %}
                       <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
                         class="btn btn-sm btn-outline-success" title="Download Official Tax Invoice">
                         <i class="bi bi-file-earmark-arrow-down me-1"></i>Invoice
                       </a>
+                      {% endif %}
                       <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
                         class="btn btn-sm btn-outline-secondary">
                         Details
@@ -616,13 +659,19 @@
                   </td>
                 </tr>
                 {% empty %}
-                <tr>
+                <tr id="noHistoryRow">
                   <td colspan="7" class="text-center py-5 text-muted">
                     <i class="bi bi-journal-x display-4 text-muted opacity-50 mb-3 d-block"></i>
-                    No completed pickup requests in your history yet.
+                    No completed or cancelled pickup requests in your history yet.
                   </td>
                 </tr>
                 {% endfor %}
+                <tr id="noFilteredHistoryRow" style="display:none;">
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-funnel display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    No requests matching the selected filter.
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -770,15 +819,25 @@
 
         <!-- TAB 7: NOTIFICATIONS -->
         <div class="tab-pane fade" id="notifications-panel" role="tabpanel">
-          <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
             <div>
               <h5 class="fw-bold mb-1">Recent Notifications &amp; Alerts</h5>
               <p class="text-muted small mb-0">Updates on your pickups, payments, invoices, and service notices.</p>
             </div>
+            {% if notifications %}
+            <div class="d-flex align-items-center gap-2" id="notif-action-buttons">
+              <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="btn-mark-all-read" onclick="markAllNotificationsRead()">
+                <i class="bi bi-check-all me-1"></i>Mark All Read
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" id="btn-clear-notifications" onclick="clearAllNotifications()">
+                <i class="bi bi-trash3 me-1"></i>Clear Notifications
+              </button>
+            </div>
+            {% endif %}
           </div>
-          <div class="list-group shadow-sm border-0">
+          <div class="list-group shadow-sm border-0" id="notification-list-group">
             {% for notif in notifications %}
-            <div class="list-group-item list-group-item-action p-3 mb-2 rounded border {% if not notif.is_read %}border-primary bg-light{% endif %}">
+            <div class="list-group-item list-group-item-action p-3 mb-2 rounded border notif-item {% if not notif.is_read %}border-primary bg-light notif-unread{% endif %}" id="notif-item-{{ notif.id }}">
               <div class="d-flex w-100 justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-2">
                   {% if notif.notification_type == 'PICKUP' %}
@@ -797,7 +856,7 @@
               <p class="mb-1 mt-2 text-secondary">{{ notif.message }}</p>
             </div>
             {% empty %}
-            <div class="text-center py-5 text-muted">
+            <div class="text-center py-5 text-muted" id="no-notif-empty-state">
               <i class="bi bi-bell-slash display-4 text-muted opacity-50 mb-3 d-block"></i>
               No notifications yet. You'll receive real-time updates as your pickups and payments progress!
             </div>
@@ -818,5 +877,98 @@
       tab.show();
     }
   }
+
+  function markAllNotificationsRead() {
+    const btn = document.getElementById("btn-mark-all-read");
+    if (btn) btn.disabled = true;
+    fetch("{% url 'notifications:mark_all_read' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        document.querySelectorAll(".notif-item").forEach(item => {
+          item.classList.remove("border-primary", "bg-light", "notif-unread");
+        });
+        const badge = document.querySelector("#notifications-tab .badge");
+        if (badge) badge.remove();
+        if (btn) {
+          btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>All Read';
+        }
+      }
+    })
+    .catch(err => console.error("Error marking notifications as read:", err))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  function clearAllNotifications() {
+    if (!confirm("Are you sure you want to clear all notifications?")) return;
+    const btn = document.getElementById("btn-clear-notifications");
+    if (btn) btn.disabled = true;
+    fetch("{% url 'notifications:clear_all' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        const listGroup = document.getElementById("notification-list-group");
+        if (listGroup) {
+          listGroup.innerHTML = `
+            <div class="text-center py-5 text-muted" id="no-notif-empty-state">
+              <i class="bi bi-bell-slash display-4 text-muted opacity-50 mb-3 d-block"></i>
+              No notifications yet. You'll receive real-time updates as your pickups and payments progress!
+            </div>
+          `;
+        }
+        const actionBtns = document.getElementById("notif-action-buttons");
+        if (actionBtns) actionBtns.remove();
+        const badge = document.querySelector("#notifications-tab .badge");
+        if (badge) badge.remove();
+      }
+    })
+    .catch(err => console.error("Error clearing notifications:", err))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+  }
+  // ── History Filter Functionality ──
+  document.querySelectorAll("#historyFilterGroup button").forEach(btn => {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("#historyFilterGroup button").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      const filter = this.dataset.filter;
+      const rows = document.querySelectorAll("#historyTable .history-row");
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const rowStatus = row.dataset.status;
+        if (filter === "all" || rowStatus === filter) {
+          row.style.display = "";
+          visibleCount++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      const noMatchRow = document.getElementById("noFilteredHistoryRow");
+      if (noMatchRow) {
+        if (rows.length > 0 && visibleCount === 0) {
+          noMatchRow.style.display = "";
+        } else {
+          noMatchRow.style.display = "none";
+        }
+      }
+    });
+  });
 </script>
 {% endblock %}

@@ -6,9 +6,9 @@ from django.utils.translation import gettext_lazy as _
 class ServiceZone(models.Model):
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=20, unique=True)
-    center_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=12.9716)
-    center_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=77.5946)
-    radius_km = models.DecimalField(max_digits=5, decimal_places=2, default=5.0)
+    center_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=9.9312)
+    center_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.2673)
+    radius_km = models.DecimalField(max_digits=5, decimal_places=2, default=25.0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

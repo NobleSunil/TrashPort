@@ -16,12 +16,15 @@ from trashport.admins.views import (
     WasteCategoryCreateView,
     WasteCategoryListView,
     WasteCategoryUpdateView,
+    CollectorPayoutSettingUpdateView,
+    AdminAnonymousFeedbackListView,
 )
 from trashport.citizens.views import (
     AddressCreateView,
     AddressDeleteView,
     AddressListView,
     AddressUpdateView,
+    SubmitAnonymousFeedbackView,
     CitizenComplaintCreateView as ComplaintCreateView,
     CitizenPickupRequestCreateView as PickupRequestCreateView,
 )

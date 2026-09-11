@@ -12,6 +12,9 @@ from .views import (
     AutoAssignPickupsView, SubscriptionOverviewView, ExportPickupsCSVView, ExportRevenueCSVView,
     OperationsReportView,
     PaymentCheckoutView, PaymentSuccessView, PickupInvoiceView,
+    CollectorPayoutSettingUpdateView,
+    SubmitAnonymousFeedbackView,
+    AdminAnonymousFeedbackListView,
 )
 from trashport.citizens.views import CitizenWalletView
 
@@ -41,10 +44,12 @@ urlpatterns = [
     path("pickups/<int:pk>/invoice/", PickupInvoiceView.as_view(), name="payment_invoice"),
     path("admin/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
     
-    # Complaints CRUD & actions
+    # Complaints & Anonymous Feedback
     path("complaints/", ComplaintListView.as_view(), name="complaint_list"),
     path("complaints/new/", ComplaintCreateView.as_view(), name="complaint_create"),
     path("complaints/<int:pk>/", ComplaintDetailView.as_view(), name="complaint_detail"),
+    path("feedback/anonymous/", SubmitAnonymousFeedbackView.as_view(), name="submit_anonymous_feedback"),
+    path("manage/feedback/", AdminAnonymousFeedbackListView.as_view(), name="anonymous_feedback_list"),
     
     # Admin Master Entries - Categories
     path("manage/categories/", WasteCategoryListView.as_view(), name="category_list"),
@@ -55,6 +60,9 @@ urlpatterns = [
     path("manage/tiers/", SubscriptionTierListView.as_view(), name="tier_list"),
     path("manage/tiers/new/", SubscriptionTierCreateView.as_view(), name="tier_create"),
     path("manage/tiers/<int:pk>/edit/", SubscriptionTierUpdateView.as_view(), name="tier_update"),
+
+    # Admin Master Entries - Collector Payout Calculation Settings
+    path("manage/payout-settings/", CollectorPayoutSettingUpdateView.as_view(), name="collector_payout_settings"),
 
     # Admin User Administration
     path("manage/users/", UserListView.as_view(), name="user_list"),

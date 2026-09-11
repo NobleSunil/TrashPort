@@ -67,6 +67,15 @@
       <a href="{% url 'waste_management:category_list' %}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-tags me-1"></i> Waste Category Rates
       </a>
+      <a href="{% url 'waste_management:collector_payout_settings' %}" class="btn btn-sm btn-success text-white fw-bold shadow-sm">
+        <i class="bi bi-calculator-fill me-1"></i> Collector Payout Calculation Settings
+      </a>
+      <a href="{% url 'waste_management:anonymous_feedback_list' %}" class="btn btn-sm btn-outline-info shadow-sm position-relative">
+        <i class="bi bi-shield-lock-fill me-1"></i> Anonymous Feedback Box
+        {% if unreviewed_feedback_count > 0 %}
+          <span class="badge bg-danger rounded-pill ms-1">{{ unreviewed_feedback_count }}</span>
+        {% endif %}
+      </a>
       <a href="{% url 'waste_management:collector_create' %}" class="btn btn-sm btn-outline-success">
         <i class="bi bi-person-plus me-1"></i> Onboard Collector
       </a>
@@ -98,7 +107,7 @@
         <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted small text-uppercase fw-semibold">Collector Payouts</span>
-            <span class="badge bg-success-subtle text-success rounded-pill">35% + 0.25/km &rarr;</span>
+            <span class="badge bg-success-subtle text-success rounded-pill">Rs. {{ collector_payout_setting.base_min_payout|floatformat:0 }} + Rs. {{ collector_payout_setting.rate_per_km|floatformat:0 }}/km &rarr;</span>
           </div>
           <h3 class="fw-bold mb-1 text-success">Rs. {{ total_collector_payouts|floatformat:2 }}</h3>
           <div class="text-muted small">
@@ -271,6 +280,33 @@
             {% endfor %}
           </ul>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collector Payout Calculation Rule Banner -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white border-start border-success border-4">
+    <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <div class="d-flex align-items-center mb-1">
+          <span class="badge bg-success-subtle text-success fw-bold px-2 py-1 rounded me-2">
+            <i class="bi bi-calculator-fill me-1"></i> Active Collector Payment Formula
+          </span>
+          <span class="text-muted small">Configurable by Admin</span>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">
+          Min Base: <span class="text-success">Rs. {{ collector_payout_setting.base_min_payout }}</span> | 
+          Distance Rate: <span class="text-primary">Rs. {{ collector_payout_setting.rate_per_km }}/km</span> | 
+          Excess Weight Commission: <span class="text-warning text-dark">{{ collector_payout_setting.extra_weight_commission_percent }}%</span>
+        </h5>
+        <p class="text-muted small mb-0">
+          Formula: Max(Base Min, Base Min + (Distance × Rate/km) + (Extra Weight Fee × Commission %)).
+        </p>
+      </div>
+      <div>
+        <a href="{% url 'waste_management:collector_payout_settings' %}" class="btn btn-success fw-bold shadow-sm px-4 text-nowrap">
+          <i class="bi bi-sliders me-1"></i> Edit Payout Rates
+        </a>
       </div>
     </div>
   </div>

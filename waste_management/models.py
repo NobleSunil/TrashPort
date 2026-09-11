@@ -76,14 +76,66 @@ class WasteCategory(models.Model):
         default=0,
         help_text="Points rewarded per kg for recycling valuable metals (Copper, Aluminum, Steel)"
     )
+    max_weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=100.00,
+        validators=[MinValueValidator(0.01)],
+        help_text="Maximum allowed weight in kg for user bookings (configurable by admin, default 100 kg)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+class CollectorPayoutSetting(models.Model):
+    """
+    Configurable parameters for collector payment calculations managed by Administrators.
+    Allows adjusting:
+    - Minimum base payout amount (default Rs. 25.00)
+    - Rate per kilometer (default Rs. 2.00/km)
+    - Extra weight commission percentage (default 20.00%)
+    """
+    base_min_payout = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=25.00,
+        validators=[MinValueValidator(0.00)],
+        help_text="Minimum guaranteed payout for a completed collection (Rs.)"
+    )
+    rate_per_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=2.00,
+        validators=[MinValueValidator(0.00)],
+        help_text="Amount paid per kilometer travelled (Rs./km)"
+    )
+    extra_weight_commission_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=20.00,
+        validators=[MinValueValidator(0.00), MaxValueValidator(100.00)],
+        help_text="Percentage commission granted to collector on excess weight surcharges (%)"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
-        verbose_name_plural = "Waste Categories"
+        verbose_name = "Collector Payout Setting"
+        verbose_name_plural = "Collector Payout Settings"
 
     def __str__(self):
-        return self.name
+        return f"Payout Rules: Base Rs. {self.base_min_payout}, Rs. {self.rate_per_km}/km, {self.extra_weight_commission_percent}% excess commission"
+
+    @classmethod
+    def get_settings(cls):
+        """Returns the active settings instance, creating default if not existing."""
+        settings_obj = cls.objects.first()
+        if not settings_obj:
+            settings_obj = cls.objects.create(
+                base_min_payout=Decimal("25.00"),
+                rate_per_km=Decimal("2.00"),
+                extra_weight_commission_percent=Decimal("20.00")
+            )
+        return settings_obj
+
 
 
 class PickupRequest(models.Model):
@@ -147,7 +199,7 @@ class PickupRequest(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0.00,
-        help_text="Earnings calculated for collector: 35% fee + Rs. 0.25/km"
+        help_text="Earnings calculated for collector: Rs. 25 base min + Rs. 2.00/km + 20% commission on extra weight"
     )
     is_weight_verified = models.BooleanField(
         default=False,
@@ -179,6 +231,16 @@ class PickupRequest(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     feedback_comments = models.TextField(blank=True, null=True)
+    cancellation_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason provided by user upon cancellation"
+    )
+    cancelled_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Timestamp when pickup was cancelled"
+    )
     user_pickup_number = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -193,27 +255,38 @@ class PickupRequest(models.Model):
 
     @property
     def effective_latitude(self) -> float:
-        if self.latitude is not None and abs(float(self.latitude) - 12.9716) > 0.0001:
+        # Default Kerala fallback: 9.9312 (Kochi/Central Kerala)
+        if self.latitude is not None and abs(float(self.latitude) - 9.9312) > 0.0001:
             return float(self.latitude)
         if self.address and self.address.latitude is not None:
             return float(self.address.latitude)
-        return float(self.latitude) if self.latitude is not None else 12.9716
+        return float(self.latitude) if self.latitude is not None else 9.9312
 
     @property
     def effective_longitude(self) -> float:
-        if self.longitude is not None and abs(float(self.longitude) - 77.5946) > 0.0001:
+        # Default Kerala fallback: 76.2673 (Kochi/Central Kerala)
+        if self.longitude is not None and abs(float(self.longitude) - 76.2673) > 0.0001:
             return float(self.longitude)
         if self.address and self.address.longitude is not None:
             return float(self.address.longitude)
-        return float(self.longitude) if self.longitude is not None else 77.5946
+        return float(self.longitude) if self.longitude is not None else 76.2673
 
     def calculate_collector_earnings(self) -> Decimal:
         """
-        Calculates collector earnings: 35% of total charge fee + Rs. 0.25 per km.
+        Calculates collector earnings dynamically based on Admin Collector Payout Settings:
+        - base_min_payout (guaranteed base minimum)
+        - rate_per_km (rate per kilometer)
+        - extra_weight_commission_percent (commission on excess weight surcharges)
         """
-        fee_part = Decimal(str(self.fee or 0)) * Decimal("0.35")
-        distance_part = Decimal(str(self.distance_km or 0)) * Decimal("0.25")
-        return round(fee_part + distance_part, 2)
+        settings_obj = CollectorPayoutSetting.get_settings()
+        base_min = Decimal(str(settings_obj.base_min_payout))
+        rate_km = Decimal(str(settings_obj.rate_per_km))
+        comm_pct = Decimal(str(settings_obj.extra_weight_commission_percent)) / Decimal("100.00")
+
+        distance_part = Decimal(str(self.distance_km or 0)) * rate_km
+        extra_commission = Decimal(str(self.extra_fee or 0)) * comm_pct
+        total = base_min + distance_part + extra_commission
+        return round(max(base_min, total), 2)
 
     def save(self, *args, **kwargs):
         is_new = not self.pk
@@ -222,12 +295,13 @@ class PickupRequest(models.Model):
             address_has_coords = self.address.latitude is not None and self.address.longitude is not None
             self_has_default_coords = (
                 self.latitude is None or 
+                abs(float(self.latitude or 0) - 9.9312) < 0.0001 or
                 abs(float(self.latitude or 0) - 12.9716) < 0.0001
             )
             if address_has_coords and self_has_default_coords:
                 self.latitude = self.address.latitude
                 self.longitude = self.address.longitude
-            elif not address_has_coords and self.latitude is not None and abs(float(self.latitude) - 12.9716) > 0.0001:
+            elif not address_has_coords and self.latitude is not None and abs(float(self.latitude) - 9.9312) > 0.0001 and abs(float(self.latitude) - 12.9716) > 0.0001:
                 # Update saved address record if it lacked coordinates
                 self.address.latitude = self.latitude
                 self.address.longitude = self.longitude
@@ -348,3 +422,36 @@ class Complaint(models.Model):
 
     def __str__(self):
         return f"Complaint #{self.id}: {self.title} ({self.status})"
+
+
+class AnonymousFeedback(models.Model):
+    """
+    Public / Citizen anonymous feedback submitted directly to system administrators.
+    Allows citizens or visitors to report issues, suggestions, or feedback without revealing identity.
+    """
+    class CategoryChoices(models.TextChoices):
+        SUGGESTION = "SUGGESTION", "Suggestion / Improvement"
+        COLLECTION_ISSUE = "COLLECTION_ISSUE", "Collection / Service Issue"
+        WEBSITE_BUG = "WEBSITE_BUG", "Website / App Bug"
+        GENERAL = "GENERAL", "General Feedback"
+
+    category = models.CharField(
+        max_length=50,
+        choices=CategoryChoices.choices,
+        default=CategoryChoices.GENERAL,
+        help_text="Feedback category"
+    )
+    subject = models.CharField(max_length=200, blank=True, null=True)
+    message = models.TextField(help_text="Anonymous feedback message sent to admin")
+    is_reviewed = models.BooleanField(default=False)
+    admin_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Anonymous Feedback"
+        verbose_name_plural = "Anonymous Feedbacks"
+
+    def __str__(self):
+        return f"Anonymous Feedback #{self.id} [{self.category}] - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+

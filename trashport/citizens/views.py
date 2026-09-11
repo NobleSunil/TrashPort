@@ -43,11 +43,17 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
             status__in=[PickupRequest.StatusChoices.COMPLETED, PickupRequest.StatusChoices.CANCELLED]
         ).select_related("category", "address", "collector").order_by("-created_at")
         
-        # History of completed pickups
-        context["past_pickups"] = PickupRequest.objects.filter(
+        # History of completed and cancelled pickups
+        history_pickups = PickupRequest.objects.filter(
             citizen=user,
-            status=PickupRequest.StatusChoices.COMPLETED
-        ).select_related("category", "address", "collector").order_by("-created_at")
+            status__in=[PickupRequest.StatusChoices.COMPLETED, PickupRequest.StatusChoices.CANCELLED]
+        ).select_related("category", "address", "collector").order_by("-updated_at")
+        context["history_pickups"] = history_pickups
+        context["past_pickups"] = history_pickups.filter(status=PickupRequest.StatusChoices.COMPLETED)
+        context["cancelled_pickups"] = history_pickups.filter(status=PickupRequest.StatusChoices.CANCELLED)
+        context["completed_count"] = context["past_pickups"].count()
+        context["cancelled_count"] = context["cancelled_pickups"].count()
+        context["history_count"] = history_pickups.count()
         
         context["addresses"] = Address.objects.filter(user=user, is_hidden=False)
         context["complaints"] = Complaint.objects.filter(citizen=user).select_related("pickup_request").order_by("-created_at")[:10]
@@ -65,7 +71,6 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
 
         context["total_recycled_kg"] = total_recycled
         context["active_count"] = context["active_pickups"].count()
-        context["completed_count"] = context["past_pickups"].count()
         context["pending_payment_count"] = context["active_pickups"].filter(
             status=PickupRequest.StatusChoices.AWAITING_PAYMENT
         ).count()
@@ -200,6 +205,15 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
                     "postal_code": addr.postal_code,
                 }
         context["addresses_json"] = json.dumps(addresses_data)
+        
+        categories_data = {}
+        for cat in WasteCategory.objects.all():
+            categories_data[str(cat.id)] = {
+                "name": cat.name,
+                "fee_per_kg": float(cat.fee_per_kg),
+                "max_weight_kg": float(cat.max_weight_kg if cat.max_weight_kg is not None else 100.00),
+            }
+        context["categories_json"] = json.dumps(categories_data)
         return context
 
     def form_valid(self, form):
@@ -276,10 +290,57 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.feedback_comments = comments
                 pickup.save()
                 messages.success(request, "Thank you for your feedback!")
-        elif action == "cancel" and pickup.status in [PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT]:
+        elif action == "cancel":
+            # 1. Prevent cancellation if a collector is already assigned or request is in progress
+            if pickup.collector is not None or pickup.status in [
+                PickupRequest.StatusChoices.ASSIGNED,
+                PickupRequest.StatusChoices.IN_TRANSIT,
+                PickupRequest.StatusChoices.COMPLETED
+            ]:
+                messages.error(
+                    request,
+                    "This pickup request cannot be cancelled because a collector has already been assigned to it."
+                )
+                return redirect("waste_management:pickup_detail", pk=pk)
+
+            # 2. Only allow cancellation if still PENDING or AWAITING_PAYMENT
+            if pickup.status not in [PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT]:
+                messages.error(request, "This pickup cannot be cancelled in its current status.")
+                return redirect("waste_management:pickup_detail", pk=pk)
+
+            # 3. User must specify a reason why cancelled
+            reason = request.POST.get("cancellation_reason", "").strip()
+            if not reason:
+                messages.error(request, "Please specify a reason for cancelling your pickup request.")
+                return redirect("waste_management:pickup_detail", pk=pk)
+
             pickup.status = PickupRequest.StatusChoices.CANCELLED
-            pickup.save()
-            messages.warning(request, "Your pickup request has been cancelled.")
+            pickup.cancellation_reason = reason
+            pickup.cancelled_at = timezone.now()
+            pickup.save(update_fields=["status", "cancellation_reason", "cancelled_at"])
+
+            # 4. Handle refund notice if payment was already made
+            if pickup.is_paid:
+                refund_msg = (
+                    f"Your pickup request #{pickup.display_id} has been cancelled. "
+                    f"Your payment of Rs. {pickup.fee} will be refunded to your original payment method within 3 to 7 business days."
+                )
+                messages.warning(request, refund_msg)
+
+                # Send in-app notification to the citizen
+                try:
+                    from trashport.notifications.models import Notification
+                    from trashport.notifications.services import NotificationService
+                    NotificationService.create_notification(
+                        user=request.user,
+                        title=f"Pickup #{pickup.display_id} Cancelled — Refund Initiated",
+                        message=f"Pickup #{pickup.display_id} was cancelled ({reason}). Your refund of Rs. {pickup.fee} will be credited to your original payment method within 3 to 7 business days.",
+                        notification_type=Notification.Types.PAYMENT
+                    )
+                except Exception:
+                    pass
+            else:
+                messages.warning(request, f"Your pickup request #{pickup.display_id} has been cancelled.")
         elif action == "pay" and pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT:
             # Redirect to the full payment checkout flow
             return redirect("waste_management:payment_checkout", pk=pk)
@@ -434,21 +495,45 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                 pickup=pickup,
             )
         elif method == "card":
+            card_number = request.POST.get("card_number", "").strip()
+            card_name = request.POST.get("card_name", "").strip()
+            expiry = request.POST.get("expiry", "").strip()
+            cvv = request.POST.get("cvv", "").strip()
+
+            if not card_number or not card_name or not expiry or not cvv:
+                context = self._build_checkout_context(
+                    request,
+                    pickup,
+                    error_msg="All card details (Card Number, Name on Card, Expiry Date, CVV) are mandatory.",
+                    active_method="card"
+                )
+                return self._render(request, context)
+
             pickup.fee = discounted_fee
             result = PaymentGatewayService.process_card_payment(
                 user=request.user,
                 pickup=pickup,
-                card_number=request.POST.get("card_number", ""),
-                card_name=request.POST.get("card_name", ""),
-                expiry=request.POST.get("expiry", ""),
-                cvv=request.POST.get("cvv", ""),
+                card_number=card_number,
+                card_name=card_name,
+                expiry=expiry,
+                cvv=cvv,
             )
         elif method == "upi":
+            upi_id = request.POST.get("upi_id", "").strip()
+            if not upi_id:
+                context = self._build_checkout_context(
+                    request,
+                    pickup,
+                    error_msg="UPI ID is mandatory to proceed with payment.",
+                    active_method="upi"
+                )
+                return self._render(request, context)
+
             pickup.fee = discounted_fee
             result = PaymentGatewayService.process_upi_payment(
                 user=request.user,
                 pickup=pickup,
-                upi_id=request.POST.get("upi_id", "").strip(),
+                upi_id=upi_id,
             )
         elif method == "wallet":
             pickup.fee = discounted_fee
@@ -657,3 +742,53 @@ class CitizenRemoveCouponView(LoginRequiredMixin, View):
             messages.info(request, "Coupon removed and 100 points refunded to your wallet.")
         next_url = request.POST.get("next") or request.GET.get("next")
         return redirect(next_url or "citizens:wallet")
+
+
+from django.http import JsonResponse
+from waste_management.models import AnonymousFeedback
+from .forms import AnonymousFeedbackForm
+
+class SubmitAnonymousFeedbackView(View):
+    """
+    Accepts anonymous feedback from citizens and website visitors.
+    No login required. Saves submission directly into database for admin inspection.
+    Supports both JSON AJAX requests and regular form POST requests.
+    """
+    def post(self, request, *args, **kwargs):
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.content_type == "application/json"
+        
+        if request.content_type == "application/json":
+            import json
+            try:
+                data = json.loads(request.body.decode("utf-8"))
+            except Exception:
+                data = {}
+        else:
+            data = request.POST
+
+        category = data.get("category", AnonymousFeedback.CategoryChoices.GENERAL)
+        subject = data.get("subject", "").strip()
+        message_text = data.get("message", "").strip()
+
+        if not message_text:
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": "Please write your feedback message before sending."}, status=400)
+            messages.error(request, "Feedback message cannot be blank.")
+            return redirect(request.META.get("HTTP_REFERER", "home"))
+
+        feedback_obj = AnonymousFeedback.objects.create(
+            category=category,
+            subject=subject or f"Anonymous Report ({category})",
+            message=message_text,
+        )
+
+        if is_ajax:
+            return JsonResponse({
+                "status": "success",
+                "message": "Thank you! Your anonymous feedback has been delivered directly to our administrative team.",
+                "id": feedback_obj.id,
+            }, status=200)
+
+        messages.success(request, "Thank you! Your anonymous feedback has been safely submitted to the administrators.")
+        return redirect(request.META.get("HTTP_REFERER", "home"))
+

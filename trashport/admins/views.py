@@ -130,15 +130,15 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["recent_pickups"] = pickups_qs[:20]
         context["selected_status"] = selected_status
         context["search_query"] = search_query
-        context["status_choices"] = PickupRequest.StatusChoices.choices
-
         # Dashboard components
         context["complaints"] = Complaint.objects.filter(
             status=Complaint.StatusChoices.PENDING
         ).select_related("citizen", "pickup_request").order_by("-created_at")[:15]
         context["categories"] = WasteCategory.objects.all()
         context["tiers"] = SubscriptionTier.objects.all()
-
+        context["collector_payout_setting"] = CollectorPayoutSetting.get_settings()
+        context["unreviewed_feedback_count"] = AnonymousFeedback.objects.filter(is_reviewed=False).count()
+        context["recent_anonymous_feedbacks"] = AnonymousFeedback.objects.all().order_by("-created_at")[:6]
         return context
 
 
@@ -158,6 +158,7 @@ class AdminPickupRequestDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         # Expose available collectors in context for manual assignment select dropdown
         context["collectors"] = User.objects.filter(role=User.Roles.COLLECTOR)
+        context["payout_settings"] = CollectorPayoutSetting.get_settings()
         return context
 
 
@@ -220,6 +221,36 @@ class AdminComplaintDetailView(LoginRequiredMixin, DetailView):
             complaint.save()
             messages.success(request, "Complaint marked as resolved.")
         return redirect("waste_management:complaint_detail", pk=pk)
+
+
+from waste_management.models import AnonymousFeedback
+
+class AdminAnonymousFeedbackListView(LoginRequiredMixin, ListView):
+    """
+    Lists all anonymous feedback submissions received from visitors and citizens for admin review.
+    """
+    model = AnonymousFeedback
+    template_name = "admin/anonymous_feedback_list.html"
+    context_object_name = "feedbacks"
+
+    def get_queryset(self):
+        return AnonymousFeedback.objects.all().order_by("-created_at")
+
+    def post(self, request, *args, **kwargs):
+        feedback_id = request.POST.get("feedback_id")
+        action = request.POST.get("action")
+        if feedback_id and action == "toggle_review":
+            fb = get_object_or_404(AnonymousFeedback, id=feedback_id)
+            fb.is_reviewed = not fb.is_reviewed
+            fb.save()
+            status_text = "reviewed" if fb.is_reviewed else "unreviewed"
+            messages.success(request, f"Feedback #{fb.id} marked as {status_text}.")
+        elif feedback_id and action == "delete":
+            fb = get_object_or_404(AnonymousFeedback, id=feedback_id)
+            fb.delete()
+            messages.success(request, "Feedback entry deleted.")
+        return redirect("waste_management:anonymous_feedback_list")
+
 
 
 # ==============================================================================
@@ -293,6 +324,34 @@ class AdminSubscriptionTierUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, "Subscription Tier updated!")
         return super().form_valid(form)
+
+
+# ==============================================================================
+# Collector Payout Settings View
+# ==============================================================================
+
+from waste_management.models import CollectorPayoutSetting
+from .forms import CollectorPayoutSettingForm
+
+class CollectorPayoutSettingUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    Allows Admins to view and configure collector payout rules:
+    - Base minimum payout (Rs.)
+    - Rate per kilometer (Rs./km)
+    - Extra weight commission percentage (%)
+    """
+    model = CollectorPayoutSetting
+    form_class = CollectorPayoutSettingForm
+    template_name = "admin/payout_settings_form.html"
+    success_url = reverse_lazy("waste_management:collector_payout_settings")
+
+    def get_object(self, queryset=None):
+        return CollectorPayoutSetting.get_settings()
+
+    def form_valid(self, form):
+        messages.success(self.request, "Collector payout calculation settings successfully updated!")
+        return super().form_valid(form)
+
 
 
 # ==============================================================================

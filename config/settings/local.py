@@ -84,17 +84,27 @@ if env("USE_DOCKER", default="no") == "yes":
 INSTALLED_APPS += ["django_extensions"]
 
 # Your stuff...
-# ------------------------------------------------------------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-        "ATOMIC_REQUESTS": True,
-        "OPTIONS": {
-            "timeout": 20,
-        },
+# Database Configuration
+# Uses PostgreSQL container as primary production-grade database
+if "DATABASE_URL" in env or os.getenv("DATABASE_URL", default=None):
+    DATABASES = {"default": env.db("DATABASE_URL")}
+    DATABASES["default"]["ATOMIC_REQUESTS"] = True
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env.str("POSTGRES_DB", default="trashport"),
+            "USER": env.str("POSTGRES_USER", default="debug"),
+            "PASSWORD": env.str("POSTGRES_PASSWORD", default="debug"),
+            "HOST": env.str("POSTGRES_HOST", default="127.0.0.1"),
+            "PORT": env.str("POSTGRES_PORT", default="5432"),
+            "ATOMIC_REQUESTS": True,
+        }
     }
-}
+
+
+
 
 # In-memory channel layer for local development to prevent Redis asyncio timeout disconnects
 CHANNEL_LAYERS = {

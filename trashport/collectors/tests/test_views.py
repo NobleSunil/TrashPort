@@ -132,10 +132,10 @@ class TestCollectorViews:
         assert pickup.is_weight_verified is True
 
         # Fee: 10kg * Rs 20 = Rs 200. Distance: 6km.
-        # Earning: (Rs 200 * 0.35) + (6km * 0.25) = Rs 70.00 + Rs 1.50 = Rs 71.50
-        assert pickup.collector_earnings == Decimal("71.50")
+        # Earning: Rs 25 min base + (6km * Rs 2.00) = Rs 25.00 + Rs 12.00 = Rs 37.00
+        assert pickup.collector_earnings == Decimal("37.00")
         collector.refresh_from_db()
-        assert Decimal(str(collector.wallet_balance)) == Decimal("71.50")
+        assert Decimal(str(collector.wallet_balance)) == Decimal("37.00")
 
     def test_waste_weight_verification_excess_weight_charges_2x_penalty(self):
         collector = User.objects.create_user(
@@ -187,10 +187,52 @@ class TestCollectorViews:
         assert pickup.extra_fee == Decimal("300.00")
         assert pickup.fee == Decimal("600.00")
 
-        # Collector Earning: (Rs 600 * 0.35) + (8km * 0.25) = Rs 210.00 + Rs 2.00 = Rs 212.00
-        assert pickup.collector_earnings == Decimal("212.00")
+        # Collector Earning: Rs 25.00 (min base) + (8km * Rs 2.00 = Rs 16.00) + 20% of extra_fee (Rs 300 * 0.20 = Rs 60.00)
+        # Total = 25.00 + 16.00 + 60.00 = Rs 101.00
+        assert pickup.collector_earnings == Decimal("101.00")
         collector.refresh_from_db()
-        assert Decimal(str(collector.wallet_balance)) == Decimal("212.00")
+        assert Decimal(str(collector.wallet_balance)) == Decimal("101.00")
+
+    def test_collector_can_claim_and_manage_multiple_pickup_jobs(self):
+        collector = User.objects.create_user(
+            email="multijob_col@trashport.local",
+            name="MultiJob Col",
+            role=User.Roles.COLLECTOR,
+            is_verified=True,
+            verification_status=User.VerificationStatus.APPROVED,
+        )
+        citizen = User.objects.create_user(
+            email="multi_citizen@trashport.local",
+            name="Multi Citizen",
+            role=User.Roles.CITIZEN,
+        )
+        addr1 = Address.objects.create(user=citizen, address_line1="1st St", city="Kochi", postal_code="682001")
+        addr2 = Address.objects.create(user=citizen, address_line1="2nd St", city="Kochi", postal_code="682001")
+        cat = WasteCategory.objects.create(name="Paper", fee_per_kg=Decimal("10.00"))
+
+        p1 = PickupRequest.objects.create(citizen=citizen, address=addr1, category=cat, weight_kg=Decimal("5.00"), distance_km=Decimal("3.00"), schedule_date=timezone.now(), is_paid=True, status=PickupRequest.StatusChoices.PENDING)
+        p2 = PickupRequest.objects.create(citizen=citizen, address=addr2, category=cat, weight_kg=Decimal("8.00"), distance_km=Decimal("4.00"), schedule_date=timezone.now(), is_paid=True, status=PickupRequest.StatusChoices.PENDING)
+
+        client = Client()
+        client.force_login(collector)
+
+        # Claim first job
+        res1 = client.post(reverse("waste_management:pickup_status_update", kwargs={"pk": p1.pk}), data={"action": "claim"}, follow=True)
+        assert res1.status_code == 200
+        p1.refresh_from_db()
+        assert p1.collector == collector
+        assert p1.status == PickupRequest.StatusChoices.ASSIGNED
+
+        # Claim second job concurrently
+        res2 = client.post(reverse("waste_management:pickup_status_update", kwargs={"pk": p2.pk}), data={"action": "claim"}, follow=True)
+        assert res2.status_code == 200
+        p2.refresh_from_db()
+        assert p2.collector == collector
+        assert p2.status == PickupRequest.StatusChoices.ASSIGNED
+
+        # Collector has 2 active assigned jobs
+        active_count = PickupRequest.objects.filter(collector=collector, status__in=[PickupRequest.StatusChoices.ASSIGNED, PickupRequest.StatusChoices.IN_TRANSIT]).count()
+        assert active_count == 2
 
     def test_collector_redeem_wallet_to_upi_success(self):
         collector = User.objects.create_user(

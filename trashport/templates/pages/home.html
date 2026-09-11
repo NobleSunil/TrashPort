@@ -379,36 +379,73 @@
         <div class="absolute top-0 right-0 w-64 h-64 bg-brand-600 rounded-full mix-blend-screen filter blur-[100px] opacity-50"></div>
         <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-600 rounded-full mix-blend-screen filter blur-[100px] opacity-50"></div>
         
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">Ready to modernize your waste logistics?</h2>
-            <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">Join hundreds of forward-thinking businesses using Trashport to reduce costs and reach zero-waste goals.</p>
-            
-            {% if request.user.is_authenticated %}
-                <a href="{% url 'waste_management:dashboard' %}" class="inline-block px-8 py-4 bg-brand-500 text-white font-semibold rounded-xl hover:bg-brand-600 transition-colors shadow-lg">
-                    Go to Dashboard
-                </a>
-            {% else %}
-                <form id="cta-form" class="max-w-md mx-auto bg-white/5 backdrop-blur-md p-2 rounded-2xl border border-white/10 flex flex-col sm:flex-row gap-2">
-                    <input type="email" placeholder="Enter your work email" required class="flex-1 bg-transparent px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-xl" />
-                    <button type="submit" class="px-6 py-3 bg-brand-500 text-white font-semibold rounded-xl hover:bg-brand-600 transition-colors shadow-lg">
-                        Get Started Free
-                    </button>
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                    <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    100% Anonymous & Confidential
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Community & Citizen Feedback</h2>
+                <p class="text-gray-300 text-sm md:text-base max-w-xl mx-auto">
+                    Have a suggestion, reported issue with collection, website feedback, or complaint? Send your thoughts directly to the TrashPort Admin team completely anonymously. No account or email needed.
+                </p>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl">
+                <form id="anonymous-feedback-form" class="space-y-4">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Feedback Category</label>
+                            <select id="feedback-category" name="category" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                                <option value="GENERAL">General Feedback</option>
+                                <option value="SUGGESTION">Suggestion / Feature Idea</option>
+                                <option value="COLLECTION_ISSUE">Waste Collection / Service Issue</option>
+                                <option value="WEBSITE_BUG">Technical / Bug Report</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Subject (Optional)</label>
+                            <input type="text" id="feedback-subject" name="subject" placeholder="e.g. Bin collection timing in Sector 4" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Your Feedback / Message <span class="text-rose-400">*</span></label>
+                        <textarea id="feedback-message" name="message" rows="4" required placeholder="Type your message, suggestion, or complaint here in detail... (Identity is strictly protected and never recorded)" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm resize-none"></textarea>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-3">
+                        <div class="flex items-center gap-2 text-xs text-gray-400">
+                            <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <span>Encrypted & routed to municipal admin dashboard</span>
+                        </div>
+                        <button type="submit" id="feedback-submit-btn" class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                            <span>Send Anonymous Feedback</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                            </svg>
+                        </button>
+                    </div>
                 </form>
-                <p class="text-sm text-gray-400 mt-4">No credit card required. 14-day free trial.</p>
-            {% endif %}
+            </div>
         </div>
         
         <!-- Custom Message Box Container (Hidden by default) -->
-        <div id="message-box" class="fixed inset-0 bg-dark/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-opacity duration-300">
-            <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300" id="message-box-content">
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="message-box" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-opacity duration-300">
+            <div class="bg-slate-900 border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 text-center" id="message-box-content">
+                <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-center text-dark mb-2">Request Sent!</h3>
-                <p class="text-center text-gray-600 mb-6">Thanks for your interest. Our team will contact you shortly.</p>
-                <button id="close-msg-btn" class="w-full py-3 bg-dark text-white rounded-xl font-medium hover:bg-gray-800 transition-colors">Close</button>
+                <h3 class="text-xl font-bold text-white mb-2" id="msg-box-title">Feedback Sent!</h3>
+                <p class="text-sm text-gray-300 mb-6" id="msg-box-text">Thank you for sharing your thoughts. Your anonymous submission has been safely delivered to the administration team.</p>
+                <button id="close-msg-btn" class="w-full py-3 bg-brand-500 text-white rounded-xl font-medium hover:bg-brand-600 transition-colors cursor-pointer">Done</button>
             </div>
         </div>
     </section>
@@ -501,16 +538,20 @@
                 }
             });
 
-            // Handle Form Submission with Custom Message Box
-            const form = document.getElementById('cta-form');
+            // Handle Anonymous Feedback Form Submission
+            const feedbackForm = document.getElementById('anonymous-feedback-form');
+            const feedbackSubmitBtn = document.getElementById('feedback-submit-btn');
             const msgBox = document.getElementById('message-box');
             const msgContent = document.getElementById('message-box-content');
+            const msgTitle = document.getElementById('msg-box-title');
+            const msgText = document.getElementById('msg-box-text');
             const closeBtn = document.getElementById('close-msg-btn');
 
-            const showMessage = () => {
+            const showMessage = (title, message) => {
+                if (title && msgTitle) msgTitle.textContent = title;
+                if (message && msgText) msgText.textContent = message;
                 msgBox.classList.remove('hidden');
                 msgBox.classList.add('flex');
-                // Small delay to allow display:flex to apply before transition
                 setTimeout(() => {
                     msgBox.classList.remove('opacity-0');
                     msgBox.classList.add('opacity-100');
@@ -524,23 +565,63 @@
                 msgBox.classList.add('opacity-0');
                 msgContent.classList.remove('scale-100');
                 msgContent.classList.add('scale-95');
-                // Wait for transition to finish before hiding
                 setTimeout(() => {
                     msgBox.classList.add('hidden');
                     msgBox.classList.remove('flex');
                 }, 300);
             };
 
-            if (form) {
-                form.addEventListener('submit', (e) => {
+            if (feedbackForm) {
+                feedbackForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const emailInput = form.querySelector('input[type="email"]');
                     
-                    // Simulate API call
-                    setTimeout(() => {
-                        showMessage();
-                        emailInput.value = ''; // Clear form
-                    }, 400);
+                    const category = document.getElementById('feedback-category').value;
+                    const subject = document.getElementById('feedback-subject').value;
+                    const message = document.getElementById('feedback-message').value;
+                    const csrfToken = feedbackForm.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+                    if (!message.trim()) {
+                        alert('Please enter your feedback message.');
+                        return;
+                    }
+
+                    const originalBtnContent = feedbackSubmitBtn.innerHTML;
+                    feedbackSubmitBtn.disabled = true;
+                    feedbackSubmitBtn.innerHTML = `
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Submitting...</span>
+                    `;
+
+                    try {
+                        const response = await fetch("{% url 'waste_management:submit_anonymous_feedback' %}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": csrfToken
+                            },
+                            body: JSON.stringify({
+                                category: category,
+                                subject: subject,
+                                message: message
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (response.ok && data.status === 'success') {
+                            showMessage("Feedback Delivered!", data.message || "Thank you. Your anonymous feedback has been securely transmitted to the admin team.");
+                            feedbackForm.reset();
+                        } else {
+                            showMessage("Submission Error", data.message || "Could not submit feedback. Please try again.");
+                        }
+                    } catch (err) {
+                        showMessage("Submission Error", "Network error while connecting. Please try again later.");
+                    } finally {
+                        feedbackSubmitBtn.disabled = false;
+                        feedbackSubmitBtn.innerHTML = originalBtnContent;
+                    }
                 });
             }
 

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Collector Payment Calculation Settings | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-9 col-lg-7">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 fw-bold text-dark mb-1">
+          <i class="bi bi-calculator-fill text-success me-2"></i>Collector Payment Calculation Settings
+        </h1>
+        <p class="text-muted mb-0">Configure the formula and rates used to calculate collector job earnings.</p>
+      </div>
+      <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Dashboard
+      </a>
+    </div>
+
+    <!-- Active Formula Preview Card -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-light border-start border-success border-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge bg-success bg-opacity-20 text-success fw-bold px-3 py-1 rounded-pill me-2">
+            <i class="bi bi-lightning-charge-fill me-1"></i> Current Formula Rule
+          </span>
+          <span class="text-muted small">Applied dynamically to all collection trips</span>
+        </div>
+        <div class="fs-5 fw-bold text-dark font-monospace mb-2">
+          Payout = Max(Base Min, Base Min + (Distance × Rate/km) + (Extra Weight Fee × Commission %))
+        </div>
+        <p class="text-muted small mb-0">
+          Whenever a collector completes a pickup, TrashPort automatically computes their earnings using these admin parameters and credits their wallet balance instantly.
+        </p>
+      </div>
+    </div>
+
+    <!-- Configuration Form Card -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+          
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark">
+              <i class="bi bi-cash-stack text-success me-1"></i> Minimum Base Payout (Rs.)
+            </label>
+            {{ form.base_min_payout }}
+            <div class="form-text text-muted">
+              The guaranteed floor payout every collector receives for a job, even for 0 km or small distances.
+            </div>
+            {% if form.base_min_payout.errors %}
+              <div class="text-danger small mt-1">{{ form.base_min_payout.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark">
+              <i class="bi bi-speedometer2 text-primary me-1"></i> Rate per Additional Kilometer (Rs./km)
+            </label>
+            {{ form.rate_per_km }}
+            <div class="form-text text-muted">
+              Compensation added to the collector for each kilometer of travel distance to the pickup location.
+            </div>
+            {% if form.rate_per_km.errors %}
+              <div class="text-danger small mt-1">{{ form.rate_per_km.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark">
+              <i class="bi bi-percent text-warning me-1"></i> Extra Weight Commission Share (%)
+            </label>
+            <div class="input-group">
+              {{ form.extra_weight_commission_percent }}
+              <span class="input-group-text fw-bold">%</span>
+            </div>
+            <div class="form-text text-muted">
+              Percentage of the 2x excess weight penalty fee that is awarded to the collector for hauling extra loads.
+            </div>
+            {% if form.extra_weight_commission_percent.errors %}
+              <div class="text-danger small mt-1">{{ form.extra_weight_commission_percent.errors }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Live Interactive Calculator Preview -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-eye-fill me-1"></i> Live Formula Simulation Preview:</h6>
+            <div class="small text-muted mb-2">Example: 5.0 km pickup trip with Rs. 100 excess weight surcharge</div>
+            <div class="d-flex align-items-center justify-content-between p-2 bg-white rounded border">
+              <span class="fw-semibold text-dark">Calculated Collector Payout:</span>
+              <span class="fs-5 fw-bold text-success" id="simulatedPayout">Rs. 55.00</span>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success px-4 py-2 fw-bold shadow-sm">
+              <i class="bi bi-check2-circle me-1"></i> Save Calculation Rates
+            </button>
+            <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary px-3 py-2">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const minInput = document.getElementById("id_base_min_payout");
+  const kmInput = document.getElementById("id_rate_per_km");
+  const commInput = document.getElementById("id_extra_weight_commission_percent");
+  const preview = document.getElementById("simulatedPayout");
+
+  function updateSimulation() {
+    if (!minInput || !kmInput || !commInput || !preview) return;
+    const baseMin = parseFloat(minInput.value) || 0;
+    const rateKm = parseFloat(kmInput.value) || 0;
+    const commPct = (parseFloat(commInput.value) || 0) / 100.0;
+
+    const distPart = 5.0 * rateKm;
+    const extraPart = 100.0 * commPct;
+    const total = Math.max(baseMin, baseMin + distPart + extraPart);
+
+    preview.textContent = "Rs. " + total.toFixed(2);
+  }
+
+  [minInput, kmInput, commInput].forEach(inp => {
+    if (inp) inp.addEventListener("input", updateSimulation);
+  });
+  updateSimulation();
+});
+</script>
+{% endblock %}

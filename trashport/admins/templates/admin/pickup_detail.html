@@ -64,7 +64,7 @@
             <div class="p-3 bg-light rounded-3 mt-3 border">
               <h6 class="fw-bold text-success mb-1"><i class="bi bi-cash-stack me-1"></i> Collector Money Sent / Payout</h6>
               <div class="fs-5 fw-bold text-success">Rs. {{ pickup.collector_earnings }}</div>
-              <small class="text-muted d-block">Formula: 35% of Fee (Rs. {{ pickup.fee }}) + Rs. 0.25/km for {{ pickup.distance_km }} km</small>
+              <small class="text-muted d-block">Formula: Rs. {{ payout_settings.base_min_payout|default:"25.00" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2.00" }}/km for {{ pickup.distance_km }} km + {{ payout_settings.extra_weight_commission_percent|default:"20.00" }}% extra weight commission</small>
             </div>
           </div>
 

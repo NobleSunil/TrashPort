@@ -26,8 +26,19 @@ def mark_notification_read_view(request, pk: int):
     return Response({"status": "success", "id": notification.pk})
 
 
-@api_view(["POST"])
+@api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def mark_all_notifications_read_view(request):
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return Response({"status": "success"})
+
+
+@api_view(["POST", "DELETE"])
+@permission_classes([IsAuthenticated])
+def clear_all_notifications_view(request):
+    """
+    Clears (deletes) all notifications for the authenticated user.
+    """
+    count, _ = Notification.objects.filter(user=request.user).delete()
+    return Response({"status": "success", "deleted_count": count})
+

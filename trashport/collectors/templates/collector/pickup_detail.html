@@ -108,7 +108,7 @@
               <span class="fs-5 fw-bold text-success">
                 Rs. {{ pickup.collector_earnings|default:preview_earnings }}
               </span>
-              <small class="text-muted d-block">(Formula: 35% of Fee + Rs. 0.25/km for {{ pickup.distance_km }} km)</small>
+              <small class="text-muted d-block">(Formula: Rs. {{ payout_settings.base_min_payout|default:"25.00" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2.00" }}/km for {{ pickup.distance_km }} km + {{ payout_settings.extra_weight_commission_percent|default:"20.00" }}% commission on extra weight)</small>
             </p>
           </div>
 
@@ -182,7 +182,7 @@
               <i class="fas fa-balance-scale text-success me-1"></i> Step 2: Measure & Verify Waste Weight
             </h6>
             <p class="text-muted small mb-3">
-              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} × 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg).
+              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} × 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg). As a collector, you earn <strong>Rs. 25 min base + Rs. 2.00/km + 20% commission of the extra weight charge</strong>!
             </p>
 
             <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" id="verificationForm">
@@ -214,6 +214,43 @@
                 <i class="fas fa-check-circle me-1"></i> Verify Weight &amp; Complete Collection
               </button>
             </form>
+
+            <script>
+              document.addEventListener("DOMContentLoaded", function() {
+                const wtInput = document.getElementById("actualWeightInput");
+                const notice = document.getElementById("extraWeightNotice");
+                const earnNotice = document.getElementById("earningCalcNotice");
+                if (wtInput && notice && earnNotice) {
+                  const estWeight = parseFloat("{{ pickup.weight_kg }}") || 0;
+                  const feePerKg = parseFloat("{{ pickup.category.fee_per_kg }}") || 0;
+                  const distKm = parseFloat("{{ pickup.distance_km }}") || 0;
+
+                  function updatePreview() {
+                    const actualWt = parseFloat(wtInput.value) || estWeight;
+                    const baseMin = parseFloat("{{ payout_settings.base_min_payout|default:'25.00' }}") || 25.0;
+                    const rateKm = parseFloat("{{ payout_settings.rate_per_km|default:'2.00' }}") || 2.0;
+                    const commPct = (parseFloat("{{ payout_settings.extra_weight_commission_percent|default:'20.00' }}") || 20.0) / 100.0;
+                    const commDisplay = parseFloat("{{ payout_settings.extra_weight_commission_percent|default:'20.00' }}") || 20.0;
+
+                    const distPart = distKm * rateKm;
+                    let extraWeight = Math.max(0, actualWt - estWeight);
+                    let extraFee = extraWeight * feePerKg * 2.0;
+                    let extraComm = extraFee * commPct;
+                    let totalEarn = Math.max(baseMin, baseMin + distPart + extraComm);
+
+                    if (extraWeight > 0) {
+                      notice.innerHTML = `<span class="text-danger fw-bold">+${extraWeight.toFixed(2)} kg excess weight detected!</span> 2x Surcharge: <strong>+Rs. ${extraFee.toFixed(2)}</strong> (Collector gets ${commDisplay}% commission: +Rs. ${extraComm.toFixed(2)})`;
+                    } else {
+                      notice.innerHTML = '<span class="text-muted">No excess weight. Standard base rate applies.</span>';
+                    }
+                    earnNotice.innerHTML = `Estimated Collector Earning: <span class="text-success fw-bold">Rs. ${totalEarn.toFixed(2)}</span> <small class="text-muted">(Rs. ${baseMin.toFixed(2)} base + Rs. ${distPart.toFixed(2)} distance${extraComm > 0 ? ' + Rs. ' + extraComm.toFixed(2) + ' extra wt commission' : ''})</small>`;
+                  }
+
+                  wtInput.addEventListener("input", updatePreview);
+                  updatePreview();
+                }
+              });
+            </script>
           </div>
           
         {% else %}
@@ -246,7 +283,7 @@
       let currentColLat = pickupLat - 0.015;
       let currentColLng = pickupLng - 0.015;
 
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });

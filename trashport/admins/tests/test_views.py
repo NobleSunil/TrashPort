@@ -195,3 +195,46 @@ class TestAdminViews:
         content_rev = resp_rev.content.decode("utf-8")
         assert "E-Waste" in content_rev
 
+    def test_admin_update_collector_payout_settings(self):
+        from django.utils import timezone
+        from waste_management.models import CollectorPayoutSetting, Address, WasteCategory, PickupRequest
+        admin = User.objects.create_superuser(email="admin_payout_calc@trashport.local", password="password")
+        client = Client()
+        client.force_login(admin)
+
+        # 1. Access settings page
+        get_resp = client.get(reverse("waste_management:collector_payout_settings"))
+        assert get_resp.status_code == 200
+
+        # 2. Update payout calculation parameters: min 50, rate 5/km, commission 25%
+        post_resp = client.post(
+            reverse("waste_management:collector_payout_settings"),
+            data={
+                "base_min_payout": "50.00",
+                "rate_per_km": "5.00",
+                "extra_weight_commission_percent": "25.00",
+            },
+            follow=True
+        )
+        assert post_resp.status_code == 200
+        settings_obj = CollectorPayoutSetting.get_settings()
+        assert settings_obj.base_min_payout == Decimal("50.00")
+        assert settings_obj.rate_per_km == Decimal("5.00")
+        assert settings_obj.extra_weight_commission_percent == Decimal("25.00")
+
+        # 3. Verify that PickupRequest dynamically uses updated payout rules
+        citizen = User.objects.create_user(email="cit_payout_check@trashport.local", role=User.Roles.CITIZEN)
+        addr = Address.objects.create(user=citizen, address_line1="Test St", city="Kottayam", postal_code="686001")
+        cat = WasteCategory.objects.create(name="Paper", fee_per_kg=Decimal("10.00"))
+        pickup = PickupRequest.objects.create(
+            citizen=citizen,
+            address=addr,
+            category=cat,
+            weight_kg=Decimal("5.00"),
+            distance_km=Decimal("4.00"),
+            schedule_date=timezone.now(),
+        )
+        # Expected: Rs. 50 (base min) + 4km * Rs. 5.00 = Rs. 50 + Rs. 20 = Rs. 70.00
+        assert pickup.calculate_collector_earnings() == Decimal("70.00")
+
+

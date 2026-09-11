@@ -72,6 +72,8 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
 
         # Aadhaar verification status sync
         self._sync_aadhaar_status(user, context)
+        from waste_management.models import CollectorPayoutSetting
+        context["payout_settings"] = CollectorPayoutSetting.get_settings()
         return context
 
     def _get_unassigned_pickup_data(self, user):
@@ -81,8 +83,9 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         from trashport.maps.services import GeoService
 
         col_location = CollectorLocation.objects.filter(collector=user).first()
-        col_lat = float(col_location.latitude) if col_location else 12.9716
-        col_lng = float(col_location.longitude) if col_location else 77.5946
+        # Default Kerala coordinates (Kochi/Central Kerala: 9.9312, 76.2673)
+        col_lat = float(col_location.latitude) if col_location else 9.9312
+        col_lng = float(col_location.longitude) if col_location else 76.2673
 
         unassigned_qs = PickupRequest.objects.filter(
             status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT],
@@ -152,6 +155,8 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
         pickup = self.object
         context["is_verified"] = getattr(user, "is_verified", False)
         context["preview_earnings"] = pickup.calculate_collector_earnings()
+        from waste_management.models import CollectorPayoutSetting
+        context["payout_settings"] = CollectorPayoutSetting.get_settings()
         return context
 
 
@@ -163,7 +168,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
     - claim: Assigns an unassigned pending request to the current collector.
     - transit: Marks the collection job as "In Transit".
     - complete: Measures actual waste weight, calculates extra weight penalty (2x rate),
-                recalculates 35% fee + Rs 0.25/km earnings, and credits collector wallet.
+                recalculates Rs 25 min + Rs 2/km + 20% extra weight commission, and credits collector wallet.
     - cancel (release): Releases an assigned request back to "Pending".
     """
     def post(self, request, pk, *args, **kwargs):
@@ -185,7 +190,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
                 pickup.collector = user
                 pickup.status = PickupRequest.StatusChoices.ASSIGNED
                 pickup.save()
-                messages.success(request, "Pickup job claimed successfully! Proceed to location when ready.")
+                messages.success(request, "Pickup job claimed successfully! You can claim multiple jobs to optimize your collection route.")
                 return redirect(reverse("waste_management:pickup_detail", kwargs={"pk": pk}) + "?just_claimed=true")
         elif action == "transit" and pickup.collector == user:
             pickup.status = PickupRequest.StatusChoices.IN_TRANSIT
@@ -217,7 +222,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
             )
             if pickup.extra_fee > Decimal("0.00"):
                 msg += f"Extra Weight Charge (2x): +Rs. {pickup.extra_fee:.2f}. "
-            msg += f"Earnings: Rs. {pickup.collector_earnings:.2f} (35% Fee + Rs 0.25/km) credited to your Wallet."
+            msg += f"Earnings: Rs. {pickup.collector_earnings:.2f} (Rs 25 min + Rs 2/km + 20% extra wt commission) credited to your Wallet."
             messages.success(request, msg)
 
         elif action == "cancel" and pickup.collector == user:

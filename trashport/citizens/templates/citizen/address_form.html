@@ -30,7 +30,7 @@
             <!-- Leaflet map container -->
             <div id="mapPicker" class="mb-2 shadow-sm" style="height: 380px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
             <div class="d-flex justify-content-between align-items-center text-muted small mb-3">
-              <div>Selected Coordinates: <strong id="coordsDisplay" class="text-dark">12.971600, 77.594600</strong></div>
+              <div>Selected Coordinates: <strong id="coordsDisplay" class="text-dark">9.931200, 76.267300</strong></div>
               <div id="geocodeStatus" class="badge bg-success-subtle text-success border border-success-subtle">
                 <i class="fas fa-check-circle me-1"></i> Auto Map Geocoding Active
               </div>
@@ -129,10 +129,10 @@
       let stateInput = document.getElementById("id_state");
       let postalInput = document.getElementById("id_postal_code");
 
-      let defaultLat = parseFloat(latInput?.value) || 12.9716;
-      let defaultLng = parseFloat(lngInput?.value) || 77.5946;
+      let defaultLat = parseFloat(latInput?.value) || 9.9312;
+      let defaultLng = parseFloat(lngInput?.value) || 76.2673;
 
-      let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
@@ -156,6 +156,7 @@
       L.control.layers(baseMaps).addTo(map);
 
       let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+      let accuracyCircle = null;
 
       function reverseGeocode(lat, lng) {
         fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
@@ -206,15 +207,38 @@
 
       document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(function (pos) {
-            let lat = pos.coords.latitude;
-            let lng = pos.coords.longitude;
-            map.setView([lat, lng], 17);
-            marker.setLatLng([lat, lng]);
-            updateCoords(lat, lng, true);
-          }, function () {
-            alert("Unable to fetch current GPS location. Please select manually on the map.");
-          });
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              let accuracy = pos.coords.accuracy || 15;
+
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+
+              if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+              } else {
+                accuracyCircle = L.circle([lat, lng], {
+                  radius: accuracy,
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.15,
+                  weight: 1.5
+                }).addTo(map);
+              }
+
+              updateCoords(lat, lng, true);
+            },
+            function (err) {
+              alert("Unable to fetch current GPS location. Please check browser permissions or select manually on the map.");
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
         }
       });
 

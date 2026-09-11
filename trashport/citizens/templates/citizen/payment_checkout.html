@@ -424,30 +424,30 @@
 
                   <!-- Card Number -->
                   <div class="mb-3">
-                    <label class="form-label pay-label" for="card_number">Card Number</label>
+                    <label class="form-label pay-label" for="card_number">Card Number <span class="text-danger">*</span></label>
                     <input type="text" id="card_number" name="card_number" class="form-control form-control-lg"
-                      placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="cc-number" inputmode="numeric">
+                      placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="cc-number" inputmode="numeric" required>
                   </div>
 
                   <!-- Cardholder Name -->
                   <div class="mb-3">
-                    <label class="form-label pay-label" for="card_name">Name on Card</label>
+                    <label class="form-label pay-label" for="card_name">Name on Card <span class="text-danger">*</span></label>
                     <input type="text" id="card_name" name="card_name" class="form-control" placeholder="John Smith"
-                      autocomplete="cc-name">
+                      autocomplete="cc-name" required>
                   </div>
 
                   <!-- Expiry + CVV -->
                   <div class="row g-3 mb-4">
                     <div class="col-6">
-                      <label class="form-label pay-label" for="expiry">Expiry Date</label>
+                      <label class="form-label pay-label" for="expiry">Expiry Date <span class="text-danger">*</span></label>
                       <input type="text" id="expiry" name="expiry" class="form-control" placeholder="MM / YY"
-                        maxlength="7" autocomplete="cc-exp" inputmode="numeric">
+                        maxlength="7" autocomplete="cc-exp" inputmode="numeric" required>
                     </div>
                     <div class="col-6">
-                      <label class="form-label pay-label" for="cvv">CVV / CVC</label>
+                      <label class="form-label pay-label" for="cvv">CVV / CVC <span class="text-danger">*</span></label>
                       <div class="cvv-wrap">
                         <input type="password" id="cvv" name="cvv" class="form-control pe-5"
-                          placeholder="&bull;&bull;&bull;" maxlength="4" autocomplete="cc-csc" inputmode="numeric">
+                          placeholder="&bull;&bull;&bull;" maxlength="4" autocomplete="cc-csc" inputmode="numeric" required>
                         <button class="cvv-eye" type="button" id="cvvToggle">
                           <i class="fas fa-eye" id="cvvIcon"></i>
                         </button>
@@ -508,9 +508,9 @@
                   <hr class="my-3">
 
                   <div class="mb-4">
-                    <label class="form-label pay-label" for="upi_id">Your UPI ID / VPA</label>
+                    <label class="form-label pay-label" for="upi_id">Your UPI ID / VPA <span class="text-danger">*</span></label>
                     <input type="text" id="upi_id" name="upi_id" class="form-control form-control-lg"
-                      placeholder="yourname@okaxis" autocomplete="off">
+                      placeholder="yourname@okaxis" autocomplete="off" required>
                     <div class="form-text">
                       <i class="fas fa-info-circle me-1"></i>
                       Enter any valid UPI ID (e.g. <code>abc@okaxis</code>). All UPI payments succeed in demo mode.
@@ -794,8 +794,10 @@
   // ── Processing overlay on submit ──
   ["card-form", "upi-form", "wallet-form"].forEach(id => {
     const f = document.getElementById(id);
-    if (f) f.addEventListener("submit", () => {
-      document.getElementById("payOverlay").classList.add("show");
+    if (f) f.addEventListener("submit", (e) => {
+      if (f.checkValidity()) {
+        document.getElementById("payOverlay").classList.add("show");
+      }
     });
   });
 </script>

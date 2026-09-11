@@ -498,7 +498,7 @@
       <h1 class="hero-title">
         Welcome back, {{ request.user.name|default:request.user.email }}!
       </h1>
-      <p class="hero-subtitle">Earn 35% of collection fees + Rs. 0.25/km distance payout, verify waste on-site, and instantly redeem earnings to UPI.</p>
+      <p class="hero-subtitle">Earn Rs. {{ payout_settings.base_min_payout|default:"25" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2" }}/km distance payout + {{ payout_settings.extra_weight_commission_percent|default:"20" }}% extra weight commission, verify waste on-site, and instantly redeem earnings to UPI.</p>
     </div>
 
     <!-- ── Stat Cards ── -->
@@ -627,12 +627,12 @@
             <i class="fas fa-bolt"></i>
           </div>
           <div>
-            <p class="section-title">Your Active Pickups</p>
-            <p class="section-subtitle">Assigned &amp; in-transit jobs</p>
+            <p class="section-title">Your Active Pickups (Multiple Jobs)</p>
+            <p class="section-subtitle">Manage all your claimed &amp; in-transit jobs concurrently</p>
           </div>
         </div>
         {% if assigned_pickups.count > 0 %}
-          <span class="section-count-badge">{{ assigned_pickups.count }} active</span>
+          <span class="section-count-badge bg-primary text-white"><i class="fas fa-layer-group me-1"></i>{{ assigned_pickups.count }} active jobs</span>
         {% endif %}
       </div>
 
@@ -669,7 +669,7 @@
                   <span class="fw-bold text-success">
                     Rs. {{ pickup.collector_earnings|default:"50.00" }}
                   </span>
-                  <small class="text-muted d-block" style="font-size:0.7rem;">35% fee + 0.25/km</small>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">Rs 25 min + Rs 2/km + 20% extra wt</small>
                 </td>
                 <td data-label="Scheduled">
                   <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
@@ -819,7 +819,7 @@
                   <span class="fw-bold text-success">
                     Rs. {{ pickup.calculated_earnings|default:pickup.collector_earnings }}
                   </span>
-                  <small class="text-muted d-block" style="font-size:0.7rem;">35% fee + 0.25/km</small>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">Rs {{ payout_settings.base_min_payout|default:"25" }} min + Rs {{ payout_settings.rate_per_km|default:"2" }}/km + {{ payout_settings.extra_weight_commission_percent|default:"20" }}% extra wt</small>
                 </td>
                 <td data-label="Scheduled">
                   <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
@@ -1000,13 +1000,13 @@
     const mapElem = document.getElementById('collectorOpportunityMap');
     if (!mapElem) return;
 
-    const collectorLat = parseFloat("{{ collector_lat|default:'12.9716' }}");
-    const collectorLng = parseFloat("{{ collector_lng|default:'77.5946' }}");
+    const collectorLat = parseFloat("{{ collector_lat|default:'9.9312' }}");
+    const collectorLng = parseFloat("{{ collector_lng|default:'76.2673' }}");
     const unassignedPickups = {{ unassigned_pickups_json|safe|default:"[]" }};
     const isVerified = {{ is_verified|yesno:"true,false" }};
     const csrfToken = "{{ csrf_token }}";
 
-    let streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     });
@@ -1135,7 +1135,25 @@
             }, 3000);
           }
 
-          // Transmit location to server in background
+          // Recalculate distances for all opportunities relative to real-time location
+          unassignedPickups.forEach(p => {
+            const R = 6371;
+            const dLat = (p.latitude - lat) * Math.PI / 180;
+            const dLon = (p.longitude - lng) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            p.distance_km = parseFloat((R * c).toFixed(1));
+
+            const row = document.getElementById('pickup-row-' + p.id);
+            if (row) {
+              row.setAttribute('data-distance', p.distance_km);
+            }
+          });
+          renderOpportunityMarkers();
+
+          // Transmit location to server in background to save as collector's current location
           fetch('/api/maps/locations/update/', {
             method: 'POST',
             headers: {
@@ -1318,6 +1336,69 @@
       if (bounds.length > 1) {
         map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
       }
+    }
+
+    // Allow collector to drag truck marker or click map to manually position their location
+    colMarker.options.draggable = true;
+    colMarker.on('dragend', function (e) {
+      const pos = colMarker.getLatLng();
+      setCollectorPositionManually(pos.lat, pos.lng);
+    });
+
+    map.on('contextmenu', function (e) {
+      setCollectorPositionManually(e.latlng.lat, e.latlng.lng);
+    });
+
+    function setCollectorPositionManually(lat, lng) {
+      currentCollectorLat = lat;
+      currentCollectorLng = lng;
+      colMarker.setLatLng([lat, lng]);
+      colMarker.bindPopup(`<b>🚛 Your Location Set</b><br>Manually pinned location`).openPopup();
+
+      if (liveAccuracyCircle) {
+        liveAccuracyCircle.setLatLng([lat, lng]).setRadius(25);
+      }
+
+      const badge = document.getElementById('liveLocationAccuracyBadge');
+      const accuracyText = document.getElementById('accuracyText');
+      if (badge && accuracyText) {
+        badge.classList.remove('d-none');
+        accuracyText.textContent = `Pinned: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+
+      // Recalculate distances relative to new location
+      unassignedPickups.forEach(p => {
+        const R = 6371;
+        const dLat = (p.latitude - lat) * Math.PI / 180;
+        const dLon = (p.longitude - lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        p.distance_km = parseFloat((R * c).toFixed(1));
+
+        const row = document.getElementById('pickup-row-' + p.id);
+        if (row) {
+          row.setAttribute('data-distance', p.distance_km);
+        }
+      });
+      renderOpportunityMarkers();
+
+      // Persist to server
+      fetch('/api/maps/locations/update/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lng,
+          speed: 0.0,
+          heading: 0.0,
+          accuracy: 10
+        })
+      }).catch(err => console.log('Location sync:', err));
     }
 
     renderOpportunityMarkers(9999);
