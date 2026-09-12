@@ -6,18 +6,25 @@
 {% block content %}
 <div class="py-5 row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body p-4">
-        <h3 class="fw-bold mb-4">Edit Profile Info</h3>
-        <form method="post" action="{% url 'users:update' %}">
-          {% csrf_token %}
-          {{ form|crispy }}
-          <div class="d-flex justify-content-between align-items-center mt-4">
-            <a href="{% url 'users:detail' %}" class="btn btn-outline-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary px-4">Save Changes</button>
-          </div>
-        </form>
+    <div class="lucent-card p-4 p-md-5">
+      <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-emerald-200">
+        <div class="w-10 h-10 rounded-2 bg-emerald-600 text-white d-flex align-items-center justify-center shadow-sm">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </div>
+        <div>
+          <h3 class="font-black text-slate-900 mb-0">Edit Profile Information</h3>
+          <p class="text-slate-500 small mb-0">Update your account details and contact preferences</p>
+        </div>
       </div>
+
+      <form method="post" action="{% url 'users:update' %}">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top border-slate-200">
+          <a href="{% url 'users:detail' %}" class="btn btn-outline-secondary font-semibold px-4 rounded-xl">Cancel</a>
+          <button type="submit" class="btn btn-success font-bold px-4 rounded-xl shadow-md" style="background-color: #059669; border-color: #059669;">Save Changes</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

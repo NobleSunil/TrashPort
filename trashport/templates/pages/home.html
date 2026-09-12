@@ -1,663 +1,561 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trashport - Intelligent Waste Logistics</title>
-    
+    <title>TrashPort — Intelligent Waste Logistics & Smart Collection</title>
+    <meta name="description" content="On-demand smart waste management: easy pickup scheduling, recycling rewards, and citizen hotline services.">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['"Fira Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace'],
                     },
                     colors: {
                         brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            900: '#14532d',
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
                         },
-                        dark: '#0f172a'
+                        accentBlue: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        accentYellow: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#d97706',
+                        }
                     }
                 }
             }
         }
     </script>
-    
+
     <style>
-        .fade-in-up {
-            animation: fadeInUp 0.8s ease-out forwards;
-            opacity: 0;
-            transform: translateY(20px);
+        :root {
+            --spring: cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text-dark: #0f172a;
+            --text-mid: #334155;
+            --text-muted: #64748b;
         }
-        
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Fira Sans', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: var(--bg-white);
+            color: var(--text-dark);
+            overflow-x: hidden;
         }
-        
-        .blob-shape {
-            border-radius: 41% 59% 46% 54% / 41% 50% 50% 59%;
-            animation: morph 8s ease-in-out infinite;
+
+        /* Tactile button interaction */
+        .tactile {
+            transition: all 0.15s var(--spring);
         }
-        
-        @keyframes morph {
-            0%, 100% { border-radius: 41% 59% 46% 54% / 41% 50% 50% 59%; }
-            50% { border-radius: 60% 40% 60% 40% / 50% 60% 40% 50%; }
+        .tactile:active { transform: scale(0.97); }
+
+        /* Custom Card Hover */
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         }
+        .feature-card:hover {
+            border-color: #059669;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(5, 150, 105, 0.12);
+        }
+
+        .blue-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .blue-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(37, 99, 235, 0.12);
+        }
+
+        .yellow-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .yellow-card:hover {
+            border-color: #d97706;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(217, 119, 6, 0.12);
+        }
+
+        /* Hero Light Grid */
+        .bg-hero-grid {
+            background-image:
+                linear-gradient(rgba(5, 150, 105, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(5, 150, 105, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        ::selection { background: #d1fae5; color: #047857; }
     </style>
 </head>
-<body class="font-sans text-gray-800 antialiased bg-gray-50 selection:bg-brand-500 selection:text-white">
 
-    <nav class="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100 transition-all duration-300" id="navbar">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                
-                <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.location.href='{% url 'home' %}'">
-                    <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </div>
-                    <span class="font-bold text-2xl tracking-tight text-dark">Trashport</span>
-                </div>
-                
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#services" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Services</a>
-                    <a href="#how-it-works" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">How it Works</a>
-                    {% if request.user.is_authenticated %}
-                        <a href="{% url 'waste_management:dashboard' %}" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Dashboard</a>
-                        <form method="POST" action="{% url 'account_logout' %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" class="text-gray-600 hover:text-brand-600 font-medium transition-colors bg-transparent border-none cursor-pointer p-0">Sign Out</button>
-                        </form>
-                    {% else %}
-                        <a href="{% url 'account_login' %}" class="text-gray-600 hover:text-brand-600 font-medium transition-colors">Sign In</a>
-                        <a href="{% url 'account_signup' %}" class="px-6 py-2.5 bg-dark text-white rounded-full font-medium hover:bg-gray-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">Get Started</a>
-                    {% endif %}
-                </div>
-                
-                <!-- Mobile Menu Button -->
-                <div class="md:hidden flex items-center">
-                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-brand-600 focus:outline-none">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
+<body>
+
+    <!-- TOP ANNOUNCEMENT BAR -->
+    <div class="bg-emerald-50 border-b border-emerald-200/60 py-2 px-4 text-center">
+        <div class="max-w-7xl mx-auto flex items-center justify-center gap-3 text-xs">
+            <span class="font-mono font-bold px-2 py-0.5 rounded bg-amber-400 text-slate-900 uppercase tracking-wider text-[10px]">NEW</span>
+            <span class="text-emerald-950 font-medium">Smart Waste Scheduling &amp; Green Reward Redemption System is Live!</span>
+            <a href="{% url 'about' %}" class="text-emerald-700 font-bold hover:underline">Learn details &rarr;</a>
         </div>
-        
-        <!-- Mobile Menu Dropdown -->
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100">
-            <div class="px-4 pt-2 pb-6 space-y-1">
-                <a href="#services" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Services</a>
-                <a href="#how-it-works" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">How it Works</a>
+    </div>
+
+    <!-- HEADER / NAVIGATION -->
+    <header id="navbar" class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
+            <!-- Logo -->
+            <a href="{% url 'home' %}" class="flex items-center gap-3 text-decoration-none">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-lg font-bold text-slate-900 tracking-tight">TrashPort</span>
+                        <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">ECO</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+                <a href="#services" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">Services</a>
+                <a href="#how-it-works" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">How It Works</a>
+                <a href="{% url 'about' %}" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">About</a>
+                <a href="#feedback-section" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">Hotline</a>
+            </nav>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3">
                 {% if request.user.is_authenticated %}
-                    <a href="{% url 'waste_management:dashboard' %}" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Dashboard</a>
-                    <form method="POST" action="{% url 'account_logout' %}" class="block">
+                    <a href="{% url 'waste_management:dashboard' %}" class="tactile inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </a>
+                    <form method="POST" action="{% url 'account_logout' %}" class="m-0">
                         {% csrf_token %}
-                        <button type="submit" class="w-full text-left block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg bg-transparent border-none cursor-pointer">Sign Out</button>
+                        <button type="submit" class="tactile px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600">Sign Out</button>
                     </form>
                 {% else %}
-                    <a href="{% url 'account_login' %}" class="block px-3 py-3 text-base font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-lg">Sign In</a>
-                    <a href="{% url 'account_signup' %}" class="block px-3 py-3 text-base font-medium text-brand-600 bg-brand-50 rounded-lg mt-4 text-center">Get Started</a>
+                    <a href="{% url 'account_login' %}" class="tactile px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900">Sign In</a>
+                    <a href="{% url 'account_signup' %}" class="tactile inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700">
+                        Get Started
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
                 {% endif %}
             </div>
         </div>
-    </nav>
+    </header>
 
-    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-white">
-        <!-- Decorative Background Blob -->
-        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-[500px] h-[500px] bg-brand-100/50 blob-shape -z-10 mix-blend-multiply filter blur-3xl opacity-70"></div>
-        <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-[400px] h-[400px] bg-blue-50/80 blob-shape -z-10 mix-blend-multiply filter blur-3xl opacity-70" style="animation-delay: -4s;"></div>
-        
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <div class="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
-                
-                <!-- Hero Content -->
-                <div class="lg:col-span-6 text-center lg:text-left">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 text-brand-700 font-medium text-sm mb-6 fade-in-up">
-                        <span class="flex h-2 w-2 rounded-full bg-brand-500"></span>
-                        Smart Waste Management Platform
-                    </div>
-                    
-                    <h1 class="text-5xl lg:text-6xl font-extrabold text-dark tracking-tight leading-[1.1] mb-6 fade-in-up delay-100">
-                        Modern logistics for a <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-green-400">cleaner planet.</span>
-                    </h1>
-                    
-                    <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto lg:mx-0 fade-in-up delay-200">
-                        Trashport connects businesses with efficient, sustainable waste collection routes. Reduce costs, track environmental impact, and streamline operations.
-                    </p>
-                    
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start fade-in-up delay-200">
-                        {% if request.user.is_authenticated %}
-                            <a href="{% url 'waste_management:pickup_create' %}" class="px-8 py-4 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 group">
-                                Book a Pickup
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </a>
-                            <a href="{% url 'waste_management:dashboard' %}" class="px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
-                                Go to Dashboard
-                            </a>
-                        {% else %}
-                            <a href="{% url 'account_signup' %}" class="px-8 py-4 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 group">
-                                Get Started Free
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </a>
-                            <a href="{% url 'account_login' %}" class="px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
-                                Sign In
-                            </a>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Trust Badges -->
-                    <div class="mt-12 pt-8 border-t border-gray-100 fade-in-up delay-200">
-                        <p class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Trusted by eco-conscious businesses</p>
-                        <div class="flex justify-center lg:justify-start gap-8 opacity-60 grayscale">
-                            <svg class="h-8" viewBox="0 0 100 30" fill="currentColor"><text x="0" y="20" font-family="Arial" font-weight="bold" font-size="20">EcoCorp</text></svg>
-                            <svg class="h-8" viewBox="0 0 100 30" fill="currentColor"><text x="0" y="20" font-family="Arial" font-weight="bold" font-size="20">GreenLogistics</text></svg>
-                            <svg class="h-8 hidden sm:block" viewBox="0 0 100 30" fill="currentColor"><text x="0" y="20" font-family="Arial" font-weight="bold" font-size="20">SustainaCo</text></svg>
-                        </div>
-                    </div>
+    <section class="bg-hero-grid relative py-16 md:py-24 bg-gradient-to-b from-emerald-50/40 via-white to-white overflow-hidden">
+        <div class="max-w-4xl mx-auto text-center px-6 relative z-10">
+            <!-- Headline -->
+            <h1 class="text-4xl md:text-6xl font-black text-slate-900 leading-tight tracking-tight mb-6">
+                Clean cities start with <span class="text-emerald-600">intelligent waste</span> collection.
+            </h1>
+
+            <p class="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 font-normal">
+                Schedule household and commercial pickups on-demand, segregate recyclables for green reward points, and support sustainable municipal logistics.
+            </p>
+
+            <!-- Call To Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-4 mb-10">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'waste_management:pickup_create' %}" class="tactile inline-flex items-center gap-2.5 px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-base font-bold shadow-lg shadow-emerald-600/30 hover:bg-emerald-700">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Schedule Pickup Now
+                    </a>
+                    <a href="{% url 'waste_management:dashboard' %}" class="tactile inline-flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700">
+                        Open Dashboard
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                {% else %}
+                    <a href="{% url 'account_signup' %}" class="tactile inline-flex items-center gap-2 px-7 py-3.5 bg-emerald-600 text-white rounded-xl text-base font-bold shadow-lg shadow-emerald-600/30 hover:bg-emerald-700">
+                        Get Started Free
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                    <a href="{% url 'account_login' %}" class="tactile inline-flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700">
+                        Sign In to Account
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Highlight Highlights -->
+            <div class="flex items-center justify-center gap-8 pt-6 border-t border-slate-200 text-sm font-semibold text-slate-700 flex-wrap">
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">✓</div>
+                    <span>Verified Green Disposal</span>
                 </div>
-                
-                <!-- Hero Image/Mockup -->
-                <div class="lg:col-span-6 mt-16 lg:mt-0 relative fade-in-up delay-200 hidden md:block">
-                    <!-- Dashboard Mockup Container -->
-                    <div class="relative rounded-2xl bg-white border border-gray-100 shadow-2xl p-2 z-10 transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full mix-blend-multiply filter blur-xl opacity-50 z-0"></div>
-                        <div class="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 relative z-10 h-80 flex flex-col">
-                            <!-- Mockup Header -->
-                            <div class="bg-white border-b border-gray-100 p-3 flex justify-between items-center">
-                                <div class="flex gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                                    <div class="w-3 h-3 rounded-full bg-amber-400"></div>
-                                    <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                                </div>
-                                <div class="text-xs text-gray-400 font-mono">dashboard.trashport.app</div>
-                                <div class="w-4"></div>
-                            </div>
-                            
-                            <!-- Mockup Content Area -->
-                            <div class="p-4 flex-1 flex gap-4">
-                                <!-- Sidebar -->
-                                <div class="w-1/4 flex flex-col gap-3">
-                                    <div class="h-6 bg-gray-200 rounded-md w-full"></div>
-                                    <div class="h-4 bg-brand-100 rounded-md w-3/4"></div>
-                                    <div class="h-4 bg-gray-200 rounded-md w-5/6"></div>
-                                    <div class="h-4 bg-gray-200 rounded-md w-4/5"></div>
-                                </div>
-                                
-                                <!-- Main content -->
-                                <div class="w-3/4 flex flex-col gap-4">
-                                    <div class="flex justify-between">
-                                        <div class="h-8 bg-gray-200 rounded-md w-1/3"></div>
-                                        <div class="h-8 bg-brand-500 rounded-md w-1/4"></div>
-                                    </div>
-                                    
-                                    <!-- Stats Row -->
-                                    <div class="flex gap-4">
-                                        <div class="flex-1 bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col gap-2">
-                                            <div class="h-3 bg-gray-200 rounded-full w-1/2"></div>
-                                            <div class="h-6 bg-brand-500 rounded-md w-3/4"></div>
-                                        </div>
-                                        <div class="flex-1 bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col gap-2">
-                                            <div class="h-3 bg-gray-200 rounded-full w-1/2"></div>
-                                            <div class="h-6 bg-gray-300 rounded-md w-2/3"></div>
-                                        </div>
-                                        <div class="flex-1 bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col gap-2">
-                                            <div class="h-3 bg-gray-200 rounded-full w-1/2"></div>
-                                            <div class="h-6 bg-gray-300 rounded-md w-3/4"></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Chart Area -->
-                                    <div class="flex-1 bg-white p-4 rounded-lg border border-gray-100 shadow-sm flex items-end justify-between gap-2 pb-0 pt-6">
-                                        <div class="w-full bg-brand-200 rounded-t-sm h-[40%]"></div>
-                                        <div class="w-full bg-brand-300 rounded-t-sm h-[60%]"></div>
-                                        <div class="w-full bg-brand-400 rounded-t-sm h-[30%]"></div>
-                                        <div class="w-full bg-brand-500 rounded-t-sm h-[80%]"></div>
-                                        <div class="w-full bg-brand-300 rounded-t-sm h-[50%]"></div>
-                                        <div class="w-full bg-brand-200 rounded-t-sm h-[70%]"></div>
-                                        <div class="w-full bg-brand-500 rounded-t-sm h-[100%]"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Floating Elements -->
-                    <div class="absolute -left-8 top-1/4 bg-white p-3 rounded-xl shadow-lg border border-gray-100 flex items-center gap-3 z-20 animate-bounce" style="animation-duration: 3s;">
-                        <div class="bg-green-100 p-2 rounded-full text-green-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-gray-800">Route Optimized</p>
-                            <p class="text-[10px] text-gray-500">Saved 12 miles today</p>
-                        </div>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">✓</div>
+                    <span>On-Demand Pickup</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">★</div>
+                    <span>Reward Credits</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="services" class="py-24 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center max-w-3xl mx-auto mb-16">
-                <h2 class="text-brand-600 font-semibold tracking-wide uppercase text-sm mb-3">Comprehensive Services</h2>
-                <h3 class="text-3xl md:text-4xl font-bold text-dark mb-4">Everything you need for efficient waste management</h3>
-                <p class="text-lg text-gray-600">We replace outdated scheduling with intelligent, data-driven logistics that save time, money, and the environment.</p>
-            </div>
-            
-            <div class="grid md:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                    <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-dark mb-3">Smart Routing</h4>
-                    <p class="text-gray-600 leading-relaxed">Our AI algorithms optimize pickup routes in real-time, reducing fuel consumption and ensuring timely collections.</p>
-                </div>
-                
-                <!-- Feature 2 -->
-                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                    <div class="w-14 h-14 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-dark mb-3">Sustainability Tracking</h4>
-                    <p class="text-gray-600 leading-relaxed">Monitor your diversion rates and carbon footprint. Generate instant reports for compliance and ESG goals.</p>
-                </div>
-                
-                <!-- Feature 3 -->
-                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                    <div class="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 mb-6 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-dark mb-3">Transparent Billing</h4>
-                    <p class="text-gray-600 leading-relaxed">No hidden fees or complex contracts. Pay only for what you generate with clear, itemized digital invoices.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- SERVICES SECTION -->
+    <section id="services" class="py-20 bg-slate-50 border-t border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6">
 
-    <section id="how-it-works" class="py-24 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
-                <!-- Image side -->
-                <div class="order-2 lg:order-1 mt-16 lg:mt-0 relative">
-                    <div class="absolute inset-0 bg-gradient-to-br from-brand-100 to-white rounded-3xl transform -rotate-3 scale-105 z-0"></div>
-                    <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Waste Sorting" class="relative z-10 rounded-3xl shadow-xl object-cover h-[500px] w-full" onerror="this.src='https://placehold.co/800x500/f0fdf4/16a34a?text=Waste+Logistics+Operations'">
-                    
-                    <!-- Stats overlay -->
-                    <div class="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg z-20 flex justify-between items-center">
-                        <div>
-                            <p class="text-4xl font-extrabold text-brand-600">85%</p>
-                            <p class="text-sm font-medium text-gray-600 mt-1">Average Diversion Rate</p>
-                        </div>
-                        <div class="h-12 w-px bg-gray-200"></div>
-                        <div>
-                            <p class="text-4xl font-extrabold text-dark">24/7</p>
-                            <p class="text-sm font-medium text-gray-600 mt-1">Support & Monitoring</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Text side -->
-                <div class="order-1 lg:order-2">
-                    <h2 class="text-brand-600 font-semibold tracking-wide uppercase text-sm mb-3">How it Works</h2>
-                    <h3 class="text-3xl md:text-4xl font-bold text-dark mb-8">Seamless integration into your daily operations</h3>
-                    
-                    <div class="space-y-8">
-                        <!-- Step 1 -->
-                        <div class="flex gap-4">
-                            <div class="flex-shrink-0 mt-1">
-                                <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-lg border-2 border-white shadow-md z-10 relative">1</div>
-                                <div class="w-0.5 h-full bg-gray-200 mx-auto -mt-2"></div>
-                            </div>
-                            <div>
-                                <h4 class="text-xl font-bold text-dark mb-2">Request or Schedule</h4>
-                                <p class="text-gray-600">Use our web dashboard or mobile app to schedule a regular pickup or request an immediate collection with a single tap.</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 2 -->
-                        <div class="flex gap-4">
-                            <div class="flex-shrink-0 mt-1">
-                                <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-lg border-2 border-white shadow-md z-10 relative">2</div>
-                                <div class="w-0.5 h-full bg-gray-200 mx-auto -mt-2"></div>
-                            </div>
-                            <div>
-                                <h4 class="text-xl font-bold text-dark mb-2">Dynamic Routing</h4>
-                                <p class="text-gray-600">Our system automatically dispatches the nearest appropriate vehicle, optimizing the route to minimize emissions and arrival time.</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 3 -->
-                        <div class="flex gap-4">
-                            <div class="flex-shrink-0 mt-1">
-                                <div class="w-10 h-10 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-lg border-2 border-white shadow-md z-10 relative">3</div>
-                            </div>
-                            <div>
-                                <h4 class="text-xl font-bold text-dark mb-2">Track & Analyze</h4>
-                                <p class="text-gray-600">Receive real-time notifications. Once collected, view detailed analytics on weights, categories, and environmental impact.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="contact" class="py-20 bg-dark relative overflow-hidden">
-        <!-- Background elements -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-600 rounded-full mix-blend-screen filter blur-[100px] opacity-50"></div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-600 rounded-full mix-blend-screen filter blur-[100px] opacity-50"></div>
-        
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-4">
-                    <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                    100% Anonymous & Confidential
-                </div>
-                <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Community & Citizen Feedback</h2>
-                <p class="text-gray-300 text-sm md:text-base max-w-xl mx-auto">
-                    Have a suggestion, reported issue with collection, website feedback, or complaint? Send your thoughts directly to the TrashPort Admin team completely anonymously. No account or email needed.
+            <!-- Section Header -->
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">CORE SERVICES</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-4 mb-4 tracking-tight">
+                    Comprehensive Waste Management Solutions
+                </h2>
+                <p class="text-slate-600 text-base leading-relaxed">
+                    Designed for households, commercial spaces, and municipal operations to maintain cleaner, sustainable communities.
                 </p>
             </div>
 
-            <div class="bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl">
-                <form id="anonymous-feedback-form" class="space-y-4">
-                    {% csrf_token %}
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Services Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Service 1 -->
+                <div class="feature-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-emerald-700 uppercase tracking-wider">RESIDENTIAL</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">Household Collection</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Convenient scheduled doorstep collection for dry waste, organic compostables, and recyclable household packaging.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700">
+                        Book Household Pickup &rarr;
+                    </a>
+                </div>
+
+                <!-- Service 2 -->
+                <div class="blue-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V10m0 0V4m0 6h4m-4 0H9"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-blue-700 uppercase tracking-wider">COMMERCIAL</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">Bulk &amp; Business Logistics</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Tailored waste collection solutions for commercial complexes, restaurants, office spaces, and event venues.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700">
+                        Explore Business Services &rarr;
+                    </a>
+                </div>
+
+                <!-- Service 3 -->
+                <div class="yellow-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-amber-700 uppercase tracking-wider">SPECIALIZED</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">E-Waste &amp; Hazardous Care</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Safe handling and specialized recycling for electronics, batteries, lamps, and hazardous residential materials.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:text-amber-700">
+                        Schedule E-Waste Disposal &rarr;
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section id="how-it-works" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+                <!-- Left Column: Visual Card -->
+                <div class="lg:col-span-5">
+                    <div class="rounded-3xl overflow-hidden border border-slate-200 shadow-xl relative bg-slate-900">
+                        <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                             alt="Eco Waste Logistics"
+                             class="w-full h-[420px] object-cover opacity-80">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent"></div>
+                        <div class="absolute bottom-6 left-6 right-6 p-6 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold font-mono">
+                                        TP
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-900">Smart Sorting Hub</div>
+                                        <div class="text-xs text-slate-500">Zero-Landfill Processing</div>
+                                    </div>
+                                </div>
+                                <span class="font-mono text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">ACTIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: 3 Steps -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div>
+                        <span class="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">SIMPLE STEPS</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-4 mb-4 tracking-tight">
+                            How TrashPort Works for You
+                        </h2>
+                        <p class="text-slate-600 text-base mb-8">
+                            A seamless three-step process connecting citizens directly to local collection crews.
+                        </p>
+                    </div>
+
+                    <!-- Step 1 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            1
+                        </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Feedback Category</label>
-                            <select id="feedback-category" name="category" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
-                                <option value="GENERAL">General Feedback</option>
-                                <option value="SUGGESTION">Suggestion / Feature Idea</option>
-                                <option value="COLLECTION_ISSUE">Waste Collection / Service Issue</option>
-                                <option value="WEBSITE_BUG">Technical / Bug Report</option>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Book Pickup Request</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Submit your request online with waste classification and location pinning. Pick a convenient arrival window.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-blue-50/60 border border-blue-200">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Collector Arrival &amp; Handover</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Our assigned neighborhood collector arrives at your location to safely load and verify waste items.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-amber-50/60 border border-amber-200">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            3
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Receive Green Reward Points</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Earn wallet credits for recycling efforts which can be redeemed for community vouchers or discounts.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- CITIZEN HOTLINE / FEEDBACK SECTION -->
+    <section id="feedback-section" class="py-20 bg-slate-50 border-t border-slate-200">
+        <div class="max-w-3xl mx-auto px-6">
+
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 border border-amber-300 mb-4">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span class="font-mono text-xs font-bold uppercase tracking-wider text-amber-900">ANONYMOUS CITIZEN HOTLINE</span>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                    Direct Feedback to Municipal Team
+                </h2>
+                <p class="text-slate-600 text-base leading-relaxed">
+                    Have concerns about a delayed collection, service issue, or suggestion? Submit feedback directly to city administrators.
+                </p>
+            </div>
+
+            <!-- Feedback Card -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
+                <form id="anonymous-feedback-form">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Category</label>
+                            <select id="feedback-category" name="category" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="GENERAL">General Operational Feedback</option>
+                                <option value="COLLECTION_ISSUE">Collection / Driver Service Issue</option>
+                                <option value="SUGGESTION">Recycling Suggestion</option>
+                                <option value="WEBSITE_BUG">Software / Portal Bug Report</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Subject (Optional)</label>
-                            <input type="text" id="feedback-subject" name="subject" placeholder="e.g. Bin collection timing in Sector 4" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                            <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Subject / Location Ref</label>
+                            <input type="text" id="feedback-subject" name="subject" placeholder="e.g. Missed bin in Sector 4" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Your Feedback / Message <span class="text-rose-400">*</span></label>
-                        <textarea id="feedback-message" name="message" rows="4" required placeholder="Type your message, suggestion, or complaint here in detail... (Identity is strictly protected and never recorded)" class="w-full bg-slate-900/90 text-white px-4 py-3 rounded-xl border border-white/10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm resize-none"></textarea>
+                    <div class="mb-6">
+                        <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Message Content <span class="text-red-500">*</span></label>
+                        <textarea id="feedback-message" name="message" rows="4" required placeholder="Describe your concern or feedback..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none leading-relaxed"></textarea>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-3">
-                        <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                            </svg>
-                            <span>Encrypted & routed to municipal admin dashboard</span>
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Secure &amp; Anonymous Transmission</span>
                         </div>
-                        <button type="submit" id="feedback-submit-btn" class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 cursor-pointer">
-                            <span>Send Anonymous Feedback</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                            </svg>
+                        <button type="submit" id="feedback-submit-btn" class="tactile inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700">
+                            <span>Submit Feedback</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
                     </div>
                 </form>
             </div>
+
         </div>
-        
-        <!-- Custom Message Box Container (Hidden by default) -->
-        <div id="message-box" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-opacity duration-300">
-            <div class="bg-slate-900 border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 text-center" id="message-box-content">
-                <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
+
+        <!-- Response Modal -->
+        <div id="message-box" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-slate-200 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-2" id="msg-box-title">Feedback Sent!</h3>
-                <p class="text-sm text-gray-300 mb-6" id="msg-box-text">Thank you for sharing your thoughts. Your anonymous submission has been safely delivered to the administration team.</p>
-                <button id="close-msg-btn" class="w-full py-3 bg-brand-500 text-white rounded-xl font-medium hover:bg-brand-600 transition-colors cursor-pointer">Done</button>
+                <h3 id="msg-box-title" class="text-xl font-bold text-slate-900 mb-2">Transmission Received</h3>
+                <p id="msg-box-text" class="text-sm text-slate-600 mb-6 leading-relaxed">Your feedback has been securely transferred to the municipal team.</p>
+                <button id="close-msg-btn" class="tactile w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700">Close</button>
             </div>
         </div>
     </section>
 
-    <footer class="bg-white border-t border-gray-100 pt-16 pb-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
-                <!-- Brand col -->
-                <div class="col-span-2 lg:col-span-2">
-                    <div class="flex items-center gap-2 mb-4" onclick="window.location.href='{% url 'home' %}'">
-                        <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </div>
-                        <span class="font-bold text-xl text-dark">Trashport</span>
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-12 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+
+                <!-- Logo & Info -->
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </div>
-                    <p class="text-gray-500 text-sm max-w-xs mb-6">Building the infrastructure for a circular economy through intelligent logistics and data transparency.</p>
-                    <div class="flex space-x-4">
-                        <!-- Social Icons Placeholders -->
-                        <a href="#" class="text-gray-400 hover:text-brand-500 transition-colors">
-                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-brand-500 transition-colors">
-                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                        </a>
+                    <div>
+                        <span class="text-base font-bold text-slate-900">TrashPort System</span>
+                        <span class="text-xs text-slate-500 block">&copy; 2026 TrashPort Eco Operations. All rights reserved.</span>
                     </div>
                 </div>
-                
-                <!-- Links columns -->
-                <div>
-                    <h4 class="font-semibold text-dark mb-4">Platform</h4>
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Routing App</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Analytics Dashboard</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">API Integration</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Hardware Sensors</a></li>
-                    </ul>
+
+                <!-- Footer Links -->
+                <div class="flex items-center gap-6 text-sm font-semibold text-slate-600">
+                    <a href="#services" class="hover:text-emerald-600">Services</a>
+                    <a href="#how-it-works" class="hover:text-emerald-600">How It Works</a>
+                    <a href="{% url 'about' %}" class="hover:text-emerald-600">About</a>
+                    <a href="#feedback-section" class="hover:text-emerald-600">Hotline</a>
                 </div>
-                
-                <div>
-                    <h4 class="font-semibold text-dark mb-4">Company</h4>
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">About Us</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Careers</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Sustainability Report</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Contact</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-dark mb-4">Legal</h4>
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Terms of Service</a></li>
-                        <li><a href="#" class="hover:text-brand-600 transition-colors">Cookie Policy</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-sm text-gray-400">© 2026 Trashport Inc. All rights reserved.</p>
-                <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                    Systems Operational
-                </div>
+
             </div>
         </div>
     </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Mobile Menu Toggle
-            const btn = document.getElementById('mobile-menu-btn');
-            const menu = document.getElementById('mobile-menu');
-
-            btn.addEventListener('click', () => {
-                menu.classList.toggle('hidden');
-            });
-
-            // Navbar Scroll Effect
-            const navbar = document.getElementById('navbar');
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 10) {
-                    navbar.classList.add('shadow-sm');
-                    navbar.classList.remove('py-2');
-                } else {
-                    navbar.classList.remove('shadow-sm');
-                    navbar.classList.add('py-2');
-                }
-            });
-
-            // Handle Anonymous Feedback Form Submission
+            // Feedback form handler
             const feedbackForm = document.getElementById('anonymous-feedback-form');
-            const feedbackSubmitBtn = document.getElementById('feedback-submit-btn');
+            const submitBtn = document.getElementById('feedback-submit-btn');
             const msgBox = document.getElementById('message-box');
-            const msgContent = document.getElementById('message-box-content');
             const msgTitle = document.getElementById('msg-box-title');
             const msgText = document.getElementById('msg-box-text');
             const closeBtn = document.getElementById('close-msg-btn');
 
-            const showMessage = (title, message) => {
-                if (title && msgTitle) msgTitle.textContent = title;
-                if (message && msgText) msgText.textContent = message;
-                msgBox.classList.remove('hidden');
-                msgBox.classList.add('flex');
-                setTimeout(() => {
-                    msgBox.classList.remove('opacity-0');
-                    msgBox.classList.add('opacity-100');
-                    msgContent.classList.remove('scale-95');
-                    msgContent.classList.add('scale-100');
-                }, 10);
+            const showMsg = (title, text) => {
+                if (msgTitle) msgTitle.textContent = title;
+                if (msgText) msgText.textContent = text;
+                if (msgBox) {
+                    msgBox.classList.remove('hidden');
+                    msgBox.classList.add('flex');
+                }
             };
 
-            const hideMessage = () => {
-                msgBox.classList.remove('opacity-100');
-                msgBox.classList.add('opacity-0');
-                msgContent.classList.remove('scale-100');
-                msgContent.classList.add('scale-95');
-                setTimeout(() => {
-                    msgBox.classList.add('hidden');
+            const hideMsg = () => {
+                if (msgBox) {
                     msgBox.classList.remove('flex');
-                }, 300);
+                    msgBox.classList.add('hidden');
+                }
             };
 
             if (feedbackForm) {
-                feedbackForm.addEventListener('submit', async (e) => {
+                feedbackForm.addEventListener('submit', async e => {
                     e.preventDefault();
-                    
                     const category = document.getElementById('feedback-category').value;
                     const subject = document.getElementById('feedback-subject').value;
                     const message = document.getElementById('feedback-message').value;
-                    const csrfToken = feedbackForm.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                    const csrf = feedbackForm.querySelector('[name=csrfmiddlewaretoken]')?.value;
 
-                    if (!message.trim()) {
-                        alert('Please enter your feedback message.');
-                        return;
-                    }
+                    if (!message.trim()) { alert('Please enter your feedback message.'); return; }
 
-                    const originalBtnContent = feedbackSubmitBtn.innerHTML;
-                    feedbackSubmitBtn.disabled = true;
-                    feedbackSubmitBtn.innerHTML = `
-                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Submitting...</span>
-                    `;
+                    const origText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>Submitting...</span>';
 
                     try {
-                        const response = await fetch("{% url 'waste_management:submit_anonymous_feedback' %}", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRFToken": csrfToken
-                            },
-                            body: JSON.stringify({
-                                category: category,
-                                subject: subject,
-                                message: message
-                            })
+                        const res = await fetch("{% url 'waste_management:submit_anonymous_feedback' %}", {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            body: JSON.stringify({ category, subject, message })
                         });
-
-                        const data = await response.json();
-                        if (response.ok && data.status === 'success') {
-                            showMessage("Feedback Delivered!", data.message || "Thank you. Your anonymous feedback has been securely transmitted to the admin team.");
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            showMsg('Submission Delivered', data.message || 'Your report has been securely logged.');
                             feedbackForm.reset();
                         } else {
-                            showMessage("Submission Error", data.message || "Could not submit feedback. Please try again.");
+                            showMsg('Submission Error', data.message || 'Could not submit. Please retry.');
                         }
-                    } catch (err) {
-                        showMessage("Submission Error", "Network error while connecting. Please try again later.");
+                    } catch {
+                        showMsg('Network Error', 'Could not reach server. Please check connection.');
                     } finally {
-                        feedbackSubmitBtn.disabled = false;
-                        feedbackSubmitBtn.innerHTML = originalBtnContent;
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = origText;
                     }
                 });
             }
 
-            if (closeBtn) {
-                closeBtn.addEventListener('click', hideMessage);
-            }
-            
-            if (msgBox) {
-                // Close on background click
-                msgBox.addEventListener('click', (e) => {
-                    if (e.target === msgBox) {
-                        hideMessage();
-                    }
-                });
-            }
-
-            // Smooth scrolling for anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    const targetId = this.getAttribute('href');
-                    if(targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        e.preventDefault();
-                        if(menu && !menu.classList.contains('hidden')) {
-                            menu.classList.add('hidden');
-                        }
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
-            });
+            if (closeBtn) closeBtn.addEventListener('click', hideMsg);
+            if (msgBox) msgBox.addEventListener('click', e => { if (e.target === msgBox) hideMsg(); });
         });
     </script>
+
 </body>
 </html>

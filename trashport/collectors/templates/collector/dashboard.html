@@ -6,21 +6,22 @@
 {% block css %}
 {{ block.super }}
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
   /* ── Dashboard Root Variables ── */
   :root {
-    --brand-primary: #16a34a;
-    --surface-bg: #f0fdf4;
-    --card-bg: #ffffff;
-    --card-border: rgba(22,163,74,0.1);
+    --brand-primary: #059669;
+    --surface-bg: #f8fafc;
+    --card-bg: linear-gradient(135deg, rgba(236, 253, 245, 0.75) 0%, rgba(255, 255, 255, 0.9) 100%);
+    --card-border: rgba(16, 185, 129, 0.25);
     --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --shadow-sm: 0 2px 8px rgba(22,163,74,0.06);
-    --shadow-md: 0 8px 32px rgba(22,163,74,0.12);
-    --shadow-lg: 0 20px 60px rgba(22,163,74,0.16);
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --shadow-sm: 0 4px 14px rgba(5, 150, 105, 0.06);
+    --shadow-md: 0 10px 30px rgba(5, 150, 105, 0.1);
+    --shadow-lg: 0 20px 50px rgba(5, 150, 105, 0.15);
     --radius-md: 16px;
     --radius-lg: 24px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -29,26 +30,32 @@
   /* ── Page Layout ── */
   .collector-dashboard {
     min-height: 100vh;
-    background: #f8fafc;
+    background-color: #f8fafc;
+    background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
     padding: 2rem 0 4rem;
   }
 
   /* ── Hero Header ── */
   .dashboard-hero {
-    background: linear-gradient(135deg, #15803d 0%, #16a34a 50%, #059669 100%);
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: var(--radius-lg);
     padding: 2.5rem 2.5rem 5rem;
     position: relative;
     overflow: hidden;
     margin-bottom: -3rem;
-    color: white;
+    color: #0f172a;
+    box-shadow: 0 10px 40px -10px rgba(5, 150, 105, 0.1);
   }
   .dashboard-hero::before {
     content: '';
     position: absolute;
     top: -40px; right: -40px;
     width: 280px; height: 280px;
-    background: rgba(255,255,255,0.08);
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
     border-radius: 50%;
   }
   .dashboard-hero::after {
@@ -56,35 +63,36 @@
     position: absolute;
     bottom: -60px; left: 30%;
     width: 200px; height: 200px;
-    background: rgba(255,255,255,0.06);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
     border-radius: 50%;
   }
   .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(255,255,255,0.2);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #047857;
+    font-family: 'Fira Code', monospace;
     border-radius: 50px;
     padding: 0.35rem 1rem;
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     margin-bottom: 1rem;
   }
   .hero-title {
     font-size: 2rem;
-    font-weight: 800;
+    font-weight: 900;
+    color: #0f172a;
     letter-spacing: -0.03em;
     margin-bottom: 0.25rem;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.12);
   }
   .hero-subtitle {
     font-size: 1rem;
-    opacity: 0.85;
-    font-weight: 400;
+    color: #475569;
+    font-weight: 500;
   }
 
   /* ── Stat Cards ── */
@@ -95,9 +103,11 @@
   }
   .stat-card {
     background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-radius: var(--radius-md);
     padding: 1.6rem 1.75rem;
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid rgba(16, 185, 129, 0.25);
     box-shadow: var(--shadow-md);
     transition: var(--transition);
     display: flex;
@@ -1313,16 +1323,48 @@
 
           let marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(map).bindPopup(popupHtml);
 
-          // Click marker to preview OSRM turn-by-turn road route!
+          function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+            let pts = [];
+            let dLat = eLat - sLat;
+            let dLng = eLng - sLng;
+            let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+            let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+            let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+            let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+            let count = 16;
+            for (let i = 0; i <= count; i++) {
+              let t = i / count;
+              let lat, lng;
+              if (t < 0.5) {
+                let subT = t * 2.0;
+                lat = (1 - subT) * sLat + subT * turn1Lat;
+                lng = (1 - subT) * sLng + subT * turn1Lng;
+              } else if (t < 0.85) {
+                let subT = (t - 0.5) / 0.35;
+                lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+                lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+              } else {
+                let subT = (t - 0.85) / 0.15;
+                lat = (1 - subT) * turn2Lat + subT * eLat;
+                lng = (1 - subT) * turn2Lng + subT * eLng;
+              }
+              let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+              let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+              pts.push([lat + wLat, lng + wLng]);
+            }
+            return pts;
+          }
+
+          // Click marker to preview turn-by-turn road route!
           marker.on('click', () => {
-            let directWaypoints = [[currentCollectorLat, currentCollectorLng], [p.latitude, p.longitude]];
+            let roadWaypoints = generateClientRoadCurve(currentCollectorLat, currentCollectorLng, p.latitude, p.longitude);
             if (previewPolyline) map.removeLayer(previewPolyline);
-            previewPolyline = L.polyline(directWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
+            previewPolyline = L.polyline(roadWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
 
             fetch(`/api/maps/route/?start_lat=${currentCollectorLat}&start_lng=${currentCollectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
               .then(res => res.json())
               .then(routeData => {
-                if (routeData && routeData.coordinates && routeData.coordinates.length > 0 && previewPolyline) {
+                if (routeData && routeData.coordinates && routeData.coordinates.length > 2 && previewPolyline) {
                   previewPolyline.setLatLngs(routeData.coordinates);
                 }
               })

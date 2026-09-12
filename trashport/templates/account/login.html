@@ -3,139 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In | TrashPort</title>
+    <title>Sign In | TrashPort Intelligent Logistics</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        brand: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
-                        dark: '#0f172a'
+                    fontFamily: {
+                        sans: ['"Fira Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace'],
                     }
                 }
             }
         }
     </script>
+    <style>
+        .bg-grid-pattern {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(5, 150, 105, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(5, 150, 105, 0.05) 1px, transparent 1px);
+        }
+    </style>
 </head>
-<body class="font-sans bg-gray-50 flex items-center justify-center min-h-screen p-4">
+<body class="font-sans bg-slate-50 bg-grid-pattern flex items-center justify-center min-h-screen p-4 text-slate-900 selection:bg-emerald-500 selection:text-white">
 
-    <div class="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-2xl p-8 relative overflow-hidden">
-        
-        <!-- Top accent line -->
-        <div class="h-2 bg-gradient-to-r from-brand-500 to-green-400 absolute top-0 left-0 right-0"></div>
+    <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 relative overflow-hidden">
+
+        <!-- Top accent line: Green, Blue & Yellow -->
+        <div class="h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-amber-400 absolute top-0 left-0 right-0"></div>
 
         <!-- Logo / Title -->
         <div class="text-center mb-8">
-            <div class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30 mx-auto mb-4 cursor-pointer"
-                onclick="window.location.href='{% url 'home' %}'">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <a href="{% url 'home' %}" class="inline-flex w-12 h-12 bg-emerald-600 rounded-xl items-center justify-center text-white shadow-md shadow-emerald-600/20 mx-auto mb-4 hover:bg-emerald-700 transition-all">
+                <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-            </div>
-            <h1 class="text-3xl font-extrabold text-dark tracking-tight">Welcome Back</h1>
-            <p class="text-sm text-gray-500 mt-2">Sign in to manage your smart waste logistics</p>
+            </a>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Sign In to TrashPort</h1>
+            <p class="text-xs text-slate-500 mt-1.5">Manage on-demand waste pickups and rewards</p>
         </div>
 
         <!-- Django Form Errors -->
         {% if form.errors %}
-            <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg">
+            <div class="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
                 {% if form.non_field_errors %}
                     {% for error in form.non_field_errors %}
                         <p class="font-medium">{{ error }}</p>
                     {% endfor %}
                 {% else %}
-                    <p class="font-medium">Please enter a correct email and password.</p>
+                    <p class="font-medium">Please enter a valid username/email and password.</p>
                 {% endif %}
             </div>
         {% endif %}
 
-        <!-- Messages (e.g. from password reset) -->
+        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
-                <div class="mb-6 p-4 {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-700{% else %}bg-green-50 border-brand-500 text-green-800{% endif %} border-l-4 text-sm rounded-r-lg">
+                <div class="mb-5 p-3.5 {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-700{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %} border text-xs rounded-xl">
                     {{ message }}
                 </div>
             {% endfor %}
         {% endif %}
 
         <!-- Email / Password Login Form -->
-        <form method="POST" action="{% url 'account_login' %}" class="space-y-5">
+        <form method="POST" action="{% url 'account_login' %}" class="space-y-4">
             {% csrf_token %}
             {% if redirect_field_value %}
                 <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
 
             <div>
-                <label for="id_login" class="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <label for="id_login" class="block text-xs font-mono font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email / Identifier</label>
                 <input type="email" name="login" id="id_login" required autocomplete="email" autofocus
                     value="{{ form.login.value|default:'' }}"
-                    placeholder="name@company.com"
-                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all">
+                    placeholder="name@organization.com"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all">
                 {% if form.login.errors %}
-                    <p class="text-xs text-red-600 mt-1 font-medium">{{ form.login.errors.0 }}</p>
+                    <p class="text-xs text-rose-600 mt-1">{{ form.login.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <div class="flex items-center justify-between mb-1.5">
-                    <label for="id_password" class="block text-sm font-semibold text-gray-700">Password</label>
-                    <a href="{% url 'account_reset_password' %}" class="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline">
-                        Forgot password?
+                    <label for="id_password" class="block text-xs font-mono font-bold text-slate-700 uppercase tracking-wider">Password</label>
+                    <a href="{% url 'account_reset_password' %}" class="text-xs text-blue-600 hover:text-blue-700 font-bold">
+                        Forgot?
                     </a>
                 </div>
                 <div class="relative">
                     <input type="password" name="password" id="id_password" required autocomplete="current-password"
                         placeholder="••••••••"
-                        class="w-full px-4 py-3 pr-12 border {% if form.password.errors %}border-red-400{% else %}border-gray-200{% endif %} rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all">
-                    
-                    <!-- Toggle Show/Hide Password Button -->
+                        class="w-full px-3.5 py-2.5 pr-11 bg-slate-50 border {% if form.password.errors %}border-rose-300{% else %}border-slate-200{% endif %} rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all">
+
                     <button type="button" onclick="togglePasswordVisibility('id_password', 'eye-icon-open', 'eye-icon-closed')"
-                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                         aria-label="Toggle password visibility">
-                        <!-- Eye Open Icon (shown when password is hidden) -->
-                        <svg id="eye-icon-open" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg id="eye-icon-open" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        <!-- Eye Closed Icon (shown when password is visible) -->
-                        <svg id="eye-icon-closed" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg id="eye-icon-closed" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                         </svg>
                     </button>
                 </div>
                 {% if form.password.errors %}
-                    <p class="text-xs text-red-600 mt-1 font-medium">{{ form.password.errors.0 }}</p>
+                    <p class="text-xs text-rose-600 mt-1">{{ form.password.errors.0 }}</p>
                 {% endif %}
             </div>
 
             {% if form.remember %}
                 <div class="flex items-center">
                     <input type="checkbox" name="remember" id="id_remember"
-                        class="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded cursor-pointer">
-                    <label for="id_remember" class="ml-2 block text-sm text-gray-600 cursor-pointer">
-                        Remember me on this device
+                        class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded cursor-pointer">
+                    <label for="id_remember" class="ml-2 block text-xs text-slate-600 cursor-pointer">
+                        Remember this workstation
                     </label>
                 </div>
             {% endif %}
 
             <button type="submit"
-                class="w-full py-3.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]">
-                Sign In
+                class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer">
+                <span>Sign In to Account</span>
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
             </button>
         </form>
 
-        <div class="relative flex py-3 items-center">
-            <div class="flex-grow border-t border-gray-200"></div>
-            <span class="flex-shrink mx-4 text-gray-400 text-xs uppercase font-semibold">Or continue with</span>
-            <div class="flex-grow border-t border-gray-200"></div>
+        <div class="relative flex py-3.5 items-center">
+            <div class="flex-grow border-t border-slate-200"></div>
+            <span class="flex-shrink mx-3 text-slate-400 text-[10px] font-mono uppercase tracking-wider">Federated SSO</span>
+            <div class="flex-grow border-t border-slate-200"></div>
         </div>
 
         <a href="{% url 'users:google_oauth_start' %}"
-            class="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all shadow-sm">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+            class="w-full flex items-center justify-center gap-2.5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all shadow-xs text-sm">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                 <g transform="matrix(1, 0, 0, 1, 0, 0)">
                     <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.97,2.37 -2.06,3.1v2.58h3.33c1.95,-1.8 3.07,-4.45 3.07,-7.48c0,-0.64 -0.06,-1.25 -0.17,-1.9z" fill="#4285F4" />
                     <path d="M12,20.6c2.32,0 4.27,-0.77 5.7,-2.09l-3.33,-2.58c-0.92,0.62 -2.1,0.99 -3.37,0.99c-2.59,0 -4.79,-1.75 -5.57,-4.1H2.03v2.67c1.47,2.93 4.51,4.92 8.07,4.92z" fill="#34A853" />
@@ -143,12 +153,12 @@
                     <path d="M12,6.1c1.26,0 2.39,0.43 3.28,1.28l2.46,-2.46c-1.48,-1.38 -3.42,-2.22 -5.74,-2.22C8.44,2.7 5.4,4.69 3.93,7.62l4.4,3.42c0.78,-2.35 2.98,-4.1 5.57,-4.1z" fill="#EA4335" />
                 </g>
             </svg>
-            Sign in with Google
+            <span>Continue with Google</span>
         </a>
 
-        <p class="text-center text-sm text-gray-500 mt-8">
-            New to TrashPort?
-            <a href="{% url 'account_signup' %}" class="text-brand-600 font-semibold hover:underline">Create an account</a>
+        <p class="text-center text-xs text-slate-500 mt-6 font-normal">
+            Need an account?
+            <a href="{% url 'account_signup' %}" class="text-emerald-600 font-bold hover:underline">Register new profile</a>
         </p>
     </div>
 

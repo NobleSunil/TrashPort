@@ -314,6 +314,38 @@
           }
         });
 
+        function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+          let pts = [];
+          let dLat = eLat - sLat;
+          let dLng = eLng - sLng;
+          let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+          let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+          let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+          let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+          let count = 16;
+          for (let i = 0; i <= count; i++) {
+            let t = i / count;
+            let lat, lng;
+            if (t < 0.5) {
+              let subT = t * 2.0;
+              lat = (1 - subT) * sLat + subT * turn1Lat;
+              lng = (1 - subT) * sLng + subT * turn1Lng;
+            } else if (t < 0.85) {
+              let subT = (t - 0.5) / 0.35;
+              lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+              lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+            } else {
+              let subT = (t - 0.85) / 0.15;
+              lat = (1 - subT) * turn2Lat + subT * eLat;
+              lng = (1 - subT) * turn2Lng + subT * eLng;
+            }
+            let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+            let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+            pts.push([lat + wLat, lng + wLng]);
+          }
+          return pts;
+        }
+
         // 3. Render Route Polylines INSTANTLY when a specific collector is selected!
         activePickups.forEach(p => {
           if (p.collector_id && collectorLocMap[p.collector_id]) {
@@ -321,17 +353,17 @@
             let routeKey = `${p.id}_${p.collector_id}_${colLoc.latitude}_${colLoc.longitude}`;
 
             if (selectedCollectorId && p.collector_id === selectedCollectorId) {
-              let directWaypoints = [[colLoc.latitude, colLoc.longitude], [p.latitude, p.longitude]];
+              let initialWaypoints = generateClientRoadCurve(colLoc.latitude, colLoc.longitude, p.latitude, p.longitude);
               
-              // 1) INSTANT RESPONSE: Draw direct line immediately with 0ms delay!
+              // 1) INSTANT RESPONSE: Draw realistic road curve immediately with 0ms delay!
               if (!routePolylines[p.id]) {
-                routePolylines[p.id] = L.polyline(directWaypoints, {
+                routePolylines[p.id] = L.polyline(initialWaypoints, {
                   color: '#16a34a',
                   weight: 6,
                   opacity: 0.95
                 }).addTo(map);
               } else {
-                routePolylines[p.id].setLatLngs(directWaypoints);
+                routePolylines[p.id].setLatLngs(initialWaypoints);
               }
 
               // 2) Use cached OSRM route if available, or fetch in background
@@ -341,7 +373,7 @@
                 fetch(`/api/maps/route/?start_lat=${colLoc.latitude}&start_lng=${colLoc.longitude}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
                   .then(res => res.json())
                   .then(routeData => {
-                    if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
+                    if (routeData && routeData.coordinates && routeData.coordinates.length > 2) {
                       routeCache[routeKey] = routeData.coordinates;
                       if (selectedCollectorId === p.collector_id && routePolylines[p.id]) {
                         routePolylines[p.id].setLatLngs(routeData.coordinates);
@@ -436,12 +468,12 @@
           });
       }
 
-      // Memory & CPU friendly polling (pauses when browser tab is inactive)
+      // Memory & CPU friendly 5-second auto-refresh polling
       let livePollInterval = null;
       function startLivePolling() {
         if (!livePollInterval) {
           loadLiveOverview();
-          livePollInterval = setInterval(loadLiveOverview, 4000);
+          livePollInterval = setInterval(loadLiveOverview, 5000);
         }
       }
       function stopLivePolling() {

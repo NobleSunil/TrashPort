@@ -1,81 +1,131 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap');
 
-/* Main font styling */
+/* Main font styling & Dot-grid background */
 body {
-  font-family: 'Outfit', sans-serif;
-  background-color: #f8f9fa;
-  color: #333333;
+  font-family: 'Fira Sans', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  background-image: radial-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-/* Custom Card Styles */
+/* Nothing OS 5.0 Lucent Effect with Green Tint */
+.lucent-card {
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px -8px rgba(5, 150, 105, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lucent-card:hover {
+  border-color: rgba(5, 150, 105, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -10px rgba(5, 150, 105, 0.15);
+}
+
+.lucent-bar {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.lucent-pill-green {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
+  font-family: 'Fira Code', monospace;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+.lucent-pill-blue {
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #1d4ed8;
+  font-family: 'Fira Code', monospace;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+.lucent-pill-yellow {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #b45309;
+  font-family: 'Fira Code', monospace;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+/* Custom Card Overrides */
 .card {
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.6) 0%, rgba(255, 255, 255, 0.85) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-3px);
+  border-color: rgba(5, 150, 105, 0.4);
+  box-shadow: 0 12px 28px rgba(5, 150, 105, 0.12) !important;
 }
 
 /* Header customization */
 .navbar {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: 0 4px 20px rgba(5, 150, 105, 0.05);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.15) !important;
 }
 
 .navbar-brand {
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.5px;
-  color: #1a1a1a !important;
+  color: #0f172a !important;
 }
 
 /* Buttons style */
 .btn {
-  border-radius: 8px;
-  font-weight: 500;
-  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
   transition: all 0.2s ease-in-out;
 }
 
 .btn-primary {
-  background-color: #4f46e5;
-  border-color: #4f46e5;
+  background-color: #059669;
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
 }
 
 .btn-primary:hover, .btn-primary:focus {
-  background-color: #4338ca;
-  border-color: #4338ca;
+  background-color: #047857;
+  border-color: #047857;
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
 }
 
-/* Alert tweaks */
-.alert {
-  border-radius: 10px;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.alert-debug {
-  color: black;
-  background-color: white;
-  border-color: #d6e9c6;
-}
-
-.alert-error {
-  color: #b94a48;
-  background-color: #f2dede;
-  border-color: #eed3d7;
+.btn-success {
+  background-color: #059669;
+  border-color: #059669;
 }
 
 /* Forms styling */
 .form-control, .form-select {
-  border-radius: 8px;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #cbd5e1;
+  background-color: rgba(255, 255, 255, 0.9);
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }

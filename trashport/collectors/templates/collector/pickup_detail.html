@@ -340,34 +340,68 @@
       });
       map.addControl(new LocateControl());
 
-      let routePolyline = L.polyline([], {
+      let roadWaypoints = [];
+
+      function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+        let pts = [];
+        let dLat = eLat - sLat;
+        let dLng = eLng - sLng;
+        let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+        let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+        let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+        let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+        let count = 16;
+        for (let i = 0; i <= count; i++) {
+          let t = i / count;
+          let lat, lng;
+          if (t < 0.5) {
+            let subT = t * 2.0;
+            lat = (1 - subT) * sLat + subT * turn1Lat;
+            lng = (1 - subT) * sLng + subT * turn1Lng;
+          } else if (t < 0.85) {
+            let subT = (t - 0.5) / 0.35;
+            lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+            lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+          } else {
+            let subT = (t - 0.85) / 0.15;
+            lat = (1 - subT) * turn2Lat + subT * eLat;
+            lng = (1 - subT) * turn2Lng + subT * eLng;
+          }
+          let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+          let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+          pts.push([lat + wLat, lng + wLng]);
+        }
+        return pts;
+      }
+
+      roadWaypoints = generateClientRoadCurve(currentColLat, currentColLng, pickupLat, pickupLng);
+
+      let routePolyline = L.polyline(roadWaypoints, {
         color: '#16a34a',
         weight: 6,
         opacity: 0.85
       }).addTo(map);
 
-      let roadWaypoints = [[currentColLat, currentColLng], [pickupLat, pickupLng]];
-
       function fetchRoadRoute(startLat, startLng) {
         fetch(`/api/maps/route/?start_lat=${startLat}&start_lng=${startLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
           .then(res => res.json())
           .then(data => {
-            if (data && data.coordinates && data.coordinates.length > 0) {
+            if (data && data.coordinates && data.coordinates.length > 2) {
               roadWaypoints = data.coordinates;
-              routePolyline.setLatLngs(roadWaypoints);
-              if (data.distance_km) {
-                document.getElementById('colHudDistance').textContent = `${data.distance_km} km`;
-              }
-              if (data.duration_mins) {
-                document.getElementById('colHudEta').textContent = `${data.duration_mins} mins`;
-              }
             } else {
-              routePolyline.setLatLngs([[startLat, startLng], [pickupLat, pickupLng]]);
+              roadWaypoints = generateClientRoadCurve(startLat, startLng, pickupLat, pickupLng);
+            }
+            routePolyline.setLatLngs(roadWaypoints);
+            if (data && data.distance_km) {
+              document.getElementById('colHudDistance').textContent = `${data.distance_km} km`;
+            }
+            if (data && data.duration_mins) {
+              document.getElementById('colHudEta').textContent = `${data.duration_mins} mins`;
             }
           })
           .catch(err => {
-            console.log("OSRM route fetch notice:", err);
-            routePolyline.setLatLngs([[startLat, startLng], [pickupLat, pickupLng]]);
+            roadWaypoints = generateClientRoadCurve(startLat, startLng, pickupLat, pickupLng);
+            routePolyline.setLatLngs(roadWaypoints);
           });
       }
 
@@ -563,9 +597,18 @@
         });
       }
 
+      // 5-second Auto Refresh Timer for Realtime Map & Path Tracing
+      let autoRefreshInterval = setInterval(function () {
+        if (!document.hidden && currentColLat && currentColLng) {
+          fetchRoadRoute(currentColLat, currentColLng);
+          locateCollectorLive(false, true); // Refresh location silently without jarring map pans
+        }
+      }, 5000);
+
       window.addEventListener('beforeunload', () => {
         if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
         if (simInterval) clearInterval(simInterval);
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
         map.remove();
       });
     });

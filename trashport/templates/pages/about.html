@@ -1,112 +1,169 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}About Us | TrashPort{% endblock title %}
+{% block title %}About TrashPort | Intelligent Waste Logistics{% endblock title %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .about-hero-glow {
+    background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(16, 185, 129, 0.12), transparent);
+  }
+  .tech-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    transition: all 0.15s ease;
+  }
+  .tech-chip:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+  .role-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .role-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+  .role-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.1);
+    border-color: #cbd5e1;
+  }
+  .role-card.citizen::before { background: linear-gradient(90deg, #10b981, #34d399); }
+  .role-card.collector::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .role-card.admin::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+  .stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-family: 'Fira Code', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+</style>
+{% endblock css %}
 
 {% block content %}
-<div class="py-5">
+<div style="padding: 0 0 60px;">
+
   <!-- Hero Section -->
-  <div class="text-center max-w-3xl mx-auto mb-5">
-    <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 rounded-pill mb-3 fs-6">
-      <i class="fas fa-leaf me-1"></i> About TrashPort
-    </span>
-    <h1 class="display-5 fw-bold text-dark mb-3">
-      Transforming Urban Waste Management Through Smart Logistics
+  <div class="about-hero-glow" style="text-align: center; padding: 56px 20px 48px; max-width: 780px; margin: 0 auto;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 9999px; margin-bottom: 20px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #059669;">About TrashPort</span>
+    </div>
+    <h1 style="font-size: clamp(1.875rem, 4vw, 3rem); font-weight: 800; color: #0f172a; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px;">
+      Transforming Urban Waste Management<br>Through <span style="color: #059669;">Smart Logistics</span>
     </h1>
-    <p class="lead text-muted px-md-4">
-      TrashPort is an end-to-end, on-demand smart waste management and recycling platform designed to modernize urban sanitation. By bridging the gap between households, field collectors, and municipal authorities, we eliminate the inefficiencies of traditional static route scheduling. Our platform optimizes waste logistics through real-time pickup requests, AI-assisted customer service, and distance-based automated dispatching.
+    <p style="font-size: 1.05rem; color: #64748b; line-height: 1.7; max-width: 640px; margin: 0 auto;">
+      TrashPort is an end-to-end, on-demand smart waste management and recycling platform designed to modernize urban sanitation — bridging citizens, collectors, and municipal authorities through real-time intelligence.
     </p>
   </div>
 
-  <!-- Mission Banner Card -->
-  <div class="card border-0 shadow-sm rounded-4 bg-dark text-white p-4 p-md-5 mb-5 overflow-hidden position-relative">
-    <div class="position-relative z-1">
-      <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-25 text-success rounded-circle p-3 mb-3">
-        <i class="fas fa-bullseye fa-2x"></i>
+  <!-- Mission Banner -->
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1e1b4b 100%); border-radius: 20px; padding: 44px 44px; margin-bottom: 32px; position: relative; overflow: hidden;">
+    <!-- Ambient glow -->
+    <div style="position: absolute; top: -60px; right: -60px; width: 320px; height: 320px; background: radial-gradient(circle, rgba(99, 102, 241, 0.2), transparent 70%); pointer-events: none;"></div>
+    <div style="position: absolute; bottom: -60px; left: -40px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(16,185,129,0.15), transparent 70%); pointer-events: none;"></div>
+
+    <div style="position: relative;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; margin-bottom: 16px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/>
+        </svg>
       </div>
-      <h2 class="h3 fw-bold mb-3 text-white">Our Mission</h2>
-      <p class="fs-5 text-light opacity-90 mb-0 leading-relaxed" style="max-width: 900px;">
-        We aim to build a cleaner, more sustainable urban ecosystem by making waste collection transparent, efficient, and rewarding. We believe that by incentivizing citizens to recycle and empowering collectors with fair, automated earnings, we can revolutionize how cities handle their daily waste footprint.
+      <h2 style="font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 12px; letter-spacing: -0.02em;">Our Mission</h2>
+      <p style="font-size: 1rem; color: rgba(255,255,255,0.75); line-height: 1.75; max-width: 840px;">
+        We aim to build a cleaner, more sustainable urban ecosystem by making waste collection <strong style="color: #34d399;">transparent, efficient, and rewarding</strong>. By incentivizing citizens to recycle and empowering collectors with fair, automated earnings, we are revolutionizing how cities handle their daily waste footprint — eliminating inefficiencies of static route scheduling through real-time demand and AI-assisted logistics.
       </p>
     </div>
   </div>
 
-  <!-- Ecosystem Section -->
-  <div class="mb-5">
-    <div class="text-center mb-4">
-      <h2 class="fw-bold text-dark">How the Ecosystem Works</h2>
-      <p class="text-muted">Designed for seamless collaboration between citizens, collectors, and city administrators.</p>
+  <!-- How Ecosystem Works — Role Cards -->
+  <div style="margin-bottom: 40px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 9999px; font-family: 'Fira Code', monospace; font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Ecosystem Architecture</div>
+      <h2 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; letter-spacing: -0.025em; margin-bottom: 8px;">How the Ecosystem Works</h2>
+      <p style="color: #64748b; font-size: 0.9rem;">Designed for seamless collaboration between citizens, collectors, and city administrators.</p>
     </div>
 
     <div class="row g-4">
-      <!-- For Citizens -->
+      <!-- Citizens -->
       <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
-          <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
-            <i class="fas fa-user-shield fa-xl"></i>
+        <div class="role-card citizen">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; margin-bottom: 16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
           </div>
-          <h3 class="h5 fw-bold text-dark mb-2">For Citizens</h3>
-          <span class="badge bg-success bg-opacity-10 text-success fw-semibold mb-3 w-auto align-self-start">On-Demand & Rewarding</span>
-          <p class="text-secondary small mb-0">
-            Schedule waste collection on your terms. Citizens can easily book pickups, categorize their waste, and estimate weight—all assisted by our integrated Groq AI chatbot. Through our digital wallet system, users earn recycling incentive points for high-value categories, while active subscribers enjoy zero-fee routine collections.
+          <span class="stat-pill" style="background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.2); margin-bottom: 10px;">On-Demand &amp; Rewarding</span>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 10px; letter-spacing: -0.01em;">For Citizens</h3>
+          <p style="font-size: 0.85rem; color: #64748b; line-height: 1.7; margin: 0;">
+            Schedule waste collection on your terms. Categorize waste, estimate weight, and earn recycling incentive points for high-value categories. Active subscribers enjoy <strong>zero-fee</strong> routine collections with our integrated Groq AI chatbot assistant.
           </p>
         </div>
       </div>
 
-      <!-- For Collectors -->
+      <!-- Collectors -->
       <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
-          <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
-            <i class="fas fa-truck-pickup fa-xl"></i>
+        <div class="role-card collector">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); border-radius: 12px; margin-bottom: 16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+            </svg>
           </div>
-          <h3 class="h5 fw-bold text-dark mb-2">For Collectors</h3>
-          <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold mb-3 w-auto align-self-start">Optimized & Fair Routing</span>
-          <p class="text-secondary small mb-0">
-            We empower verified drivers with a live, geolocation-aware job board. Our automated dispatch engine uses proximity algorithms to assign the nearest available jobs. With on-site weight verification and automated commission calculations—factoring in both base fees and travel distance—collectors are guaranteed transparent and immediate digital payouts.
+          <span class="stat-pill" style="background: rgba(59,130,246,0.1); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); margin-bottom: 10px;">Optimized &amp; Fair Routing</span>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 10px; letter-spacing: -0.01em;">For Collectors</h3>
+          <p style="font-size: 0.85rem; color: #64748b; line-height: 1.7; margin: 0;">
+            Verified drivers get a live, geolocation-aware job board. Our automated dispatch engine assigns nearest jobs using proximity algorithms. On-site weight verification and automated commission calculations guarantee <strong>transparent, immediate digital payouts</strong>.
           </p>
         </div>
       </div>
 
-      <!-- For Administrators -->
+      <!-- Administrators -->
       <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 hover-top transition-all">
-          <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
-            <i class="fas fa-chart-line fa-xl"></i>
+        <div class="role-card admin">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.25); border-radius: 12px; margin-bottom: 16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
           </div>
-          <h3 class="h5 fw-bold text-dark mb-2">For Administrators</h3>
-          <span class="badge bg-info bg-opacity-10 text-info fw-semibold mb-3 w-auto align-self-start">Complete Operational Oversight</span>
-          <p class="text-secondary small mb-0">
-            The Admin Control Room is the central nervous system of TrashPort. City authorities and platform managers gain real-time visibility through live GPS fleet tracking, automated compliance audits, and dynamic dashboard analytics covering revenue, recycled tonnage, and collector payouts.
+          <span class="stat-pill" style="background: rgba(139,92,246,0.1); color: #7c3aed; border: 1px solid rgba(139,92,246,0.2); margin-bottom: 10px;">Complete Oversight</span>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 10px; letter-spacing: -0.01em;">For Administrators</h3>
+          <p style="font-size: 0.85rem; color: #64748b; line-height: 1.7; margin: 0;">
+            The Admin Control Room is the central nervous system of TrashPort. City authorities gain real-time visibility through live GPS fleet tracking, automated compliance audits, and dynamic dashboards covering revenue, recycled tonnage, and collector payouts.
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Tech Stack Section -->
-  <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-light mb-4">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-4 text-center text-lg-start">
-        <div class="d-inline-flex align-items-center justify-content-center bg-dark text-white rounded-3 p-3 mb-3" style="width: 56px; height: 56px;">
-          <i class="fas fa-microchip fa-xl"></i>
-        </div>
-        <h3 class="fw-bold text-dark mb-2">Powered by Modern Technology</h3>
-        <p class="text-muted small mb-0">Scalable, fast, and secure infrastructure designed for modern civic operations.</p>
-      </div>
-      <div class="col-lg-8">
-        <p class="text-secondary mb-4">
-          TrashPort is built for scale and speed. Powered by a robust Django framework, REST APIs, and PostgreSQL, the platform integrates Stripe for seamless payments and Haversine distance calculations for precision routing. It is a comprehensive technological solution for a complex civic challenge.
-        </p>
-        <div class="d-flex flex-wrap gap-2">
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-python text-primary me-1"></i> Django 5</span>
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-database text-info me-1"></i> PostgreSQL</span>
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-stripe text-indigo me-1"></i> Stripe Payments</span>
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-robot text-success me-1"></i> Groq AI Chatbot</span>
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fas fa-map-marked-alt text-warning me-1"></i> Leaflet / Maps</span>
-          <span class="badge bg-white text-dark border px-3 py-2 rounded-pill"><i class="fab fa-docker text-primary me-1"></i> Docker & Redis</span>
-        </div>
-      </div>
-    </div>
   </div>
+
 </div>
 {% endblock content %}

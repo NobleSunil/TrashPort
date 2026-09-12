@@ -351,24 +351,58 @@
           }
           collectorMarker.bindPopup(`<b>🚛 Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
 
+          function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+            let pts = [];
+            let dLat = eLat - sLat;
+            let dLng = eLng - sLng;
+            let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+            let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+            let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+            let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+            let count = 16;
+            for (let i = 0; i <= count; i++) {
+              let t = i / count;
+              let lat, lng;
+              if (t < 0.5) {
+                let subT = t * 2.0;
+                lat = (1 - subT) * sLat + subT * turn1Lat;
+                lng = (1 - subT) * sLng + subT * turn1Lng;
+              } else if (t < 0.85) {
+                let subT = (t - 0.5) / 0.35;
+                lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+                lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+              } else {
+                let subT = (t - 0.85) / 0.15;
+                lat = (1 - subT) * turn2Lat + subT * eLat;
+                lng = (1 - subT) * turn2Lng + subT * eLng;
+              }
+              let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+              let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+              pts.push([lat + wLat, lng + wLng]);
+            }
+            return pts;
+          }
+
+          // Instantly set curved road waypoints before network request
+          routePolyline.setLatLngs(generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng));
+
           // Fetch OSRM Road Geometry
           fetch(`/api/maps/route/?start_lat=${cLat}&start_lng=${cLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
             .then(res => res.json())
             .then(routeData => {
-              if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
-                routePolyline.setLatLngs(routeData.coordinates);
-                if (routeData.distance_km !== undefined) {
-                  document.getElementById('hudDistance').textContent = `${routeData.distance_km} km`;
-                }
-                if (routeData.duration_mins !== undefined) {
-                  document.getElementById('hudEta').textContent = `${routeData.duration_mins} mins`;
-                }
-              } else {
-                routePolyline.setLatLngs([[cLat, cLng], [pickupLat, pickupLng]]);
+              let pts = (routeData && routeData.coordinates && routeData.coordinates.length > 2)
+                ? routeData.coordinates
+                : generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng);
+              routePolyline.setLatLngs(pts);
+              if (routeData && routeData.distance_km !== undefined) {
+                document.getElementById('hudDistance').textContent = `${routeData.distance_km} km`;
+              }
+              if (routeData && routeData.duration_mins !== undefined) {
+                document.getElementById('hudEta').textContent = `${routeData.duration_mins} mins`;
               }
             })
             .catch(err => {
-              routePolyline.setLatLngs([[cLat, cLng], [pickupLat, pickupLng]]);
+              routePolyline.setLatLngs(generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng));
             });
 
           // Fit bounds smoothly on initial load without jarring repetitive re-centering
