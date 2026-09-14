@@ -60,7 +60,19 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         
         from trashport.payments.models import UPIPayoutRequest
         total_upi_redeemed = UPIPayoutRequest.objects.filter(status=UPIPayoutRequest.Statuses.COMPLETED).aggregate(total=Sum("amount"))["total"] or 0
-        context["recent_upi_payouts"] = UPIPayoutRequest.objects.select_related("collector").order_by("-created_at")[:8]
+
+        # Dynamic Filters & Limit for UPI Payouts Table
+        payout_per_page = self.request.GET.get("payout_per_page", "5").strip()
+        payouts_qs = UPIPayoutRequest.objects.select_related("collector").order_by("-created_at")
+        if payout_per_page == "all":
+            context["recent_upi_payouts"] = payouts_qs
+        else:
+            try:
+                p_limit = int(payout_per_page)
+            except ValueError:
+                p_limit = 5
+            context["recent_upi_payouts"] = payouts_qs[:p_limit]
+        context["payout_per_page"] = payout_per_page
         context["total_upi_redeemed"] = total_upi_redeemed
 
         completion_rate = round((completed_pickups / total_pickups * 100), 1) if total_pickups > 0 else 0
@@ -112,9 +124,10 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["trend_labels_json"] = json.dumps(trend_labels)
         context["trend_counts_json"] = json.dumps(trend_counts)
 
-        # Dynamic Filters for Recent Pickups Table
+        # Dynamic Filters & Limits for Recent Pickups Table
         selected_status = self.request.GET.get("status", "").strip()
         search_query = self.request.GET.get("q", "").strip()
+        per_page = self.request.GET.get("per_page", "5").strip()
 
         pickups_qs = PickupRequest.objects.select_related("citizen", "address", "category", "collector").all().order_by("-created_at")
 
@@ -127,13 +140,35 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
                 | Q(address__city__icontains=search_query)
             )
 
-        context["recent_pickups"] = pickups_qs[:20]
+        if per_page == "all":
+            context["recent_pickups"] = pickups_qs
+        else:
+            try:
+                limit = int(per_page)
+            except ValueError:
+                limit = 5
+            context["recent_pickups"] = pickups_qs[:limit]
+
         context["selected_status"] = selected_status
         context["search_query"] = search_query
-        # Dashboard components
-        context["complaints"] = Complaint.objects.filter(
+        context["per_page"] = per_page
+
+        # Dynamic Filters for Pending Complaints
+        complaint_per_page = self.request.GET.get("complaint_per_page", "5").strip()
+        complaints_qs = Complaint.objects.filter(
             status=Complaint.StatusChoices.PENDING
-        ).select_related("citizen", "pickup_request").order_by("-created_at")[:15]
+        ).select_related("citizen", "pickup_request").order_by("-created_at")
+
+        if complaint_per_page == "all":
+            context["complaints"] = complaints_qs
+        else:
+            try:
+                c_limit = int(complaint_per_page)
+            except ValueError:
+                c_limit = 5
+            context["complaints"] = complaints_qs[:c_limit]
+        context["complaint_per_page"] = complaint_per_page
+
         context["categories"] = WasteCategory.objects.all()
         context["tiers"] = SubscriptionTier.objects.all()
         context["collector_payout_setting"] = CollectorPayoutSetting.get_settings()
