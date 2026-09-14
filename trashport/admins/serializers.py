@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from waste_management.models import WasteCategory, SubscriptionTier
+from waste_management.models import WasteCategory
 
 
 class WasteCategorySerializer(serializers.ModelSerializer):
@@ -7,8 +7,3 @@ class WasteCategorySerializer(serializers.ModelSerializer):
         model = WasteCategory
         fields = "__all__"
 
-
-class SubscriptionTierSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SubscriptionTier
-        fields = "__all__"

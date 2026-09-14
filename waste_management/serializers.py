@@ -2,8 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest, Complaint
-
+from .models import Address, WasteCategory, PickupRequest, Complaint
 User = get_user_model()
 
 class UserShortSerializer(serializers.ModelSerializer):
@@ -16,25 +15,6 @@ class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         fields = "__all__"
-
-
-class SubscriptionTierSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SubscriptionTier
-        fields = "__all__"
-
-
-class SubscriptionSerializer(serializers.ModelSerializer):
-    tier_details = SubscriptionTierSerializer(source="tier", read_only=True)
-    user_details = UserShortSerializer(source="user", read_only=True)
-
-    class Meta:
-        model = Subscription
-        fields = [
-            "id", "user", "user_details", "tier", "tier_details", 
-            "start_date", "end_date", "is_active", "created_at", "updated_at"
-        ]
-
 
 class WasteCategorySerializer(serializers.ModelSerializer):
     class Meta:

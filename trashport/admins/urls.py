@@ -14,11 +14,8 @@ from trashport.admins.views import AdminLiveMapView
 from waste_management.views import (
     WasteCategoryListView,
     WasteCategoryCreateView,
-    SubscriptionTierListView,
-    SubscriptionTierCreateView,
     UserListView,
     AutoAssignPickupsView,
-    SubscriptionOverviewView,
     ExportPickupsCSVView,
     ExportRevenueCSVView,
     OperationsReportView,
@@ -34,9 +31,6 @@ urlpatterns = [
     path("categories/", WasteCategoryListView.as_view(), name="category_list"),
     path("categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
 
-    # Citizen & Commercial Subscription Tiers
-    path("tiers/", SubscriptionTierListView.as_view(), name="tier_list"),
-    path("tiers/new/", SubscriptionTierCreateView.as_view(), name="tier_create"),
 
     # User Management & Verification Status Reviews
     path("users/", UserListView.as_view(), name="user_list"),
@@ -44,8 +38,6 @@ urlpatterns = [
     # Auto-Dispatch Algorithm Trigger (Nearest Collector / Load Balancing)
     path("auto-assign/", AutoAssignPickupsView.as_view(), name="auto_assign"),
 
-    # Subscription Overview & Analytics Dashboard
-    path("subscriptions/", SubscriptionOverviewView.as_view(), name="subscription_overview"),
 
     # Operational Analytics & Reporting
     path("reports/operations/", OperationsReportView.as_view(), name="operations_report"),

@@ -278,7 +278,7 @@ trashport/media/
 .envs/
 
 # Databases
-*.sqlite3
+*.sqlite3*
 
 # Firebase credentials & certificates
 serviceAccountKey.json

@@ -28,11 +28,9 @@ from trashport.citizens.views import (
     CitizenComplaintCreateView as ComplaintCreateView,
     CitizenPickupRequestCreateView as PickupRequestCreateView,
 )
-from .models import Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest, Complaint
+from .models import Address, WasteCategory, PickupRequest, Complaint
 from .serializers import (
     AddressSerializer,
-    SubscriptionTierSerializer,
-    SubscriptionSerializer,
     WasteCategorySerializer,
     PickupRequestSerializer,
     ComplaintSerializer,
@@ -50,16 +48,6 @@ class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [drf_permissions.AllowAny]
 
 
-class SubscriptionTierViewSet(viewsets.ModelViewSet):
-    queryset = SubscriptionTier.objects.all().order_by("price")
-    serializer_class = SubscriptionTierSerializer
-    permission_classes = [drf_permissions.AllowAny]
-
-
-class SubscriptionViewSet(viewsets.ModelViewSet):
-    queryset = Subscription.objects.all().order_by("-created_at")
-    serializer_class = SubscriptionSerializer
-    permission_classes = [drf_permissions.AllowAny]
 
 
 class WasteCategoryViewSet(viewsets.ModelViewSet):
@@ -166,37 +154,6 @@ class ComplaintDetailView(LoginRequiredMixin, View):
         return HttpResponseForbidden("Invalid role")
 
 
-class SubscriptionTierListView(LoginRequiredMixin, View):
-    def get(self, request, *args, **kwargs):
-        if request.user.role == User.Roles.ADMIN or request.user.is_superuser:
-            from trashport.admins.views import AdminSubscriptionTierListView
-            return AdminSubscriptionTierListView.as_view()(request, *args, **kwargs)
-        return HttpResponseForbidden("Invalid role")
-
-
-class SubscriptionTierCreateView(LoginRequiredMixin, View):
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.role == User.Roles.ADMIN or request.user.is_superuser:
-            from trashport.admins.views import AdminSubscriptionTierCreateView
-            return AdminSubscriptionTierCreateView.as_view()(request, *args, **kwargs)
-        return HttpResponseForbidden("Invalid role")
-
-
-class SubscriptionTierUpdateView(LoginRequiredMixin, View):
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.role == User.Roles.ADMIN or request.user.is_superuser:
-            from trashport.admins.views import AdminSubscriptionTierUpdateView
-            return AdminSubscriptionTierUpdateView.as_view()(request, *args, **kwargs)
-        return HttpResponseForbidden("Invalid role")
-
-
-class SubscribeView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        if request.user.role == User.Roles.CITIZEN:
-            from trashport.citizens.views import CitizenSubscribeView
-            return CitizenSubscribeView.as_view()(request, *args, **kwargs)
-        return HttpResponseForbidden("Invalid role")
-
 
 class UserListView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
@@ -262,12 +219,6 @@ class AutoAssignPickupsView(LoginRequiredMixin, View):
         return HttpResponseForbidden("Invalid role")
 
 
-class SubscriptionOverviewView(LoginRequiredMixin, View):
-    def get(self, request, *args, **kwargs):
-        if request.user.role == User.Roles.ADMIN or request.user.is_superuser:
-            from trashport.admins.views import AdminSubscriptionOverviewView
-            return AdminSubscriptionOverviewView.as_view()(request, *args, **kwargs)
-        return HttpResponseForbidden("Invalid role")
 
 
 class ExportPickupsCSVView(LoginRequiredMixin, View):

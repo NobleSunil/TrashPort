@@ -2,7 +2,7 @@ import pytest
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from waste_management.models import (
-    Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest
+    Address, WasteCategory, PickupRequest
 )
 
 User = get_user_model()
@@ -82,13 +82,11 @@ def test_pickup_calculations_and_status_transitions():
     assert citizen.wallet_points == 60
 
 
-def test_subscribed_pickup_fee_calculation():
-    # 1. Setup users, category, subscription tier, and address
+def test_pickup_standard_fee_calculation():
     citizen = User.objects.create_user(
-        email="citizen_sub@example.com",
+        email="subcitizen@example.com",
         password="password123",
-        role=User.Roles.CITIZEN,
-        wallet_points=0
+        role=User.Roles.CITIZEN
     )
     address = Address.objects.create(
         user=citizen,
@@ -105,20 +103,6 @@ def test_subscribed_pickup_fee_calculation():
         points_per_kg=2
     )
     
-    # Setup active subscription
-    tier = SubscriptionTier.objects.create(
-        name="Premium Plan",
-        price=20.00,
-        is_active=True
-    )
-    Subscription.objects.create(
-        user=citizen,
-        tier=tier,
-        start_date=timezone.now().date(),
-        is_active=True
-    )
-    
-    # 2. Book pickup
     pickup = PickupRequest.objects.create(
         citizen=citizen,
         address=address,
@@ -127,12 +111,10 @@ def test_subscribed_pickup_fee_calculation():
         schedule_date=timezone.now()
     )
     
-    # Subscribed user: fee should be 0
-    assert pickup.fee == 0.00
+    assert pickup.fee == 15.00
     assert pickup.points_earned == 20
-    # Status should be PENDING immediately, since no payment is needed
-    assert pickup.status == PickupRequest.StatusChoices.PENDING
-    assert pickup.is_paid
+    assert pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT
+    assert not pickup.is_paid
 
 
 def test_admin_dashboard_view_analytics_and_filtering(client):

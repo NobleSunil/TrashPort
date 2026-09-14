@@ -16,13 +16,6 @@ class TestAdminViews:
         response = client.get(reverse("waste_management:category_list"))
         assert response.status_code == 200
 
-    def test_tier_list_view(self):
-        admin = User.objects.create_superuser(email="admin_tier@trashport.local", password="password")
-        client = Client()
-        client.force_login(admin)
-        response = client.get(reverse("waste_management:tier_list"))
-        assert response.status_code == 200
-
     def test_admin_approve_collector_verification(self):
         admin = User.objects.create_superuser(email="admin_verify@trashport.local", password="password")
         collector = User.objects.create_user(

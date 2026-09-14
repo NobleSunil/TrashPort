@@ -1,23 +1,11 @@
 from django.contrib import admin
-from .models import Address, SubscriptionTier, Subscription, WasteCategory, PickupRequest, Complaint
+from .models import Address, WasteCategory, PickupRequest, Complaint
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
     list_display = ["id", "user", "address_line1", "city", "state", "postal_code", "is_default"]
     list_filter = ["city", "state", "is_default"]
     search_fields = ["user__email", "address_line1", "city"]
-
-@admin.register(SubscriptionTier)
-class SubscriptionTierAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "price", "is_active", "created_at"]
-    list_filter = ["is_active"]
-    search_fields = ["name"]
-
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "tier", "start_date", "end_date", "is_active"]
-    list_filter = ["is_active", "tier"]
-    search_fields = ["user__email", "tier__name"]
 
 @admin.register(WasteCategory)
 class WasteCategoryAdmin(admin.ModelAdmin):

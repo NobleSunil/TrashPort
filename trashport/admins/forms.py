@@ -3,14 +3,13 @@ Admin and Operations Forms.
 
 Defines form structures for administrators to:
 - Configure Waste Categories (pricing per kg and green reward points).
-- Manage Subscription Tiers (pricing, billing cycles, active toggles).
 - Register verified waste collector accounts directly with encrypted credentials.
 """
 
 from django import forms
 from django.contrib.auth import get_user_model
 
-from waste_management.models import SubscriptionTier, WasteCategory
+from waste_management.models import WasteCategory
 
 User = get_user_model()
 
@@ -26,19 +25,6 @@ class WasteCategoryForm(forms.ModelForm):
             "fee_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.00"}),
             "points_per_kg": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
             "max_weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01", "placeholder": "Maximum allowed weight in kg (e.g. 100)"}),
-        }
-
-
-class SubscriptionTierForm(forms.ModelForm):
-    """Form for managing monthly/annual citizen subscription plans."""
-    class Meta:
-        model = SubscriptionTier
-        fields = ["name", "price", "description", "is_active"]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tier Name"}),
-            "price": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Description"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
 

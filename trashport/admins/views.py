@@ -13,8 +13,8 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
 from trashport.users.models import User
-from waste_management.models import Complaint, PickupRequest, Subscription, SubscriptionTier, WasteCategory
-from .forms import CollectorCreationForm, SubscriptionTierForm, WalletPointAdjustmentForm, WasteCategoryForm
+from waste_management.models import Complaint, PickupRequest, WasteCategory
+from .forms import CollectorCreationForm, WalletPointAdjustmentForm, WasteCategoryForm
 
 
 class AdminLiveMapView(LoginRequiredMixin, TemplateView):
@@ -170,7 +170,6 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["complaint_per_page"] = complaint_per_page
 
         context["categories"] = WasteCategory.objects.all()
-        context["tiers"] = SubscriptionTier.objects.all()
         context["collector_payout_setting"] = CollectorPayoutSetting.get_settings()
         context["unreviewed_feedback_count"] = AnonymousFeedback.objects.filter(is_reviewed=False).count()
         context["recent_anonymous_feedbacks"] = AnonymousFeedback.objects.all().order_by("-created_at")[:6]
@@ -329,36 +328,6 @@ class WasteCategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-# ==============================================================================
-# Subscription Tier CRUD Views
-# ==============================================================================
-
-class AdminSubscriptionTierListView(LoginRequiredMixin, ListView):
-    model = SubscriptionTier
-    template_name = "admin/tier_list.html"
-    context_object_name = "tiers"
-
-
-class AdminSubscriptionTierCreateView(LoginRequiredMixin, CreateView):
-    model = SubscriptionTier
-    form_class = SubscriptionTierForm
-    template_name = "admin/tier_form.html"
-    success_url = reverse_lazy("waste_management:tier_list")
-
-    def form_valid(self, form):
-        messages.success(self.request, "Subscription Tier created!")
-        return super().form_valid(form)
-
-
-class AdminSubscriptionTierUpdateView(LoginRequiredMixin, UpdateView):
-    model = SubscriptionTier
-    form_class = SubscriptionTierForm
-    template_name = "admin/tier_form.html"
-    success_url = reverse_lazy("waste_management:tier_list")
-
-    def form_valid(self, form):
-        messages.success(self.request, "Subscription Tier updated!")
-        return super().form_valid(form)
 
 
 # ==============================================================================
@@ -622,34 +591,6 @@ class AdminAutoAssignPickupsView(LoginRequiredMixin, View):
         return redirect("waste_management:dashboard")
 
 
-# ==============================================================================
-# Subscriptions Overview View
-# ==============================================================================
-
-class AdminSubscriptionOverviewView(LoginRequiredMixin, ListView):
-    """
-    Displays Pay-As-You-Use collection revenue, waste category rates,
-    recent transactions, and citizen plan overview.
-    """
-    model = Subscription
-    template_name = "admin/subscription_overview.html"
-    context_object_name = "subscriptions"
-
-    def get_queryset(self):
-        return Subscription.objects.select_related("user", "tier").all().order_by("-created_at")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["categories"] = WasteCategory.objects.all()
-        context["total_revenue"] = PickupRequest.objects.filter(is_paid=True).aggregate(total=Sum("fee"))["total"] or 0
-        context["total_weight_kg"] = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("weight_kg"))["total"] or 0
-        context["total_points_earned"] = PickupRequest.objects.aggregate(total=Sum("points_earned"))["total"] or 0
-        context["recent_paid_pickups"] = (
-            PickupRequest.objects.filter(is_paid=True)
-            .select_related("citizen", "category", "address")
-            .order_by("-created_at")[:20]
-        )
-        return context
 
 
 # ==============================================================================

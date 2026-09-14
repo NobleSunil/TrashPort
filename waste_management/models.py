@@ -34,33 +34,6 @@ class Address(models.Model):
         return f"{self.address_line1}, {self.city} ({self.user.email})"
 
 
-class SubscriptionTier(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.name} (Rs. {self.price})"
-
-
-class Subscription(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="subscriptions"
-    )
-    tier = models.ForeignKey(SubscriptionTier, on_delete=models.PROTECT)
-    start_date = models.DateField()
-    end_date = models.DateField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.user.email} - {self.tier.name}"
 
 
 class WasteCategory(models.Model):
@@ -319,12 +292,8 @@ class PickupRequest(models.Model):
                     count = PickupRequest.objects.filter(citizen_id=self.citizen_id).count()
                     self.user_pickup_number = count + 1
 
-            # Check subscription
-            has_sub = Subscription.objects.filter(user=self.citizen, is_active=True).exists()
-            if has_sub:
-                self.fee = Decimal("0.00")
-            else:
-                self.fee = Decimal(str(self.weight_kg)) * Decimal(str(self.category.fee_per_kg))
+            # Calculate collection fee based on category rate
+            self.fee = Decimal(str(self.weight_kg)) * Decimal(str(self.category.fee_per_kg))
             
             self.points_earned = int(Decimal(str(self.weight_kg)) * Decimal(str(self.category.points_per_kg)))
             

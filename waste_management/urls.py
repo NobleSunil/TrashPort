@@ -6,10 +6,8 @@ from .views import (
     PickupRequestCreateView, PickupRequestDetailView, PickupStatusUpdateView,
     ComplaintListView, ComplaintCreateView, ComplaintDetailView,
     WasteCategoryListView, WasteCategoryCreateView, WasteCategoryUpdateView,
-    SubscribeView,
-    SubscriptionTierListView, SubscriptionTierCreateView, SubscriptionTierUpdateView,
     UserListView, CollectorCreateView, UserDetailView, UserToggleActiveView, CollectorVerificationView, WalletAdjustView, CollectorRedeemUPIView,
-    AutoAssignPickupsView, SubscriptionOverviewView, ExportPickupsCSVView, ExportRevenueCSVView,
+    AutoAssignPickupsView, ExportPickupsCSVView, ExportRevenueCSVView,
     OperationsReportView,
     PaymentCheckoutView, PaymentSuccessView, PickupInvoiceView,
     CollectorPayoutSettingUpdateView,
@@ -26,9 +24,7 @@ urlpatterns = [
     path("wallet/", CitizenWalletView.as_view(), name="wallet"),
     path("wallet/redeem-upi/", CollectorRedeemUPIView.as_view(), name="collector_redeem_upi"),
     
-    # Subscriptions
-    path("subscriptions/<int:pk>/subscribe/", SubscribeView.as_view(), name="subscribe"),
-    
+
     # Addresses CRUD
     path("addresses/", AddressListView.as_view(), name="address_list"),
     path("addresses/new/", AddressCreateView.as_view(), name="address_create"),
@@ -56,10 +52,6 @@ urlpatterns = [
     path("manage/categories/new/", WasteCategoryCreateView.as_view(), name="category_create"),
     path("manage/categories/<int:pk>/edit/", WasteCategoryUpdateView.as_view(), name="category_update"),
 
-    # Admin Master Entries - Tiers
-    path("manage/tiers/", SubscriptionTierListView.as_view(), name="tier_list"),
-    path("manage/tiers/new/", SubscriptionTierCreateView.as_view(), name="tier_create"),
-    path("manage/tiers/<int:pk>/edit/", SubscriptionTierUpdateView.as_view(), name="tier_update"),
 
     # Admin Master Entries - Collector Payout Calculation Settings
     path("manage/payout-settings/", CollectorPayoutSettingUpdateView.as_view(), name="collector_payout_settings"),
@@ -72,10 +64,9 @@ urlpatterns = [
     path("manage/users/<int:pk>/verify/", CollectorVerificationView.as_view(), name="collector_verify"),
     path("manage/users/<int:pk>/wallet/", WalletAdjustView.as_view(), name="user_wallet_adjust"),
 
-    # Admin Subscriptions, Auto-Assign & Exports
+    # Admin Auto-Assign & Exports
     path("manage/live-map/", AdminLiveMapView.as_view(), name="live_map"),
     path("manage/pickups/auto-assign/", AutoAssignPickupsView.as_view(), name="pickup_auto_assign"),
-    path("manage/subscriptions/", SubscriptionOverviewView.as_view(), name="subscription_overview"),
     path("manage/reports/operations/", OperationsReportView.as_view(), name="operations_report"),
     path("manage/export/pickups/", ExportPickupsCSVView.as_view(), name="export_pickups_csv"),
     path("manage/export/revenue/", ExportRevenueCSVView.as_view(), name="export_revenue_csv"),

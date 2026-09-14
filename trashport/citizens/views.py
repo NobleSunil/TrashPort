@@ -13,7 +13,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
-from waste_management.models import Address, Complaint, PickupRequest, SubscriptionTier, Subscription, WasteCategory
+from waste_management.models import Address, Complaint, PickupRequest, WasteCategory
 from .forms import AddressForm, ComplaintForm, PickupRequestForm
 from trashport.payments.services import PaymentGatewayService, WalletService
 from trashport.payments.models import PaymentTransaction, WalletHistory
@@ -58,9 +58,6 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         context["addresses"] = Address.objects.filter(user=user, is_hidden=False)
         context["complaints"] = Complaint.objects.filter(citizen=user).select_related("pickup_request").order_by("-created_at")[:10]
         
-        # Subscription details
-        context["subscription"] = Subscription.objects.filter(user=user, is_active=True).select_related("tier").first()
-        context["available_tiers"] = SubscriptionTier.objects.filter(is_active=True)
         context["waste_categories"] = WasteCategory.objects.all().order_by("name")
 
         # Statistics & Metrics
@@ -348,27 +345,6 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
         return redirect("waste_management:pickup_detail", pk=pk)
 
 
-# ==============================================================================
-# Subscription View
-# ==============================================================================
-
-class CitizenSubscribeView(LoginRequiredMixin, View):
-    def post(self, request, pk, *args, **kwargs):
-        tier = get_object_or_404(SubscriptionTier, pk=pk)
-        user = request.user
-
-        # Deactivate old subscriptions
-        Subscription.objects.filter(user=user, is_active=True).update(is_active=False)
-
-        # Create new subscription
-        Subscription.objects.create(
-            user=user,
-            tier=tier,
-            start_date=timezone.now().date(),
-            is_active=True
-        )
-        messages.success(request, f"Successfully subscribed to {tier.name}!")
-        return redirect("waste_management:dashboard")
 
 
 # ==============================================================================

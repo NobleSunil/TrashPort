@@ -10,7 +10,7 @@ import django
 django.setup()
 
 from django.contrib.auth import get_user_model
-from waste_management.models import WasteCategory, SubscriptionTier, Address, PickupRequest
+from waste_management.models import WasteCategory, Address, PickupRequest
 from django.utils import timezone
 
 User = get_user_model()
@@ -32,20 +32,6 @@ def seed_demo_data():
         )
         if created:
             print(f"Created category: {name}")
-
-    # 2. Subscription Tiers
-    tiers = [
-        ("Green Starter", 19.99, "Basic weekly residential collection with 10 bonus points per pickup."),
-        ("Eco Family Pro", 49.99, "Bi-weekly collection with prioritized hazardous handling & rewards."),
-        ("Commercial Zero-Waste", 149.99, "Daily enterprise collection, customized manifests, and carbon credits."),
-    ]
-    for name, price, desc in tiers:
-        tier, created = SubscriptionTier.objects.get_or_create(
-            name=name,
-            defaults={"price": price, "description": desc, "is_active": True}
-        )
-        if created:
-            print(f"Created subscription tier: {name}")
 
     # 3. Demo Users
     if not User.objects.filter(email="collector@trashport.local").exists():
