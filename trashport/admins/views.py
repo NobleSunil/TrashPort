@@ -629,6 +629,73 @@ class AdminAutoAssignPickupsView(LoginRequiredMixin, View):
 
 
 # ==============================================================================
+# Shared Date Range Parsing Helper
+# ==============================================================================
+#
+# PURPOSE:
+#   Parses duration presets (today, yesterday, 7days, 30days, this_month,
+#   last_month, year, all) or custom start_date/end_date query parameters
+#   from an HTTP request into a normalized (duration, start_date, end_date) tuple.
+#
+# CONNECTIONS:
+#   - Used by: AdminOperationsReportView.get_context_data()
+#   - Can be reused by any admin view needing duration-based date filtering.
+#
+# RETURNS:
+#   Tuple of (duration: str, start_date: date|None, end_date: date|None)
+# ==============================================================================
+
+def _parse_date_range(request):
+    """Parse duration presets or custom date range from GET parameters."""
+    today = timezone.localdate()
+    duration = request.GET.get("duration", "").strip()
+    start_date_str = request.GET.get("start_date", "").strip()
+    end_date_str = request.GET.get("end_date", "").strip()
+
+    start_date = None
+    end_date = None
+
+    if start_date_str or end_date_str:
+        duration = "custom"
+        if start_date_str:
+            start_date = parse_date(start_date_str)
+        if end_date_str:
+            end_date = parse_date(end_date_str)
+    elif duration == "today":
+        start_date = today
+        end_date = today
+    elif duration == "yesterday":
+        start_date = today - timedelta(days=1)
+        end_date = today - timedelta(days=1)
+    elif duration == "7days":
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif duration == "30days":
+        start_date = today - timedelta(days=29)
+        end_date = today
+    elif duration == "this_month":
+        start_date = today.replace(day=1)
+        end_date = today
+    elif duration == "last_month":
+        first_day_current_month = today.replace(day=1)
+        last_day_last_month = first_day_current_month - timedelta(days=1)
+        start_date = last_day_last_month.replace(day=1)
+        end_date = last_day_last_month
+    elif duration == "year":
+        start_date = today.replace(month=1, day=1)
+        end_date = today
+    elif duration == "all":
+        start_date = None
+        end_date = None
+    else:
+        duration = "30days"
+        start_date = today - timedelta(days=29)
+        end_date = today
+
+    return duration, start_date, end_date
+
+
+# ==============================================================================
 # Operations & Analytics Report View
 # ==============================================================================
 
@@ -647,50 +714,7 @@ class AdminOperationsReportView(LoginRequiredMixin, TemplateView):
         context["role"] = user.role
 
         today = timezone.localdate()
-        duration = self.request.GET.get("duration", "").strip()
-        start_date_str = self.request.GET.get("start_date", "").strip()
-        end_date_str = self.request.GET.get("end_date", "").strip()
-
-        start_date = None
-        end_date = None
-
-        # Parse duration presets or custom date range
-        if start_date_str or end_date_str:
-            duration = "custom"
-            if start_date_str:
-                start_date = parse_date(start_date_str)
-            if end_date_str:
-                end_date = parse_date(end_date_str)
-        elif duration == "today":
-            start_date = today
-            end_date = today
-        elif duration == "yesterday":
-            start_date = today - timedelta(days=1)
-            end_date = today - timedelta(days=1)
-        elif duration == "7days":
-            start_date = today - timedelta(days=6)
-            end_date = today
-        elif duration == "30days":
-            start_date = today - timedelta(days=29)
-            end_date = today
-        elif duration == "this_month":
-            start_date = today.replace(day=1)
-            end_date = today
-        elif duration == "last_month":
-            first_day_current_month = today.replace(day=1)
-            last_day_last_month = first_day_current_month - timedelta(days=1)
-            start_date = last_day_last_month.replace(day=1)
-            end_date = last_day_last_month
-        elif duration == "year":
-            start_date = today.replace(month=1, day=1)
-            end_date = today
-        elif duration == "all":
-            start_date = None
-            end_date = None
-        else:
-            duration = "30days"
-            start_date = today - timedelta(days=29)
-            end_date = today
+        duration, start_date, end_date = _parse_date_range(self.request)
 
         context["duration"] = duration
         context["start_date"] = start_date.strftime("%Y-%m-%d") if start_date else ""

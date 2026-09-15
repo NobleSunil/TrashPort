@@ -111,7 +111,7 @@ class TestPasswordResetAndEmailViews:
     def test_password_reset_page_loads(self, client):
         response = client.get(reverse("account_reset_password"))
         assert response.status_code == HTTPStatus.OK
-        assert "Forgot Password?" in response.content.decode()
+        assert "Reset Your Password" in response.content.decode()
 
     def test_password_reset_submission_sends_email(self, client, user: User):
         response = client.post(

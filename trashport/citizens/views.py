@@ -565,7 +565,7 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                     error_msg="UPI ID is mandatory to proceed with payment.",
                     active_method="upi"
                 )
-                return self._render(request, context)
+                return render(request, self.template_name, context)
 
             pickup.fee = discounted_fee
             result = PaymentGatewayService.process_upi_payment(

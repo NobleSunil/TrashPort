@@ -189,30 +189,35 @@ class RoleDispatchView(LoginRequiredMixin, View):
         appropriate role-specific view class based on the logged-in user's role.
 
         FLOW:
-          1. Determine user's role (superusers → ADMIN)
-          2. Look up the target view class in role_map
-          3. Dynamically import the view class
-          4. Instantiate and call its as_view() to handle the request
-          5. Return HTTP 403 if no mapping exists for the role
+          1. Let LoginRequiredMixin handle unauthenticated users (→ 302 redirect)
+          2. Determine user's role (superusers → ADMIN)
+          3. Look up the target view class in role_map
+          4. Dynamically import the view class
+          5. Instantiate and call its as_view() to handle the request
+          6. Return HTTP 403 if no mapping exists for the role
         """
-        # ---- Step 1: Determine effective role ----
+        # ---- Step 1: Let LoginRequiredMixin redirect unauthenticated users ----
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        # ---- Step 2: Determine effective role ----
         role = getattr(request.user, "role", None)
         if request.user.is_superuser:
             role = User.Roles.ADMIN
 
-        # ---- Step 2: Look up target view path ----
+        # ---- Step 3: Look up target view path ----
         view_path = self.role_map.get(role)
         if not view_path:
             return HttpResponseForbidden("Invalid role")
 
-        # ---- Step 3: Dynamically import the view class ----
+        # ---- Step 4: Dynamically import the view class ----
         # Split "trashport.citizens.views.CitizenDashboardView" into
         # module = "trashport.citizens.views" and class_name = "CitizenDashboardView"
         module_path, class_name = view_path.rsplit(".", 1)
         module = importlib.import_module(module_path)
         view_class = getattr(module, class_name)
 
-        # ---- Step 4: Delegate to the role-specific view ----
+        # ---- Step 5: Delegate to the role-specific view ----
         return view_class.as_view()(request, *args, **kwargs)
 
 
