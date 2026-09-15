@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from waste_management.models import PickupRequest, Address, Complaint
+from trashport.core.waste_management.models import PickupRequest, Address, Complaint
 
 
 class CitizenPickupSerializer(serializers.ModelSerializer):

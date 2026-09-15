@@ -17,8 +17,8 @@ django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from trashport.chatbot.routing import websocket_urlpatterns as chatbot_ws
-from trashport.maps.routing import websocket_urlpatterns as maps_ws
+from trashport.services.chatbot.routing import websocket_urlpatterns as chatbot_ws
+from trashport.core.maps.routing import websocket_urlpatterns as maps_ws
 
 application = ProtocolTypeRouter(
     {

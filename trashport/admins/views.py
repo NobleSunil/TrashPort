@@ -8,18 +8,18 @@ PURPOSE:
   system, which checks user.role == ADMIN before forwarding here.
 
 CONNECTION MAP:
-  - waste_management/views.py   → dispatches to views in this file (DashboardView, etc.)
-  - waste_management/urls.py    → URL endpoints resolve through the dispatchers above
-  - trashport/admins/urls.py    → API-scoped admin routes (live map, reports)
-  - trashport/admins/forms.py   → form classes used by create/update views here
-  - waste_management/models.py  → PickupRequest, WasteCategory, Complaint, CollectorPayoutSetting
-  - trashport/payments/models.py → UPIPayoutRequest for payout history
+  - waste_management/views.py   Ã¢â€ â€™ dispatches to views in this file (DashboardView, etc.)
+  - waste_management/urls.py    Ã¢â€ â€™ URL endpoints resolve through the dispatchers above
+  - trashport/admins/urls.py    Ã¢â€ â€™ API-scoped admin routes (live map, reports)
+  - trashport/admins/forms.py   Ã¢â€ â€™ form classes used by create/update views here
+  - waste_management/models.py  Ã¢â€ â€™ PickupRequest, WasteCategory, Complaint, CollectorPayoutSetting
+  - trashport/payments/models.py Ã¢â€ â€™ UPIPayoutRequest for payout history
 
 IMPACT:
   - Adding a new admin feature: create the view class here, then add a dispatcher
     in waste_management/views.py and register the URL in waste_management/urls.py.
   - Modifying aggregation queries affects dashboard KPI cards and Chart.js graphs.
-  - CSV export views directly stream to browser — changes affect downloaded files.
+  - CSV export views directly stream to browser Ã¢â‚¬â€ changes affect downloaded files.
 """
 
 import csv
@@ -38,9 +38,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
-from trashport.payments.models import UPIPayoutRequest
+from trashport.services.payments.models import UPIPayoutRequest
 from trashport.users.models import User
-from waste_management.models import (
+from trashport.core.waste_management.models import (
     AnonymousFeedback,
     CollectorPayoutSetting,
     Complaint,
@@ -579,7 +579,7 @@ class AdminWalletAdjustView(LoginRequiredMixin, View):
         if form.is_valid():
             points = form.cleaned_data["points"]
             reason = form.cleaned_data.get("reason", "").strip()
-            from trashport.payments.services import WalletService
+            from trashport.services.payments.services import WalletService
             WalletService.adjust_points(
                 user=target,
                 points_delta=points,

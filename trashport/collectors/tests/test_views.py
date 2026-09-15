@@ -5,8 +5,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from trashport.payments.models import UPIPayoutRequest
-from waste_management.models import Address, PickupRequest, WasteCategory
+from trashport.services.payments.models import UPIPayoutRequest
+from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db

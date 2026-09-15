@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django import forms
 from django.utils import timezone
-from waste_management.models import Address, PickupRequest, Complaint
+from trashport.core.waste_management.models import Address, PickupRequest, Complaint
 
 
 class AddressForm(forms.ModelForm):
@@ -160,7 +160,7 @@ class ComplaintForm(forms.ModelForm):
             self.fields["pickup_request"].queryset = PickupRequest.objects.filter(citizen=user)
 
 
-from waste_management.models import AnonymousFeedback
+from trashport.core.waste_management.models import AnonymousFeedback
 
 class AnonymousFeedbackForm(forms.ModelForm):
     """Form for citizens and visitors to submit anonymous feedback directly to administrators."""

@@ -9,7 +9,7 @@ Defines form structures for administrators to:
 from django import forms
 from django.contrib.auth import get_user_model
 
-from waste_management.models import WasteCategory
+from trashport.core.waste_management.models import WasteCategory
 
 User = get_user_model()
 
@@ -72,7 +72,7 @@ class WalletPointAdjustmentForm(forms.Form):
     )
 
 
-from waste_management.models import CollectorPayoutSetting
+from trashport.core.waste_management.models import CollectorPayoutSetting
 
 class CollectorPayoutSettingForm(forms.ModelForm):
     """Form for admins to configure collector payout rates and commissions."""

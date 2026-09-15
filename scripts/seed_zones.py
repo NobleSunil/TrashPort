@@ -19,7 +19,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 import django
 django.setup()
 
-from trashport.maps.models import ServiceZone
+from trashport.core.maps.models import ServiceZone
 
 def seed_zones():
     """Seeds predefined geographic circular service zones into the database."""

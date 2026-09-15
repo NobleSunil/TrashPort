@@ -25,8 +25,8 @@ class TestCitizenViews:
     def test_invoice_view_paid_success(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
-        from trashport.payments.models import PaymentTransaction
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.services.payments.models import PaymentTransaction
 
         user = User.objects.create_user(email="invoice_user@trashport.local", name="Invoice User", role=User.Roles.CITIZEN)
         addr = Address.objects.create(
@@ -82,7 +82,7 @@ class TestCitizenViews:
     def test_invoice_view_unpaid_redirects(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         user = User.objects.create_user(email="unpaid_user@trashport.local", name="Unpaid User", role=User.Roles.CITIZEN)
         addr = Address.objects.create(
@@ -115,7 +115,7 @@ class TestCitizenViews:
     def test_invoice_view_forbidden_for_other_citizen(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         owner = User.objects.create_user(email="owner@trashport.local", name="Owner User", role=User.Roles.CITIZEN)
         intruder = User.objects.create_user(email="intruder@trashport.local", name="Intruder User", role=User.Roles.CITIZEN)
@@ -148,7 +148,7 @@ class TestCitizenViews:
     def test_citizen_dashboard_includes_invoices_tab(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         user = User.objects.create_user(email="cit_dash_inv@trashport.local", name="Dash Inv", role=User.Roles.CITIZEN)
         addr = Address.objects.create(
@@ -185,7 +185,7 @@ class TestCitizenViews:
         from datetime import timedelta
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, WasteCategory
+        from trashport.core.waste_management.models import Address, WasteCategory
         from trashport.citizens.forms import PickupRequestForm
 
         user = User.objects.create_user(email="timeval_cit@trashport.local", name="TimeVal Cit", role=User.Roles.CITIZEN)
@@ -241,7 +241,7 @@ class TestCitizenViews:
         from datetime import timedelta
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, WasteCategory
+        from trashport.core.waste_management.models import Address, WasteCategory
         from trashport.citizens.forms import PickupRequestForm
 
         user = User.objects.create_user(email="wt_cit@trashport.local", name="Weight Cit", role=User.Roles.CITIZEN)
@@ -274,7 +274,7 @@ class TestCitizenViews:
     def test_payment_checkout_mandatory_details(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         user = User.objects.create_user(email="pay_mand_cit@trashport.local", name="Pay Mand Cit", role=User.Roles.CITIZEN)
         addr = Address.objects.create(user=user, address_line1="12 Payment Rd", city="Kochi", postal_code="682001")
@@ -330,7 +330,7 @@ class TestCitizenViews:
     def test_pickup_cancellation_reason_and_assignment_lock(self):
         from decimal import Decimal
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         user = User.objects.create_user(email="cancel_cit@trashport.local", name="Cancel Cit", role=User.Roles.CITIZEN)
         collector = User.objects.create_user(email="cancel_col@trashport.local", name="Cancel Col", role=User.Roles.COLLECTOR)

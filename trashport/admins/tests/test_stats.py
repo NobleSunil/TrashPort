@@ -1,6 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-from waste_management.models import WasteCategory
+from trashport.core.waste_management.models import WasteCategory
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db

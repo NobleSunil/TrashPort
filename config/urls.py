@@ -1,5 +1,5 @@
 """
-config/urls.py — Master URL Configuration (Root URL Router)
+config/urls.py Ã¢â‚¬â€ Master URL Configuration (Root URL Router)
 ============================================================
 
 PURPOSE:
@@ -8,31 +8,31 @@ PURPOSE:
   the global URL structure.
 
 URL STRUCTURE OVERVIEW:
-  /                    → Home page (pages/home.html template)
-  /about/              → About page (pages/about.html template)
-  /accounts/           → django-allauth auth views (login, signup, logout, etc.)
-  /api/                → REST API (config/api_router.py → /api/users/, /api/addresses/, ...)
-  /api/schema/         → drf-spectacular OpenAPI schema (JSON/YAML download)
-  /api/docs/           → Swagger UI for interactive API exploration
-  /api/auth-token/     → DRF token authentication endpoint
-  /<ADMIN_URL>/        → Django admin panel (default: /django-admin/)
-  /api/maps/           → Map API (collector GPS, road routing)
-  /api/collectors/     → Collector Aadhaar OTP verification API
-  /                    → All other URLs handled by waste_management/urls.py
+  /                    Ã¢â€ â€™ Home page (pages/home.html template)
+  /about/              Ã¢â€ â€™ About page (pages/about.html template)
+  /accounts/           Ã¢â€ â€™ django-allauth auth views (login, signup, logout, etc.)
+  /api/                Ã¢â€ â€™ REST API (config/api_router.py Ã¢â€ â€™ /api/users/, /api/addresses/, ...)
+  /api/schema/         Ã¢â€ â€™ drf-spectacular OpenAPI schema (JSON/YAML download)
+  /api/docs/           Ã¢â€ â€™ Swagger UI for interactive API exploration
+  /api/auth-token/     Ã¢â€ â€™ DRF token authentication endpoint
+  /<ADMIN_URL>/        Ã¢â€ â€™ Django admin panel (default: /django-admin/)
+  /api/maps/           Ã¢â€ â€™ Map API (collector GPS, road routing)
+  /api/collectors/     Ã¢â€ â€™ Collector Aadhaar OTP verification API
+  /                    Ã¢â€ â€™ All other URLs handled by waste_management/urls.py
                          (dashboard, pickups, addresses, complaints, payments, etc.)
 
 CONNECTION MAP:
-  - waste_management/urls.py     → handles all citizen/collector/admin web UI URLs
-  - config/api_router.py         → handles all /api/ REST endpoints
-  - trashport/maps/urls.py       → handles /api/maps/ GPS and routing endpoints
-  - trashport/collectors/urls.py → handles /api/collectors/aadhaar/ endpoints
-  - config/settings/base.py      → ADMIN_URL, DEBUG mode for debug toolbar inclusion
+  - waste_management/urls.py     Ã¢â€ â€™ handles all citizen/collector/admin web UI URLs
+  - config/api_router.py         Ã¢â€ â€™ handles all /api/ REST endpoints
+  - trashport/maps/urls.py       Ã¢â€ â€™ handles /api/maps/ GPS and routing endpoints
+  - trashport/collectors/urls.py Ã¢â€ â€™ handles /api/collectors/aadhaar/ endpoints
+  - config/settings/base.py      Ã¢â€ â€™ ADMIN_URL, DEBUG mode for debug toolbar inclusion
 
 ALLAUTH AUTH VIEWS (at /accounts/):
-  /accounts/login/      → Sign in
-  /accounts/signup/     → Register (role is set during signup)
-  /accounts/logout/     → Sign out
-  /accounts/password/   → Password change/reset flows
+  /accounts/login/      Ã¢â€ â€™ Sign in
+  /accounts/signup/     Ã¢â€ â€™ Register (role is set during signup)
+  /accounts/logout/     Ã¢â€ â€™ Sign out
+  /accounts/password/   Ã¢â€ â€™ Password change/reset flows
 
 IMPACT:
   - Changing a URL prefix here changes ALL sub-URLs under it.
@@ -66,7 +66,7 @@ urlpatterns = [
     path("users/", include("trashport.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
-    path("", include("waste_management.urls")),
+    path("", include("trashport.core.waste_management.urls")),
     # Citizen-facing pages (wallet, etc.)
     path("citizen/", include("trashport.citizens.urls", namespace="citizens")),
     # ...
@@ -78,15 +78,15 @@ urlpatterns = [
 urlpatterns += [
     # API base url
     path("api/", include("config.api_router")),
-    path("api/firebase/", include("trashport.firebase.urls", namespace="api_firebase")),
+    path("api/firebase/", include("trashport.services.firebase.urls", namespace="api_firebase")),
     path("api/citizens/", include("trashport.citizens.urls", namespace="api_citizens")),
     path("api/collectors/", include("trashport.collectors.urls", namespace="api_collectors")),
     path("api/admins/", include("trashport.admins.urls", namespace="api_admins")),
-    path("api/payments/", include("trashport.payments.urls", namespace="api_payments")),
-    path("api/maps/", include("trashport.maps.urls", namespace="api_maps")),
-    path("api/notifications/", include("trashport.notifications.urls", namespace="api_notifications")),
-    path("api/dispatch/", include("trashport.dispatch.urls", namespace="api_dispatch")),
-    path("api/chatbot/", include("trashport.chatbot.urls", namespace="api_chatbot")),
+    path("api/payments/", include("trashport.services.payments.urls", namespace="api_payments")),
+    path("api/maps/", include("trashport.core.maps.urls", namespace="api_maps")),
+    path("api/notifications/", include("trashport.services.notifications.urls", namespace="api_notifications")),
+    path("api/dispatch/", include("trashport.services.dispatch.urls", namespace="api_dispatch")),
+    path("api/chatbot/", include("trashport.services.chatbot.urls", namespace="api_chatbot")),
     # DRF auth token
     path("api/auth-token/", obtain_auth_token, name="obtain_auth_token"),
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),

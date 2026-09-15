@@ -11,7 +11,7 @@ Routes:
 
 from django.urls import path
 from trashport.admins.views import AdminLiveMapView
-from waste_management.views import (
+from trashport.core.waste_management.views import (
     WasteCategoryListView,
     WasteCategoryCreateView,
     UserListView,

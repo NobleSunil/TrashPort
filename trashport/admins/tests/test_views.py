@@ -101,7 +101,7 @@ class TestAdminViews:
 
     def test_admin_operations_report_filtering_and_graphs(self):
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         admin = User.objects.create_superuser(email="admin_rep2@trashport.local", password="password")
         citizen = User.objects.create_user(email="cit_data@trashport.local", password="password", role=User.Roles.CITIZEN)
@@ -148,7 +148,7 @@ class TestAdminViews:
 
     def test_admin_export_csv_filtered_by_date(self):
         from django.utils import timezone
-        from waste_management.models import Address, PickupRequest, WasteCategory
+        from trashport.core.waste_management.models import Address, PickupRequest, WasteCategory
 
         admin = User.objects.create_superuser(email="admin_csv@trashport.local", password="password")
         citizen = User.objects.create_user(email="cit_csv@trashport.local", password="password", role=User.Roles.CITIZEN)
@@ -190,7 +190,7 @@ class TestAdminViews:
 
     def test_admin_update_collector_payout_settings(self):
         from django.utils import timezone
-        from waste_management.models import CollectorPayoutSetting, Address, WasteCategory, PickupRequest
+        from trashport.core.waste_management.models import CollectorPayoutSetting, Address, WasteCategory, PickupRequest
         admin = User.objects.create_superuser(email="admin_payout_calc@trashport.local", password="password")
         client = Client()
         client.force_login(admin)

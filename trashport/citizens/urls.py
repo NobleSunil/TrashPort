@@ -1,5 +1,5 @@
 from django.urls import path
-from waste_management.views import (
+from trashport.core.waste_management.views import (
     DashboardView,
     PickupRequestCreateView,
     PickupRequestDetailView,

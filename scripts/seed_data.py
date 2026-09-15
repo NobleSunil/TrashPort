@@ -10,7 +10,7 @@ import django
 django.setup()
 
 from django.contrib.auth import get_user_model
-from waste_management.models import WasteCategory, Address, PickupRequest
+from trashport.core.waste_management.models import WasteCategory, Address, PickupRequest
 from django.utils import timezone
 
 User = get_user_model()

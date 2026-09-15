@@ -1,5 +1,5 @@
 """
-config/api_router.py — REST API Router Configuration
+config/api_router.py â€” REST API Router Configuration
 ======================================================
 
 PURPOSE:
@@ -7,23 +7,23 @@ PURPOSE:
   This is the central registry for all JSON API endpoints at /api/....
 
 ROUTED ENDPOINTS:
-  /api/users/           → UserViewSet          (trashport/users/api/views.py)
-  /api/addresses/       → AddressViewSet       (waste_management/views.py)
-  /api/waste-categories/→ WasteCategoryViewSet (waste_management/views.py)
-  /api/pickup-requests/ → PickupRequestViewSet (waste_management/views.py)
-  /api/complaints/      → ComplaintViewSet     (waste_management/views.py)
+  /api/users/           â†’ UserViewSet          (trashport/users/api/views.py)
+  /api/addresses/       â†’ AddressViewSet       (waste_management/views.py)
+  /api/waste-categories/â†’ WasteCategoryViewSet (waste_management/views.py)
+  /api/pickup-requests/ â†’ PickupRequestViewSet (waste_management/views.py)
+  /api/complaints/      â†’ ComplaintViewSet     (waste_management/views.py)
 
 INCLUDED IN:
-  config/urls.py → path("api/", include("config.api_router"))
+  config/urls.py â†’ path("api/", include("config.api_router"))
 
 ROUTER TYPE:
-  - DEBUG=True  → DefaultRouter  (includes browsable /api/ root listing)
-  - DEBUG=False → SimpleRouter   (no browsable root, faster, no extra URL)
+  - DEBUG=True  â†’ DefaultRouter  (includes browsable /api/ root listing)
+  - DEBUG=False â†’ SimpleRouter   (no browsable root, faster, no extra URL)
 
 CONNECTION MAP:
-  - config/urls.py        → includes this file at /api/ prefix
-  - waste_management/views.py → provides the ViewSet classes
-  - trashport/users/api/views.py → provides UserViewSet
+  - config/urls.py        â†’ includes this file at /api/ prefix
+  - waste_management/views.py â†’ provides the ViewSet classes
+  - trashport/users/api/views.py â†’ provides UserViewSet
 
 IMPACT:
   - Adding a new ViewSet: import it here and call router.register().
@@ -38,7 +38,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.routers import SimpleRouter
 
 from trashport.users.api.views import UserViewSet
-from waste_management.views import (
+from trashport.core.waste_management.views import (
     AddressViewSet,
     WasteCategoryViewSet,
     PickupRequestViewSet,

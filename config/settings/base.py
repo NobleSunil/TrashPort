@@ -101,18 +101,20 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    # Role apps
     "trashport.users",
-    "trashport.firebase",
+    "trashport.admins",
     "trashport.citizens",
     "trashport.collectors",
-    "trashport.admins",
-    "trashport.payments",
-    "trashport.maps",
-    "trashport.notifications",
-    "trashport.dispatch",
-    "trashport.chatbot",
-    "waste_management",
-    # Your stuff: custom apps go here
+    # Core domain
+    "trashport.core.waste_management",
+    "trashport.core.maps",
+    # Services
+    "trashport.services.firebase",
+    "trashport.services.notifications",
+    "trashport.services.payments",
+    "trashport.services.dispatch",
+    "trashport.services.chatbot",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -120,7 +122,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # MIGRATIONS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#migration-modules
-MIGRATION_MODULES = {"sites": "trashport.contrib.sites.migrations"}
+MIGRATION_MODULES = {"sites": "trashport.core.contrib.sites.migrations"}
 
 # AUTHENTICATION
 # ------------------------------------------------------------------------------

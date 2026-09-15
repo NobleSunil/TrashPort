@@ -2,13 +2,13 @@
 URL configuration for the Collectors app.
 
 Aadhaar verification routes (COLLECTOR-SCOPED):
-  /api/collectors/aadhaar/initiate/  — validate Aadhaar number, generate demo OTP
-  /api/collectors/aadhaar/verify/    — verify OTP, mark collector as aadhaar_verified
+  /api/collectors/aadhaar/initiate/  â€” validate Aadhaar number, generate demo OTP
+  /api/collectors/aadhaar/verify/    â€” verify OTP, mark collector as aadhaar_verified
 
 All other routes delegate to the shared waste_management views.
 """
 from django.urls import path
-from waste_management.views import DashboardView, PickupStatusUpdateView, PickupRequestDetailView
+from trashport.core.waste_management.views import DashboardView, PickupStatusUpdateView, PickupRequestDetailView
 
 # Collector-scoped Aadhaar views (do NOT affect other roles)
 from .aadhaar_views import AadhaarInitiateView, AadhaarVerifyView, AadhaarVerifyPageView
@@ -21,8 +21,8 @@ urlpatterns = [
     path("jobs/<int:pk>/status/", PickupStatusUpdateView.as_view(), name="job_status"),
 
     # -------------------------------------------------------------------------
-    # Aadhaar verification — Collector signup only
-    # GET  /api/collectors/aadhaar/  — Page (HTML form)
+    # Aadhaar verification â€” Collector signup only
+    # GET  /api/collectors/aadhaar/  â€” Page (HTML form)
     # POST /api/collectors/aadhaar/initiate/
     # POST /api/collectors/aadhaar/verify/
     # -------------------------------------------------------------------------
