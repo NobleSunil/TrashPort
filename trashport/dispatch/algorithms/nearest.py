@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Tuple
 from trashport.maps.services import GeoService
 from django.contrib.auth import get_user_model
 

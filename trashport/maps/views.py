@@ -145,7 +145,7 @@ def pickup_live_tracking_view(request, pickup_id):
             c_loc = CollectorLocation.objects.get(collector=pickup.collector)
             collector_lat = float(c_loc.latitude)
             collector_lng = float(c_loc.longitude)
-            
+
             # Compute live distance
             distance_km = GeoService.haversine_distance(
                 collector_lat, collector_lng, pickup_lat, pickup_lng

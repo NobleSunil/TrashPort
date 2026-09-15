@@ -6,7 +6,7 @@ from django.urls import resolve
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from trashport.users.models import User
+    pass
 
 
 def test_detail():

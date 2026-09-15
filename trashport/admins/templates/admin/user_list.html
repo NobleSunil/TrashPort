@@ -121,7 +121,7 @@
           {% for u in users_list %}
             <tr>
               <td class="ps-3 fw-bold text-dark">{{ u.email }}</td>
-              <td>{{ u.name|default:"—" }}</td>
+              <td>{{ u.name|default:"Ã¢â‚¬â€" }}</td>
               <td>
                 {% if u.role == 'ADMIN' %}
                   <span class="badge bg-danger">Administrator</span>
@@ -147,7 +147,7 @@
                     </span>
                   {% endif %}
                 {% else %}
-                  <span class="text-muted small">—</span>
+                  <span class="text-muted small">Ã¢â‚¬â€</span>
                 {% endif %}
               </td>
               <td>

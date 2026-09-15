@@ -68,9 +68,7 @@ Citizen-specific views for managing user addresses, booking pickup requests, pay
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import models as db_models
 from django.db.models import Sum
-from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -105,7 +103,7 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         ).exclude(
             status__in=[PickupRequest.StatusChoices.COMPLETED, PickupRequest.StatusChoices.CANCELLED]
         ).select_related("category", "address", "collector").order_by("-created_at")
-        
+
         # History of completed and cancelled pickups
         history_pickups = PickupRequest.objects.filter(
             citizen=user,
@@ -117,10 +115,10 @@ class CitizenDashboardView(LoginRequiredMixin, TemplateView):
         context["completed_count"] = context["past_pickups"].count()
         context["cancelled_count"] = context["cancelled_pickups"].count()
         context["history_count"] = history_pickups.count()
-        
+
         context["addresses"] = Address.objects.filter(user=user, is_hidden=False)
         context["complaints"] = Complaint.objects.filter(citizen=user).select_related("pickup_request").order_by("-created_at")[:10]
-        
+
         context["waste_categories"] = WasteCategory.objects.all().order_by("name")
 
         # Statistics & Metrics
@@ -265,7 +263,7 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
                     "postal_code": addr.postal_code,
                 }
         context["addresses_json"] = json.dumps(addresses_data)
-        
+
         categories_data = {}
         for cat in WasteCategory.objects.all():
             categories_data[str(cat.id)] = {
@@ -280,7 +278,7 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
         form.instance.citizen = self.request.user
         submitted_lat = form.cleaned_data.get("latitude")
         submitted_lng = form.cleaned_data.get("longitude")
-        
+
         # If no saved address was selected, create a new Address from inline inputs
         if not form.cleaned_data.get("address"):
             addr = Address.objects.create(
@@ -780,7 +778,6 @@ class CitizenRemoveCouponView(LoginRequiredMixin, View):
 
 from django.http import JsonResponse
 from waste_management.models import AnonymousFeedback
-from .forms import AnonymousFeedbackForm
 
 class SubmitAnonymousFeedbackView(View):
     """
@@ -790,7 +787,7 @@ class SubmitAnonymousFeedbackView(View):
     """
     def post(self, request, *args, **kwargs):
         is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.content_type == "application/json"
-        
+
         if request.content_type == "application/json":
             import json
             try:

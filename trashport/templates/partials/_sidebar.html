@@ -3,24 +3,24 @@
     <div class="text-xs uppercase font-bold text-gray-400 tracking-wider">Navigation</div>
     <nav class="space-y-2">
       <a href="{% url 'waste_management:dashboard' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl bg-brand-50 text-brand-700">
-        📊 Dashboard
+        Ã°Å¸â€œÅ  Dashboard
       </a>
       {% if user.role == 'CITIZEN' %}
         <a href="{% url 'waste_management:pickup_create' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
-          📦 Book Pickup
+          Ã°Å¸â€œÂ¦ Book Pickup
         </a>
         <a href="{% url 'waste_management:address_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
-          📍 Addresses
+          Ã°Å¸â€œÂ Addresses
         </a>
         <a href="{% url 'waste_management:complaint_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
-          ⚠️ Complaints
+          Ã¢Å¡Â Ã¯Â¸Â Complaints
         </a>
       {% elif user.role == 'ADMIN' or user.is_superuser %}
         <a href="{% url 'waste_management:user_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
-          👥 Users
+          Ã°Å¸â€˜Â¥ Users
         </a>
         <a href="{% url 'waste_management:category_list' %}" class="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-xl text-gray-700 hover:bg-gray-50">
-          🏷️ Categories
+          Ã°Å¸ÂÂ·Ã¯Â¸Â Categories
         </a>
       {% endif %}
     </nav>

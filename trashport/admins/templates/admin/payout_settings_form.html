@@ -29,7 +29,7 @@
           <span class="text-muted small">Applied dynamically to all collection trips</span>
         </div>
         <div class="fs-5 fw-bold text-dark font-monospace mb-2">
-          Payout = Max(Base Min, Base Min + (Distance × Rate/km) + (Extra Weight Fee × Commission %))
+          Payout = Max(Base Min, Base Min + (Distance Ãƒâ€” Rate/km) + (Extra Weight Fee Ãƒâ€” Commission %))
         </div>
         <p class="text-muted small mb-0">
           Whenever a collector completes a pickup, TrashPort automatically computes their earnings using these admin parameters and credits their wallet balance instantly.
@@ -42,7 +42,7 @@
       <div class="card-body p-4">
         <form method="post">
           {% csrf_token %}
-          
+
           <div class="mb-4">
             <label class="form-label fw-bold text-dark">
               <i class="bi bi-cash-stack text-success me-1"></i> Minimum Base Payout (Rs.)

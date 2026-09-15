@@ -5,9 +5,9 @@
 {% block content %}
 <div class="py-4 row justify-content-center">
   <div class="col-md-10 col-lg-8">
-    
+
     <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
-      ← Back to Dashboard
+      Ã¢â€ Â Back to Dashboard
     </a>
 
     <!-- Live Map & ETA HUD -->
@@ -182,7 +182,7 @@
                 <input type="hidden" name="action" value="cancel">
                 <div class="modal-body p-4">
                   <p class="text-muted mb-3">Please specify why you are cancelling this pickup request:</p>
-                  
+
                   <div class="mb-3">
                     <label for="cancelReasonPreset" class="form-label fw-bold small">Reason Category:*</label>
                     <select class="form-select" id="cancelReasonPreset" onchange="handlePresetReasonChange(this)" required>
@@ -310,8 +310,8 @@
       });
 
       let baseMaps = {
-        "📍 Street Map (OSM)": streetLayer,
-        "🛰️ Satellite View": satelliteLayer
+        "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
+        "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
       };
 
       let map = L.map('trackingMap', {
@@ -328,7 +328,7 @@
 
       // Pickup Pin Marker
       let pickupMarker = L.marker([pickupLat, pickupLng]).addTo(map)
-        .bindPopup("<b>📍 Pickup Location</b><br>{{ pickup.address.address_line1 }}").openPopup();
+        .bindPopup("<b>Ã°Å¸â€œÂ Pickup Location</b><br>{{ pickup.address.address_line1 }}").openPopup();
 
       let collectorMarker = null;
       let routePolyline = L.polyline([], {
@@ -349,7 +349,7 @@
           } else {
             collectorMarker.setLatLng([cLat, cLng]);
           }
-          collectorMarker.bindPopup(`<b>🚛 Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
+          collectorMarker.bindPopup(`<b>Ã°Å¸Å¡â€º Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
 
           function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
             let pts = [];

@@ -13,5 +13,5 @@ class NavigateAction(BaseChatAction):
             return {"reply": "Opening Pickup History...", "action": "NAVIGATE", "url": "/dashboard/"}
         elif "tier" in lowered or "subscription" in lowered or "category" in lowered or "pricing" in lowered:
             return {"reply": "TrashPort uses pay-per-collection pricing based on waste category and weight. Opening Waste Categories...", "action": "NAVIGATE", "url": "/manage/categories/"}
-        
+
         return {"reply": "Taking you to your main dashboard...", "action": "NAVIGATE", "url": "/dashboard/"}

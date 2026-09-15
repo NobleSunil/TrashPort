@@ -1,5 +1,4 @@
 from typing import Tuple
-from trashport.maps.models import ServiceZone
 
 
 class ZoneBasedDispatch:

@@ -177,7 +177,6 @@
 {% block content %}
 <div class="container py-4">
 
-  <!-- ================= HERO WELCOME BANNER ================= -->
   <div class="dashboard-hero p-4 p-md-5 mb-4 shadow">
     <div class="row align-items-center position-relative" style="z-index: 2;">
       <div class="col-lg-7 mb-4 mb-lg-0">
@@ -212,7 +211,6 @@
     </div>
   </div>
 
-  <!-- ================= METRICS & STATS CARDS ================= -->
   <div class="row g-3 mb-4">
     <!-- Wallet Points -->
     <div class="col-sm-6 col-lg-3">
@@ -296,7 +294,6 @@
     </div>
   </div>
 
-  <!-- ================= NAV PILLS TABS ================= -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 pt-3 pb-0">
       <ul class="nav nav-pills nav-pills-custom gap-2 border-bottom pb-3" id="dashboardTabs" role="tablist">
@@ -617,7 +614,7 @@
                       Rs. {{ pickup.fee }}
                       {% if pickup.status == 'CANCELLED' and pickup.is_paid %}
                         <div class="small text-danger fw-semibold" style="font-size:0.75rem;">
-                          <i class="fas fa-undo-alt me-1"></i>Refund in 3–7 days
+                          <i class="fas fa-undo-alt me-1"></i>Refund in 3Ã¢â‚¬â€œ7 days
                         </div>
                       {% endif %}
                     {% else %}
@@ -948,7 +945,7 @@
       if (btn) btn.disabled = false;
     });
   }
-  // ── History Filter Functionality ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ History Filter Functionality Ã¢â€â‚¬Ã¢â€â‚¬
   document.querySelectorAll("#historyFilterGroup button").forEach(btn => {
     btn.addEventListener("click", function () {
       document.querySelectorAll("#historyFilterGroup button").forEach(b => b.classList.remove("active"));

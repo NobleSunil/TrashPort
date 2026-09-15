@@ -36,7 +36,7 @@ def test_pickup_calculations_and_status_transitions():
         fee_per_kg=2.50,
         points_per_kg=10
     )
-    
+
     # 2. Test unsubscribed booking
     pickup = PickupRequest.objects.create(
         citizen=citizen,
@@ -45,7 +45,7 @@ def test_pickup_calculations_and_status_transitions():
         weight_kg=6.00,
         schedule_date=timezone.now()
     )
-    
+
     # Fee should be 6 * 2.50 = 15.00
     assert pickup.fee == 15.00
     # Points should be 6 * 10 = 60
@@ -53,30 +53,30 @@ def test_pickup_calculations_and_status_transitions():
     # Status should be AWAITING_PAYMENT
     assert pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT
     assert not pickup.is_paid
-    
+
     # 3. Test pay action
     pickup.is_paid = True
     pickup.status = PickupRequest.StatusChoices.PENDING
     pickup.save()
-    
+
     # Refetch
     pickup.refresh_from_db()
     assert pickup.is_paid
     assert pickup.status == PickupRequest.StatusChoices.PENDING
-    
+
     # 4. Test collector transit and completion
     pickup.collector = collector
     pickup.status = PickupRequest.StatusChoices.ASSIGNED
     pickup.save()
-    
+
     # Transit
     pickup.status = PickupRequest.StatusChoices.IN_TRANSIT
     pickup.save()
-    
+
     # Complete
     pickup.status = PickupRequest.StatusChoices.COMPLETED
     pickup.save()
-    
+
     # Citizen should receive reward points in their wallet
     citizen.refresh_from_db()
     assert citizen.wallet_points == 60
@@ -102,7 +102,7 @@ def test_pickup_standard_fee_calculation():
         fee_per_kg=1.50,
         points_per_kg=2
     )
-    
+
     pickup = PickupRequest.objects.create(
         citizen=citizen,
         address=address,
@@ -110,7 +110,7 @@ def test_pickup_standard_fee_calculation():
         weight_kg=10.00,
         schedule_date=timezone.now()
     )
-    
+
     assert pickup.fee == 15.00
     assert pickup.points_earned == 20
     assert pickup.status == PickupRequest.StatusChoices.AWAITING_PAYMENT

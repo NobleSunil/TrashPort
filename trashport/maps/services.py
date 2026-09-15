@@ -137,10 +137,10 @@ class GeoService:
         dlat = end_lat - start_lat
         dlng = end_lng - start_lng
         dist_km = GeoService.haversine_distance(start_lat, start_lng, end_lat, end_lng)
-        
+
         # Determine number of intermediate road turns based on distance
         num_segments = max(16, int(dist_km * 5))
-        
+
         # Calculate primary street corner turn points (simulating L-shaped & S-shaped city road grid)
         # Point A -> Street Turn 1 -> Street Turn 2 -> Point B
         turn1_lat = start_lat + dlat * 0.60 + (dlng * 0.12)
@@ -171,9 +171,9 @@ class GeoService:
             # Add micro road curvature wobbles matching real street blocks
             wobble_lat = math.sin(t * math.pi * 4) * (dlat * 0.02)
             wobble_lng = math.cos(t * math.pi * 4) * (dlng * 0.02)
-            
+
             points.append([round(lat + wobble_lat, 6), round(lng + wobble_lng, 6)])
-            
+
         return points
 
     @staticmethod
@@ -219,7 +219,7 @@ class GeoService:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TrashPort/2.0",
             "Accept": "application/json"
         }
-        
+
         endpoints = [
             f"https://router.project-osrm.org/route/v1/driving/{start_lng},{start_lat};{end_lng},{end_lat}?overview=full&geometries=geojson",
             f"https://routing.openstreetmap.de/routed-car/route/v1/driving/{start_lng},{start_lat};{end_lng},{end_lat}?overview=full&geometries=geojson",
@@ -239,7 +239,7 @@ class GeoService:
                         leaflet_coords = [[pt[1], pt[0]] for pt in raw_coords]
                         distance_km = round(first_route.get("distance", 0) / 1000.0, 2)
                         duration_mins = max(1, round(first_route.get("duration", 0) / 60.0))
-                        
+
                         if len(leaflet_coords) >= 2:
                             result = {
                                 "coordinates": leaflet_coords,

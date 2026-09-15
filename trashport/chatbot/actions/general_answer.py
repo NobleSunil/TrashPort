@@ -13,7 +13,7 @@ class GeneralAnswerAction(BaseChatAction):
             return {
                 "reply": "Waste Segregation Tip: Keep Dry waste (paper, plastic, glass) separate from Wet organic waste (food scraps). E-waste and batteries should be booked for hazardous collection."
             }
-        
+
         return {
             "reply": "I'm here to assist with all your TrashPort waste logistics needs. Would you like to schedule a pickup or view available services?"
         }

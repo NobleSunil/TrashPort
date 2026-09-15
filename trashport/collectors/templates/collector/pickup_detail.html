@@ -5,9 +5,9 @@
 {% block content %}
 <div class="py-4 row justify-content-center">
   <div class="col-md-10 col-lg-9">
-    
+
     <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
-      ← Back to Dashboard
+      Ã¢â€ Â Back to Dashboard
     </a>
 
     <!-- Navigation & GPS Broadcaster Card -->
@@ -21,7 +21,7 @@
                 <i class="fas fa-satellite-dish me-1"></i> <span id="colDetailAccuracyText">GPS: Accurate</span>
               </span>
             </div>
-            <span class="text-muted small">Use layer control (top-right) to toggle 🛰️ Satellite / 🗺️ Street view.</span>
+            <span class="text-muted small">Use layer control (top-right) to toggle Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite / Ã°Å¸â€”ÂºÃ¯Â¸Â Street view.</span>
           </div>
           <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2">
             <button id="btnLocateCollector" class="btn btn-sm btn-success text-white fw-semibold shadow-sm" title="Center map to my accurate live location">
@@ -85,7 +85,7 @@
             <p class="mb-2"><strong>Waste Category:</strong> <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span></p>
             <p class="mb-2"><strong>Category Base Rate:</strong> Rs. {{ pickup.category.fee_per_kg }}/kg (Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
             <p class="mb-2"><strong>Estimated Weight (Customer):</strong> <span class="badge bg-secondary">{{ pickup.weight_kg }} kg</span></p>
-            
+
             {% if pickup.is_weight_verified %}
               <div class="p-3 bg-success-subtle border border-success-subtle rounded-3 my-3">
                 <div class="d-flex justify-content-between align-items-center">
@@ -104,7 +104,7 @@
             <p class="mb-2"><strong>Scheduled Slot:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
             <hr>
             <p class="mb-2"><strong>Total Customer Fee:</strong> <span class="fs-5 fw-bold text-dark">Rs. {{ pickup.fee }}</span></p>
-            <p class="mb-2"><strong>Collector Earning Payout:</strong> 
+            <p class="mb-2"><strong>Collector Earning Payout:</strong>
               <span class="fs-5 fw-bold text-success">
                 Rs. {{ pickup.collector_earnings|default:preview_earnings }}
               </span>
@@ -138,7 +138,7 @@
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
         <h5 class="card-title fw-bold text-dark mb-3">Collector Action Panel</h5>
-        
+
         {% if pickup.status == 'PENDING' %}
           <p class="text-muted small">This job is pending. Claim it to assign it to yourself.</p>
           {% if is_verified %}
@@ -155,7 +155,7 @@
               <span>Account pending administrator verification. You cannot claim jobs until verified.</span>
             </div>
           {% endif %}
-        
+
         {% elif pickup.status == 'ASSIGNED' and pickup.collector == request.user %}
           <p class="text-muted small">Update status when you begin transit to customer location.</p>
           <div class="d-flex gap-2">
@@ -182,19 +182,19 @@
               <i class="fas fa-balance-scale text-success me-1"></i> Step 2: Measure & Verify Waste Weight
             </h6>
             <p class="text-muted small mb-3">
-              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} × 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg). As a collector, you earn <strong>Rs. 25 min base + Rs. 2.00/km + 20% commission of the extra weight charge</strong>!
+              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} Ãƒâ€” 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg). As a collector, you earn <strong>Rs. 25 min base + Rs. 2.00/km + 20% commission of the extra weight charge</strong>!
             </p>
 
             <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" id="verificationForm">
               {% csrf_token %}
               <input type="hidden" name="action" value="complete">
-              
+
               <div class="row g-3 align-items-end mb-3">
                 <div class="col-md-5">
                   <label class="form-label fw-bold small text-dark">Measured Actual Weight (kg):</label>
                   <div class="input-group">
-                    <input type="number" step="0.01" min="0.1" name="actual_weight_kg" id="actualWeightInput" 
-                           class="form-control form-control-lg fw-bold text-success" 
+                    <input type="number" step="0.01" min="0.1" name="actual_weight_kg" id="actualWeightInput"
+                           class="form-control form-control-lg fw-bold text-success"
                            value="{{ pickup.weight_kg }}" required>
                     <span class="input-group-text fw-bold">kg</span>
                   </div>
@@ -252,7 +252,7 @@
               });
             </script>
           </div>
-          
+
         {% else %}
           <p class="text-muted mb-0 small">Job status is: <strong>{{ pickup.status }}</strong></p>
         {% endif %}
@@ -294,8 +294,8 @@
       });
 
       let baseMaps = {
-        "📍 Street Map (OSM)": streetLayer,
-        "🛰️ Satellite View": satelliteLayer
+        "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
+        "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
       };
 
       let map = L.map('collectorMap', {
@@ -312,11 +312,11 @@
 
       // User Pickup Marker
       let userMarker = L.marker([pickupLat, pickupLng]).addTo(map)
-        .bindPopup("<b>📍 User Pickup Spot</b><br>{{ pickup.address.address_line1 }}").openPopup();
+        .bindPopup("<b>Ã°Å¸â€œÂ User Pickup Spot</b><br>{{ pickup.address.address_line1 }}").openPopup();
 
       // Collector Vehicle Marker
       let colMarker = L.marker([currentColLat, currentColLng]).addTo(map)
-        .bindPopup("<b>🚛 Your Location (Collector)</b>");
+        .bindPopup("<b>Ã°Å¸Å¡â€º Your Location (Collector)</b>");
 
       let liveAccuracyCircle = null;
 
@@ -469,7 +469,7 @@
 
             if (badge && text) {
               badge.classList.remove('d-none');
-              text.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+              text.textContent = `GPS: Ã‚Â±${Math.round(accuracy)}m (Accurate)`;
             }
 
             if (btn && btnText) {
@@ -500,7 +500,7 @@
         locateBtn.addEventListener('click', () => locateCollectorLive(true, false));
       }
 
-      // Auto-locate on page load — use live GPS as the default starting position
+      // Auto-locate on page load Ã¢â‚¬â€ use live GPS as the default starting position
       // Falls back to the offset position silently if GPS is unavailable
       if (navigator.geolocation) {
         locateCollectorLive(true, true);
@@ -580,7 +580,7 @@
               const text = document.getElementById('colDetailAccuracyText');
               if (badge && text) {
                 badge.classList.remove('d-none');
-                text.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+                text.textContent = `Live GPS: Ã‚Â±${Math.round(accuracy)}m`;
               }
             },
             (err) => {

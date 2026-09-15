@@ -10,10 +10,10 @@
       <div class="card-body p-4">
         <h1 class="h3 mb-2 text-success fw-bold"><i class="fas fa-truck-pickup me-2"></i>Book Waste Pickup</h1>
         <p class="text-muted mb-4">Set your pickup location on the map, enter your address, and select your category and schedule.</p>
-        
+
         <form method="post">
           {% csrf_token %}
-          
+
           <div class="mb-4">
             <h5 class="fw-bold text-dark mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>1. Set Exact Pickup Location on Map</h5>
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -37,13 +37,13 @@
             <!-- Address Input / Selection Panel -->
             <div class="p-3 bg-light rounded-3 border">
               <h6 class="fw-bold text-dark mb-3"><i class="fas fa-home me-2 text-success"></i>Pickup Address</h6>
-              
+
               {% if form.address.field.queryset.count > 0 %}
                 <div class="mb-3">
                   <label class="form-label fw-bold small text-muted">Option A: Select Saved Address</label>
                   {{ form.address }}
                 </div>
-                <div class="text-center text-muted small my-2 fw-bold">— OR ENTER NEW ADDRESS BELOW —</div>
+                <div class="text-center text-muted small my-2 fw-bold">Ã¢â‚¬â€ OR ENTER NEW ADDRESS BELOW Ã¢â‚¬â€</div>
               {% endif %}
 
               <div class="row g-2">
@@ -102,7 +102,7 @@
                   </div>
                 </div>
                 <div class="form-text small text-muted mt-1">
-                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM – 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM Ã¢â‚¬â€œ 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
                 </div>
               </div>
             </div>
@@ -175,8 +175,8 @@
       });
 
       let baseMaps = {
-        "📍 Street Map (OSM)": streetLayer,
-        "🛰️ Satellite View": satelliteLayer
+        "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
+        "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
       };
 
       let map = L.map('mapPicker', {
@@ -500,7 +500,7 @@
         updateHiddenSchedule();
       }
 
-      // ── Dynamic Category Weight Limit ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Dynamic Category Weight Limit Ã¢â€â‚¬Ã¢â€â‚¬
       const categoriesData = {{ categories_json|safe|default:"{}" }};
       const categorySelect = document.getElementById("id_category");
       const weightInput = document.getElementById("id_weight_kg");

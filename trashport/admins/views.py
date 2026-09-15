@@ -24,12 +24,11 @@ IMPACT:
 
 import csv
 import json
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse
@@ -96,7 +95,7 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         total_points_earned = PickupRequest.objects.aggregate(total=Sum("points_earned"))["total"] or 0
         total_collector_payouts = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("collector_earnings"))["total"] or 0
         total_extra_charges = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("extra_fee"))["total"] or 0
-        
+
         total_upi_redeemed = UPIPayoutRequest.objects.filter(status=UPIPayoutRequest.Statuses.COMPLETED).aggregate(total=Sum("amount"))["total"] or 0
 
         # Dynamic Filters & Limit for UPI Payouts Table
@@ -537,7 +536,7 @@ class AdminCollectorVerificationView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         collector = get_object_or_404(User, pk=pk, role=User.Roles.COLLECTOR)
         action = request.POST.get("action")  # "approve" or "reject"
-        
+
         if action == "approve":
             collector.is_verified = True
             collector.verification_status = User.VerificationStatus.APPROVED
@@ -561,7 +560,7 @@ class AdminWalletAdjustView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
 
         target = get_object_or_404(User, pk=pk)
-        
+
         # Check if collector cash adjustment or citizen point adjustment
         cash_amount = request.POST.get("cash_amount")
         if cash_amount and target.role == User.Roles.COLLECTOR:

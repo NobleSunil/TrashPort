@@ -26,7 +26,7 @@ class TestDispatchScheduler:
             name="Collector",
             role=User.Roles.COLLECTOR
         )
-        
+
         cat = WasteCategory.objects.create(name="Free Recyclables", fee_per_kg=0.0)
         addr = Address.objects.create(
             user=citizen,

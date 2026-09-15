@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
-  /* ── Dashboard Root Variables ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Dashboard Root Variables Ã¢â€â‚¬Ã¢â€â‚¬ */
   :root {
     --brand-primary: #059669;
     --surface-bg: #f8fafc;
@@ -27,7 +27,7 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* ── Page Layout ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Page Layout Ã¢â€â‚¬Ã¢â€â‚¬ */
   .collector-dashboard {
     min-height: 100vh;
     background-color: #f8fafc;
@@ -36,7 +36,7 @@
     padding: 2rem 0 4rem;
   }
 
-  /* ── Hero Header ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Hero Header Ã¢â€â‚¬Ã¢â€â‚¬ */
   .dashboard-hero {
     background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
     backdrop-filter: blur(20px) saturate(180%);
@@ -95,7 +95,7 @@
     font-weight: 500;
   }
 
-  /* ── Stat Cards ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Stat Cards Ã¢â€â‚¬Ã¢â€â‚¬ */
   .stats-row {
     position: relative;
     z-index: 10;
@@ -132,7 +132,7 @@
   .stat-icon-blue   { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; }
   .stat-icon-green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
   .stat-icon-amber  { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
-  
+
   .stat-text-label {
     font-size: 0.73rem;
     font-weight: 700;
@@ -154,7 +154,7 @@
     margin-top: 0.2rem;
   }
 
-  /* ── Section Cards ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Section Cards Ã¢â€â‚¬Ã¢â€â‚¬ */
   .section-card {
     background: var(--card-bg);
     border-radius: var(--radius-md);
@@ -250,7 +250,7 @@
     color: #ffffff !important;
   }
 
-  /* ── Data Table ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Data Table Ã¢â€â‚¬Ã¢â€â‚¬ */
   .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -309,7 +309,7 @@
   .weight-text { font-weight: 700; color: var(--text-primary); }
   .schedule-text { font-size: 0.8rem; color: var(--text-secondary); }
 
-  /* ── Status Badges ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Status Badges Ã¢â€â‚¬Ã¢â€â‚¬ */
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -326,7 +326,7 @@
   .status-completed{ background: #d1fae5; color: #047857; }
   .status-default  { background: #f1f5f9; color: #475569; }
 
-  /* ── Action Buttons ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Action Buttons Ã¢â€â‚¬Ã¢â€â‚¬ */
   .actions-wrap {
     display: flex;
     align-items: center;
@@ -355,7 +355,7 @@
   .btn-claim    { background: #16a34a; color: white; }
   .btn-claim:hover { background: #15803d; color: white; }
 
-  /* ── Empty State ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Empty State Ã¢â€â‚¬Ã¢â€â‚¬ */
   .empty-state {
     text-align: center;
     padding: 3rem 2rem;
@@ -370,7 +370,7 @@
   }
   .empty-state-desc { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
 
-  /* ── History Toggle ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ History Toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
   .history-toggle-btn {
     display: inline-flex;
     align-items: center;
@@ -387,7 +387,7 @@
   }
   .history-toggle-btn:hover { background: #dcfce7; border-color: #16a34a; }
 
-  /* ── Animations ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Animations Ã¢â€â‚¬Ã¢â€â‚¬ */
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -398,7 +398,7 @@
   .anim-delay-3 { animation-delay: 0.15s; }
   .anim-delay-4 { animation-delay: 0.20s; }
 
-  /* ── Responsive ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Responsive Ã¢â€â‚¬Ã¢â€â‚¬ */
   @media (max-width: 768px) {
     .dashboard-hero { padding: 2rem 1.5rem 4.5rem; }
     .hero-title { font-size: 1.55rem; }
@@ -424,7 +424,7 @@
 <div class="collector-dashboard">
   <div class="container-xl px-3 px-md-4">
 
-    <!-- ── Collector Verification Notice (if pending or rejected) ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Collector Verification Notice (if pending or rejected) Ã¢â€â‚¬Ã¢â€â‚¬ -->
     {% if not is_verified %}
       {% if verification_status == 'REJECTED' %}
         <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-4 d-flex align-items-center gap-3">
@@ -452,7 +452,7 @@
       {% endif %}
     {% endif %}
 
-    <!-- ── Aadhaar Verification Notice (Collector-scoped — DEMO MODE) ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Aadhaar Verification Notice (Collector-scoped Ã¢â‚¬â€ DEMO MODE) Ã¢â€â‚¬Ã¢â€â‚¬ -->
     {# This banner is shown only to collectors who haven't completed Aadhaar  #}
     {# verification. It reads from CollectorAadhaarProfile, not users.User.   #}
     {% if not aadhaar_verified %}
@@ -464,7 +464,7 @@
           </div>
           <div>
             <h5 class="fw-bold mb-1" style="color:#9a3412;">
-              🪪 Aadhaar Verification Pending
+              Ã°Å¸ÂªÂª Aadhaar Verification Pending
               <span class="badge ms-2 fw-normal" style="background:#ea580c; font-size:0.65rem;">DEMO MODE</span>
             </h5>
             <p class="mb-0 small" style="color:#7c2d12;">
@@ -478,11 +478,11 @@
         <a href="/api/collectors/aadhaar/"
            class="btn fw-bold px-4 py-2 flex-shrink-0"
            style="background:#ea580c; color:white; border-radius:0.6rem; white-space:nowrap;">
-          Verify Aadhaar →
+          Verify Aadhaar Ã¢â€ â€™
         </a>
       </div>
     {% else %}
-      <!-- Aadhaar verified badge — shown after successful verification -->
+      <!-- Aadhaar verified badge Ã¢â‚¬â€ shown after successful verification -->
       <div class="alert border-0 shadow-sm rounded-4 px-4 py-3 mb-4 d-flex align-items-center gap-3"
            style="background:#f0fdf4; border-left: 4px solid #16a34a !important;">
         <i class="fas fa-id-card-alt" style="color:#16a34a; font-size:1.5rem;"></i>
@@ -494,7 +494,7 @@
       </div>
     {% endif %}
 
-    <!-- ── Hero Header ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Hero Header Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <div class="dashboard-hero anim-fade-up">
       <div class="hero-badge">
         {% if is_verified %}
@@ -511,7 +511,7 @@
       <p class="hero-subtitle">Earn Rs. {{ payout_settings.base_min_payout|default:"25" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2" }}/km distance payout + {{ payout_settings.extra_weight_commission_percent|default:"20" }}% extra weight commission, verify waste on-site, and instantly redeem earnings to UPI.</p>
     </div>
 
-    <!-- ── Stat Cards ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Stat Cards Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <div class="row g-3 stats-row">
       <!-- Collector Cash Wallet Card with Redeem Button -->
       <div class="col-12 col-md-4 anim-fade-up anim-delay-1">
@@ -526,13 +526,13 @@
               <div class="stat-text-sub">Collection Earnings</div>
             </div>
           </div>
-          <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+          <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
                   data-bs-toggle="modal" data-bs-target="#redeemUpiModal" {% if not is_verified %}disabled title="Account must be verified to redeem"{% endif %}>
             <i class="fas fa-arrow-circle-up"></i> Redeem to UPI
           </button>
         </div>
       </div>
-      
+
       <!-- Active Assigned Jobs -->
       <div class="col-6 col-md-2 anim-fade-up anim-delay-2">
         <div class="stat-card" style="cursor:pointer;" onclick="document.querySelector('.section-card').scrollIntoView({behavior: 'smooth'})">
@@ -574,7 +574,7 @@
       </div>
     </div>
 
-    <!-- ── Redeem to UPI Modal ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Redeem to UPI Modal Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <div class="modal fade" id="redeemUpiModal" tabindex="-1" aria-labelledby="redeemUpiModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -629,7 +629,7 @@
       </div>
     </div>
 
-    <!-- ── Active Pickups ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Active Pickups Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <div class="section-card anim-fade-up anim-delay-2">
       <div class="section-header">
         <div class="section-header-left">
@@ -730,7 +730,7 @@
       </div>
     </div>
 
-    <!-- ── Available Jobs to Claim (With Proximity Priority & Opportunity Map) ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Available Jobs to Claim (With Proximity Priority & Opportunity Map) Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <div class="section-card anim-fade-up anim-delay-3">
       <div class="section-header flex-column flex-md-row align-items-start align-items-md-center gap-2">
         <div class="section-header-left">
@@ -742,7 +742,7 @@
             <p class="section-subtitle">Prioritized by distance from your current live GPS position</p>
           </div>
         </div>
-        
+
         <!-- Radius Expansion Toolbar & Real-Time Location Button -->
         <div class="d-flex flex-wrap gap-2 align-items-center" id="radiusToolbar">
           <button type="button" id="getCollectorGpsBtn" class="btn btn-sm btn-primary shadow-sm">
@@ -866,7 +866,7 @@
       </div>
     </div>
 
-    <!-- ── Completed History (Collapsible) ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Completed History (Collapsible) Ã¢â€â‚¬Ã¢â€â‚¬ -->
     {% if completed_pickups %}
     <div class="section-card anim-fade-up anim-delay-4">
       <div class="section-header">
@@ -941,7 +941,7 @@
     </div>
     {% endif %}
 
-    <!-- ── UPI Redemption History Table ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ UPI Redemption History Table Ã¢â€â‚¬Ã¢â€â‚¬ -->
     {% if upi_payouts %}
     <div class="section-card anim-fade-up anim-delay-4">
       <div class="section-header">
@@ -1035,8 +1035,8 @@
     });
 
     L.control.layers({
-      "📍 Street Map (OSM)": streetLayer,
-      "🛰️ Satellite View": satelliteLayer
+      "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
+      "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
     }).addTo(map);
 
     setTimeout(() => map.invalidateSize(), 300);
@@ -1063,7 +1063,7 @@
     // Collector Truck Marker
     let colMarker = L.marker([collectorLat, collectorLng], {
       icon: createIcon("fa-truck", "bg-success", true)
-    }).addTo(map).bindPopup("<b>🚛 Your Live Location</b><br>Collector Vehicle Position");
+    }).addTo(map).bindPopup("<b>Ã°Å¸Å¡â€º Your Live Location</b><br>Collector Vehicle Position");
 
     // In-map Floating Locate Button
     const LocateControl = L.Control.extend({
@@ -1113,7 +1113,7 @@
 
           // Update Collector Marker
           colMarker.setLatLng([lat, lng]);
-          colMarker.bindPopup(`<b>🚛 Your Live Location</b><br>Collector Position (±${Math.round(accuracy)}m accuracy)`).openPopup();
+          colMarker.bindPopup(`<b>Ã°Å¸Å¡â€º Your Live Location</b><br>Collector Position (Ã‚Â±${Math.round(accuracy)}m accuracy)`).openPopup();
 
           // Pulse & Accuracy Circle
           if (liveAccuracyCircle) {
@@ -1134,7 +1134,7 @@
 
           if (badge && accuracyText) {
             badge.classList.remove('d-none');
-            accuracyText.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+            accuracyText.textContent = `GPS: Ã‚Â±${Math.round(accuracy)}m (Accurate)`;
           }
 
           if (btn) {
@@ -1241,7 +1241,7 @@
               const accuracyText = document.getElementById('accuracyText');
               if (badge && accuracyText) {
                 badge.classList.remove('d-none');
-                accuracyText.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+                accuracyText.textContent = `Live GPS: Ã‚Â±${Math.round(accuracy)}m`;
               }
               fetch('/api/maps/locations/update/', {
                 method: 'POST',
@@ -1268,7 +1268,7 @@
       });
     }
 
-    // Auto-locate collector on page load — use live GPS as the default position
+    // Auto-locate collector on page load Ã¢â‚¬â€ use live GPS as the default position
     if (navigator.geolocation) {
       locateCollectorLive(true);
     }
@@ -1395,7 +1395,7 @@
       currentCollectorLat = lat;
       currentCollectorLng = lng;
       colMarker.setLatLng([lat, lng]);
-      colMarker.bindPopup(`<b>🚛 Your Location Set</b><br>Manually pinned location`).openPopup();
+      colMarker.bindPopup(`<b>Ã°Å¸Å¡â€º Your Location Set</b><br>Manually pinned location`).openPopup();
 
       if (liveAccuracyCircle) {
         liveAccuracyCircle.setLatLng([lat, lng]).setRadius(25);
@@ -1461,7 +1461,7 @@
         this.classList.add('btn-success');
 
         const maxDist = parseFloat(this.getAttribute('data-max-dist')) || 9999;
-        
+
         // Filter Leaflet Map Markers
         renderOpportunityMarkers(maxDist);
 

@@ -5,9 +5,9 @@
 {% block content %}
 <div class="py-4 row justify-content-center">
   <div class="col-md-8">
-    
+
     <a href="{% url 'waste_management:complaint_list' %}" class="btn btn-sm btn-outline-secondary mb-3">
-      ← Back to Complaints
+      Ã¢â€ Â Back to Complaints
     </a>
 
     <div class="card border-0 shadow-sm mb-4">
@@ -32,7 +32,7 @@
           <div class="mb-4">
             <h5 class="text-uppercase text-muted small fw-bold">Linked Pickup Request</h5>
             <p>
-              <a href="{% url 'waste_management:pickup_detail' complaint.pickup_request.id %}">Pickup Request #{{ complaint.pickup_request.id }}</a> 
+              <a href="{% url 'waste_management:pickup_detail' complaint.pickup_request.id %}">Pickup Request #{{ complaint.pickup_request.id }}</a>
               (Scheduled: {{ complaint.pickup_request.schedule_date|date:"M d, Y" }}, Status: {{ complaint.pickup_request.status }})
             </p>
           </div>
@@ -55,7 +55,7 @@
         <div class="card-body p-4">
           <h5 class="card-title text-success">Resolve Complaint</h5>
           <p class="text-muted small">Verify that the issue has been resolved with the citizen/collector before marking as resolved.</p>
-          
+
           <form method="post" action="{% url 'waste_management:complaint_detail' complaint.id %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="resolve">

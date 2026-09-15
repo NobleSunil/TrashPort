@@ -1,11 +1,11 @@
 {% extends "base_citizen.html" %}
 
-{% block title %}Secure Payment — Pickup #{{ pickup.id }} | TrashPort{% endblock %}
+{% block title %}Secure Payment Ã¢â‚¬â€ Pickup #{{ pickup.id }} | TrashPort{% endblock %}
 
 {% block css %}
 {{ block.super }}
 <style>
-  /* ── Method Tabs ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Method Tabs Ã¢â€â‚¬Ã¢â€â‚¬ */
   .pay-method-tabs {
     display: flex;
     gap: 8px;
@@ -41,7 +41,7 @@
     box-shadow: 0 4px 12px rgba(13, 110, 253, .25);
   }
 
-  /* ── Virtual Card Preview ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Virtual Card Preview Ã¢â€â‚¬Ã¢â€â‚¬ */
   .card-preview-widget {
     background: linear-gradient(135deg, #1e3a5f 0%, #2d5f8a 50%, #1a4a70 100%);
     border-radius: 16px;
@@ -119,7 +119,7 @@
     font-style: italic;
   }
 
-  /* ── Form Inputs ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Form Inputs Ã¢â€â‚¬Ã¢â€â‚¬ */
   .form-label.pay-label {
     font-size: 0.75rem;
     font-weight: 600;
@@ -129,7 +129,7 @@
     margin-bottom: 5px;
   }
 
-  /* ── UPI app buttons ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ UPI app buttons Ã¢â€â‚¬Ã¢â€â‚¬ */
   .upi-app-grid {
     display: flex;
     gap: 8px;
@@ -165,7 +165,7 @@
     margin-bottom: 3px;
   }
 
-  /* ── Test Cards Panel ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Test Cards Panel Ã¢â€â‚¬Ã¢â€â‚¬ */
   .test-card-panel {
     border: 1.5px dashed #dee2e6;
     border-radius: 10px;
@@ -225,7 +225,7 @@
     font-weight: 600;
   }
 
-  /* ── Summary Sidebar ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Summary Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ */
   .summary-item {
     display: flex;
     justify-content: space-between;
@@ -245,7 +245,7 @@
     padding-top: 12px;
   }
 
-  /* ── CVV wrapper ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ CVV wrapper Ã¢â€â‚¬Ã¢â€â‚¬ */
   .cvv-wrap {
     position: relative;
   }
@@ -261,7 +261,7 @@
     cursor: pointer;
   }
 
-  /* ── Processing overlay ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Processing overlay Ã¢â€â‚¬Ã¢â€â‚¬ */
   .pay-overlay {
     display: none;
     position: fixed;
@@ -332,7 +332,7 @@
 
       <div class="row g-4">
 
-        <!-- ══ LEFT: Payment Form ══ -->
+        <!-- Ã¢â€¢ÂÃ¢â€¢Â LEFT: Payment Form Ã¢â€¢ÂÃ¢â€¢Â -->
         <div class="col-lg-7">
 
           <!-- Error alert -->
@@ -350,7 +350,7 @@
             <div class="d-flex align-items-center gap-2">
               <i class="bi bi-ticket-perforated-fill fs-5"></i>
               <div>
-                <strong>Coupon Applied!</strong> Code <code class="fw-bold">{{ coupon.code }}</code> —
+                <strong>Coupon Applied!</strong> Code <code class="fw-bold">{{ coupon.code }}</code> Ã¢â‚¬â€
                 Rs. {{ coupon.discount }} discount applied to your total.
               </div>
             </div>
@@ -401,7 +401,7 @@
                 </button>
               </div>
 
-              <!-- ── CARD PANEL ── -->
+              <!-- Ã¢â€â‚¬Ã¢â€â‚¬ CARD PANEL Ã¢â€â‚¬Ã¢â€â‚¬ -->
               <div class="method-panel {% if active_method == 'card' or not active_method %}active{% endif %}"
                 id="panel-card">
                 <form method="post" id="card-form">
@@ -484,7 +484,7 @@
                 </div>
               </div>
 
-              <!-- ── UPI PANEL ── -->
+              <!-- Ã¢â€â‚¬Ã¢â€â‚¬ UPI PANEL Ã¢â€â‚¬Ã¢â€â‚¬ -->
               <div class="method-panel {% if active_method == 'upi' %}active{% endif %}" id="panel-upi">
                 <form method="post" id="upi-form">
                   {% csrf_token %}
@@ -523,7 +523,7 @@
                 </form>
               </div>
 
-              <!-- ── WALLET PANEL ── -->
+              <!-- Ã¢â€â‚¬Ã¢â€â‚¬ WALLET PANEL Ã¢â€â‚¬Ã¢â€â‚¬ -->
               <div class="method-panel {% if active_method == 'wallet' %}active{% endif %}" id="panel-wallet">
                 <form method="post" id="wallet-form">
                   {% csrf_token %}
@@ -583,7 +583,7 @@
           </div>
         </div>
 
-        <!-- ══ RIGHT: Order Summary ══ -->
+        <!-- Ã¢â€¢ÂÃ¢â€¢Â RIGHT: Order Summary Ã¢â€¢ÂÃ¢â€¢Â -->
         <div class="col-lg-5">
           <div class="card border-0 shadow-sm" style="position:sticky;top:20px;">
             <div class="card-body p-4">
@@ -712,7 +712,7 @@
 
 {% block inline_javascript %}
 <script>
-  // ── Tab switching ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Tab switching Ã¢â€â‚¬Ã¢â€â‚¬
   document.querySelectorAll(".pay-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       const method = tab.dataset.method;
@@ -723,7 +723,7 @@
     });
   });
 
-  // ── Card number formatting + brand detection ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Card number formatting + brand detection Ã¢â€â‚¬Ã¢â€â‚¬
   const BRANDS = [
     { re: /^4/, name: "VISA", color: "#fff" },
     { re: /^5[1-5]/, name: "MASTERCARD", color: "#ffd700" },
@@ -733,7 +733,7 @@
   document.getElementById("card_number").addEventListener("input", e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 16);
     e.target.value = v.replace(/(.{4})/g, "$1 ").trim();
-    const padded = v.padEnd(16, "•");
+    const padded = v.padEnd(16, "Ã¢â‚¬Â¢");
     document.getElementById("previewNumber").textContent = padded.replace(/(.{4})/g, "$1 ").trim();
     const b = BRANDS.find(b => b.re.test(v));
     const el = document.getElementById("cardBrand");
@@ -741,12 +741,12 @@
     else { el.textContent = ""; el.style.opacity = ".6"; }
   });
 
-  // ── Cardholder name ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Cardholder name Ã¢â€â‚¬Ã¢â€â‚¬
   document.getElementById("card_name").addEventListener("input", e => {
     document.getElementById("previewName").textContent = e.target.value.toUpperCase() || "YOUR NAME";
   });
 
-  // ── Expiry formatting ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Expiry formatting Ã¢â€â‚¬Ã¢â€â‚¬
   document.getElementById("expiry").addEventListener("input", e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 4);
     if (v.length >= 2) v = v.slice(0, 2) + " / " + v.slice(2);
@@ -754,7 +754,7 @@
     document.getElementById("previewExpiry").textContent = v || "MM/YY";
   });
 
-  // ── CVV toggle ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ CVV toggle Ã¢â€â‚¬Ã¢â€â‚¬
   const cvvInput = document.getElementById("cvv");
   const cvvIcon = document.getElementById("cvvIcon");
   document.getElementById("cvvToggle").addEventListener("click", () => {
@@ -763,7 +763,7 @@
     cvvIcon.className = show ? "fas fa-eye-slash" : "fas fa-eye";
   });
 
-  // ── UPI app quick-fill ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ UPI app quick-fill Ã¢â€â‚¬Ã¢â€â‚¬
   function setUpiSuffix(el) {
     const inp = document.getElementById("upi_id");
     inp.value = (inp.value.split("@")[0] || "yourname") + el.dataset.suffix;
@@ -771,7 +771,7 @@
     el.classList.add("selected");
   }
 
-  // ── Test card auto-fill ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Test card auto-fill Ã¢â€â‚¬Ã¢â€â‚¬
   function fillTestCard(number) {
     const inp = document.getElementById("card_number");
     inp.value = number;
@@ -782,7 +782,7 @@
     document.getElementById("previewExpiry").textContent = "12 / 28";
   }
 
-  // ── Test cards toggle ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Test cards toggle Ã¢â€â‚¬Ã¢â€â‚¬
   function toggleTestCards() {
     const body = document.getElementById("tcBody");
     const chev = document.getElementById("tcChevron");
@@ -791,7 +791,7 @@
     chev.className = vis ? "fas fa-chevron-down ms-auto" : "fas fa-chevron-up ms-auto";
   }
 
-  // ── Processing overlay on submit ──
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Processing overlay on submit Ã¢â€â‚¬Ã¢â€â‚¬
   ["card-form", "upi-form", "wallet-form"].forEach(id => {
     const f = document.getElementById(id);
     if (f) f.addEventListener("submit", (e) => {

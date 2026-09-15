@@ -1,4 +1,3 @@
-import pytest
 from trashport.citizens.forms import AddressForm
 
 

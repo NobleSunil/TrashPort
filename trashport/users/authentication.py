@@ -10,7 +10,7 @@ initialize_firebase()
 class FirebaseAuthentication(BaseAuthentication):
     """
     Firebase Token-based Authentication for Django Rest Framework.
-    
+
     Expects header:
     Authorization: Bearer <firebase_id_token>
     """
@@ -20,7 +20,7 @@ class FirebaseAuthentication(BaseAuthentication):
             return None
 
         token = header.split(" ")[1]
-        
+
         # Enable mock token verification for local testing and unit tests
         if token.startswith("mock-token-"):
             uid = token.replace("mock-token-", "")

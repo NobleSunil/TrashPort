@@ -190,7 +190,7 @@
           </div>
           <h3 class="fw-bold mb-1 text-dark">{{ active_complaints }} <span class="fs-6 text-muted">Issues</span></h3>
           <div class="text-muted small d-flex justify-content-between align-items-center gap-2">
-            <span>{{ total_citizens }} Citizens • {{ total_collectors }} Collectors</span>
+            <span>{{ total_citizens }} Citizens Ã¢â‚¬Â¢ {{ total_collectors }} Collectors</span>
             <span class="text-primary fw-semibold small d-inline-flex align-items-center gap-1 text-nowrap">
               View Pending <i class="bi bi-arrow-down-circle-fill fs-6"></i>
             </span>
@@ -317,12 +317,12 @@
           <span class="text-muted small">Configurable by Admin</span>
         </div>
         <h5 class="fw-bold text-dark mb-1">
-          Min Base: <span class="text-success">Rs. {{ collector_payout_setting.base_min_payout }}</span> | 
-          Distance Rate: <span class="text-primary">Rs. {{ collector_payout_setting.rate_per_km }}/km</span> | 
+          Min Base: <span class="text-success">Rs. {{ collector_payout_setting.base_min_payout }}</span> |
+          Distance Rate: <span class="text-primary">Rs. {{ collector_payout_setting.rate_per_km }}/km</span> |
           Excess Weight Commission: <span class="text-warning text-dark">{{ collector_payout_setting.extra_weight_commission_percent }}%</span>
         </h5>
         <p class="text-muted small mb-0">
-          Formula: Max(Base Min, Base Min + (Distance × Rate/km) + (Extra Weight Fee × Commission %)).
+          Formula: Max(Base Min, Base Min + (Distance Ãƒâ€” Rate/km) + (Extra Weight Fee Ãƒâ€” Commission %)).
         </p>
       </div>
       <div>
@@ -512,7 +512,7 @@
     // 1. Trend Line Chart
     const trendLabels = {{ trend_labels_json|safe }};
     const trendData = {{ trend_counts_json|safe }};
-    
+
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     new Chart(ctxTrend, {
       type: 'line',

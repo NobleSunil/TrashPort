@@ -51,22 +51,6 @@ from rest_framework import viewsets
 # CONNECTION: waste_management/urls.py depends on these re-exports.
 # IMPACT: Removing any of these imports will break the corresponding URL route.
 # ---------------------------------------------------------------------------
-from trashport.admins.views import (
-    WasteCategoryCreateView,
-    WasteCategoryListView,
-    WasteCategoryUpdateView,
-    CollectorPayoutSettingUpdateView,
-    AdminAnonymousFeedbackListView,
-)
-from trashport.citizens.views import (
-    AddressCreateView,
-    AddressDeleteView,
-    AddressListView,
-    AddressUpdateView,
-    SubmitAnonymousFeedbackView,
-    CitizenComplaintCreateView as ComplaintCreateView,
-    CitizenPickupRequestCreateView as PickupRequestCreateView,
-)
 
 from .models import Address, WasteCategory, PickupRequest, Complaint
 from .serializers import (

@@ -10,16 +10,13 @@ Required Google Cloud Console setting:
                                    http://127.0.0.1:8001/users/google/callback/
 """
 
-import json
 import logging
 import secrets
 
 import requests
 from django.contrib.auth import login as django_login
-from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
-from django.views.decorators.http import require_GET, require_POST
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 from google_auth_oauthlib.flow import Flow
 
 from trashport.users.models import User
@@ -30,10 +27,8 @@ logger = logging.getLogger(__name__)
 # ─── Google OAuth 2.0 settings ────────────────────────────────────────────────
 # These match your Firebase project's auto-created OAuth 2.0 Web Client.
 from django.conf import settings
-import os
 
 def _get_client_id(request=None) -> str:
-    from django.conf import settings
     cid = getattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "")
     if not cid:
         import os
@@ -224,7 +219,6 @@ def _get_client_secret(request):
     Retrieve the Google OAuth client secret from settings or env.
     The client secret is needed to exchange the auth code for tokens.
     """
-    from django.conf import settings
     secret = getattr(settings, "GOOGLE_OAUTH_CLIENT_SECRET", "")
     if not secret:
         import os

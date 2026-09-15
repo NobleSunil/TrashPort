@@ -36,10 +36,10 @@
         <p class="text-sm text-gray-500 mb-8">Are you sure you want to sign out of TrashPort?</p>
 
         <div id="status" class="hidden mb-4 p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 text-sm rounded-r-lg">
-            Signing out…
+            Signing outÃ¢â‚¬Â¦
         </div>
 
-        <!-- POST form to Django — Firebase signOut() is called FIRST via JS below -->
+        <!-- POST form to Django Ã¢â‚¬â€ Firebase signOut() is called FIRST via JS below -->
         <form id="logout-form" method="POST" action="{% url 'account_logout' %}">
             {% csrf_token %}
             <button id="signout-btn" type="button" onclick="doSignOut()"
@@ -75,7 +75,7 @@
             const btn    = document.getElementById('signout-btn');
             const status = document.getElementById('status');
             btn.disabled = true;
-            btn.textContent = 'Signing out…';
+            btn.textContent = 'Signing outÃ¢â‚¬Â¦';
             status.classList.remove('hidden');
 
             try {
@@ -84,7 +84,7 @@
                 //    would immediately re-authenticate the user.
                 await signOut(auth);
             } catch (e) {
-                // Firebase sign-out failed (e.g. already signed out) — continue anyway
+                // Firebase sign-out failed (e.g. already signed out) Ã¢â‚¬â€ continue anyway
                 console.warn('Firebase signOut:', e.message);
             }
 

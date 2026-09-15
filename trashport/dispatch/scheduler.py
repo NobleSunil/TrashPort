@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 from django.contrib.auth import get_user_model
 from waste_management.models import PickupRequest
 from .models import DispatchBatch

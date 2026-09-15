@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 class SlotExtractor:
     """Extracts entities and slots like pickup ID, category, or numbers."""
-    
+
     CATEGORIES = ["plastic", "organic", "wet", "dry", "e-waste", "ewaste", "paper", "metal", "glass", "hazardous"]
 
     @classmethod

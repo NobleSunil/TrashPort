@@ -119,7 +119,7 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
             # Build LLM context window
             system_content = await sync_to_async(build_system_prompt)(self.user, pickups, faqs)
             messages = [{"role": "system", "content": system_content}]
-            
+
             # Avoid duplicating the current message if it's already at the end of history
             clean_history = list(history[-10:])
             if clean_history and clean_history[-1].get("content") == message and clean_history[-1].get("role") == "user":

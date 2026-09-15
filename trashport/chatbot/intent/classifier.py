@@ -1,10 +1,9 @@
-import re
 from .intents import IntentType
 
 
 class IntentClassifier:
     """Rule-based and heuristic intent classifier with LLM fallback support."""
-    
+
     INTENT_KEYWORDS = {
         IntentType.SCHEDULE_PICKUP: ["schedule", "book", "new pickup", "collect trash", "pickup my waste", "request collection"],
         IntentType.CHANGE_SCHEDULE: ["reschedule", "change time", "postpone", "move pickup", "change date"],

@@ -12,7 +12,7 @@ class TestFirebaseTokenAuthentication:
         auth = FirebaseTokenAuthentication()
         factory = APIRequestFactory()
         request = factory.get("/api/firebase/me/", HTTP_AUTHORIZATION="Bearer mock-token-testuser")
-        
+
         user, decoded = auth.authenticate(request)
         assert user is not None
         assert user.firebase_uid == "testuser"

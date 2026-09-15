@@ -35,7 +35,7 @@ class TestFirebaseAuthentication:
     def test_invalid_firebase_token(self, mock_verify, auth: FirebaseAuthentication, api_rf: APIRequestFactory):
         mock_verify.side_effect = Exception("Token expired")
         request = api_rf.get("/api/users/me/", HTTP_AUTHORIZATION="Bearer invalid-token")
-        
+
         with pytest.raises(AuthenticationFailed) as exc_info:
             auth.authenticate(request)
         assert "Invalid or expired Firebase token" in str(exc_info.value)
@@ -43,7 +43,7 @@ class TestFirebaseAuthentication:
     def test_valid_mock_token_creates_user(self, auth: FirebaseAuthentication, api_rf: APIRequestFactory):
         uid = "firebase-test-123"
         email = f"{uid}@example.com"
-        
+
         # Ensure user does not exist beforehand
         assert not User.objects.filter(firebase_uid=uid).exists()
         assert not User.objects.filter(email=email).exists()
@@ -60,7 +60,7 @@ class TestFirebaseAuthentication:
     def test_valid_mock_token_retrieves_existing_user_by_uid(self, auth: FirebaseAuthentication, api_rf: APIRequestFactory):
         uid = "firebase-test-456"
         email = f"{uid}@example.com"
-        
+
         # Pre-create user with firebase_uid
         existing_user = User.objects.create(
             firebase_uid=uid,
@@ -78,7 +78,7 @@ class TestFirebaseAuthentication:
     def test_valid_mock_token_maps_existing_user_by_email(self, auth: FirebaseAuthentication, api_rf: APIRequestFactory):
         uid = "firebase-test-789"
         email = f"{uid}@example.com"
-        
+
         # Pre-create user with matching email but no firebase_uid
         existing_user = User.objects.create(
             email=email,

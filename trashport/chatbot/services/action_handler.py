@@ -79,7 +79,7 @@ def _sync_edit_pickup(user, pickup_id, new_time_str):
 def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_type=None, address_id=None, address_details=None, category_val=None, weight_val=None):
     # Find or create Address instance
     address_obj = None
-    
+
     if address_type == "new" and address_details:
         address_obj = Address.objects.create(
             user=user,
@@ -100,7 +100,7 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
             if not address_obj:
                 clean_val = str(address_id).split(",")[0].strip()
                 address_obj = Address.objects.filter(user=user, address_line1__icontains=clean_val).first()
-    
+
     # Legacy lookup fallback
     if not address_obj and address_val:
         if str(address_val).isdigit():
@@ -220,13 +220,13 @@ async def execute_action(user, parsed: dict) -> dict:
             address_details = payload.get("address_details")
             category = payload.get("category") or payload.get("waste_type") or payload.get("type")
             weight = payload.get("weight_kg") or payload.get("weight") or payload.get("estimated_weight")
-            
+
             if not scheduled_time:
                 return {"type": "text", "message": "Scheduled time is required."}
-            
+
             if not address and not address_type and not address_id and not address_details:
                 return {"type": "text", "message": "Address information is required."}
-                
+
             return await sync_to_async(_sync_book_pickup)(
                 user=user,
                 address_val=address,

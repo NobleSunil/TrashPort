@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="py-4 container-fluid">
-  
+
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
     <div>
       <h2 class="mb-1 text-primary fw-bold"><i class="fas fa-globe-americas me-2"></i>Fleet &amp; Pickup Live Control Room</h2>
@@ -15,7 +15,7 @@
         <i class="fas fa-compress-arrows-alt me-1"></i> Reset View / Show All Fleet
       </button>
       <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        ← Back to Dashboard
+        Ã¢â€ Â Back to Dashboard
       </a>
       <span class="badge bg-success p-2 fs-6" id="adminMapStatus">
         <i class="fas fa-satellite-dish fa-spin me-1"></i> Live Stream Active
@@ -57,8 +57,8 @@
         <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-center mb-3 px-2">
             <div class="d-flex flex-wrap gap-3 small fw-bold">
-              <span class="badge bg-success p-2"><i class="fas fa-truck me-1"></i> 🟢 Collector Assigned</span>
-              <span class="badge bg-danger p-2"><i class="fas fa-truck me-1"></i> 🔴 Collector Free / Idle</span>
+              <span class="badge bg-success p-2"><i class="fas fa-truck me-1"></i> Ã°Å¸Å¸Â¢ Collector Assigned</span>
+              <span class="badge bg-danger p-2"><i class="fas fa-truck me-1"></i> Ã°Å¸â€Â´ Collector Free / Idle</span>
               <span class="text-warning"><i class="fas fa-circle me-1"></i> Pending Pickup</span>
               <span class="text-primary"><i class="fas fa-circle me-1"></i> Assigned</span>
             </div>
@@ -114,8 +114,8 @@
       });
 
       let baseMaps = {
-        "📍 Street Map (OSM)": streetLayer,
-        "🛰️ Satellite View": satelliteLayer
+        "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
+        "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
       };
 
       let map = L.map('adminLiveMap', {
@@ -159,7 +159,7 @@
         document.getElementById('onMapResetControl').style.display = 'block';
         document.getElementById('sidebarFocusStatus').textContent = "Collector Focus Mode";
         document.getElementById('sidebarFocusStatus').className = "badge bg-warning text-dark border small";
-        
+
         if (cachedOverviewData) {
           renderOverview(cachedOverviewData);
         }
@@ -172,7 +172,7 @@
         document.getElementById('onMapResetControl').style.display = 'none';
         document.getElementById('sidebarFocusStatus').textContent = "Overview Mode";
         document.getElementById('sidebarFocusStatus').className = "badge bg-light text-dark border small";
-        
+
         // Remove all route polylines when resetting selection
         Object.keys(routePolylines).forEach(key => {
           if (routePolylines[key]) {
@@ -276,9 +276,9 @@
           let popupHtml = `
             <div class="p-1">
               <h6 class="mb-1 fw-bold ${c.is_assigned ? 'text-success' : 'text-danger'}">
-                🚛 Collector ${c.name} (${c.is_assigned ? 'ASSIGNED' : 'FREE'})
+                Ã°Å¸Å¡â€º Collector ${c.name} (${c.is_assigned ? 'ASSIGNED' : 'FREE'})
               </h6>
-              <div><strong>Status:</strong> ${c.is_assigned ? '🟢 Active Tasks (' + c.active_task_count + ')' : '🔴 Free / Idle'}</div>
+              <div><strong>Status:</strong> ${c.is_assigned ? 'Ã°Å¸Å¸Â¢ Active Tasks (' + c.active_task_count + ')' : 'Ã°Å¸â€Â´ Free / Idle'}</div>
               <div><strong>Speed:</strong> ${c.speed} km/h</div>
               <div><strong>Last Updated:</strong> ${c.updated_at}</div>
             </div>
@@ -354,7 +354,7 @@
 
             if (selectedCollectorId && p.collector_id === selectedCollectorId) {
               let initialWaypoints = generateClientRoadCurve(colLoc.latitude, colLoc.longitude, p.latitude, p.longitude);
-              
+
               // 1) INSTANT RESPONSE: Draw realistic road curve immediately with 0ms delay!
               if (!routePolylines[p.id]) {
                 routePolylines[p.id] = L.polyline(initialWaypoints, {
@@ -397,7 +397,7 @@
           activeCollectors.forEach(c => {
             let isSelected = (c.collector_id === selectedCollectorId);
             let badgeBg = c.is_assigned ? "bg-success" : "bg-danger";
-            let badgeText = c.is_assigned ? `🟢 Assigned (${c.active_task_count} Job)` : "🔴 Free / Available";
+            let badgeText = c.is_assigned ? `Ã°Å¸Å¸Â¢ Assigned (${c.active_task_count} Job)` : "Ã°Å¸â€Â´ Free / Available";
 
             sidebarHtml += `
               <div class="card mb-3 border ${isSelected ? 'border-primary shadow-sm bg-primary-subtle' : 'border-gray-200'}">

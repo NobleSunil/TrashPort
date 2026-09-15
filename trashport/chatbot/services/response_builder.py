@@ -8,7 +8,7 @@ class ChatResponseBuilder:
     @classmethod
     def process_user_message(cls, text: str, session_key: str = None, user=None) -> dict:
         session = ChatSessionManager.get_or_create_session(session_key, user)
-        
+
         # Log user message
         ChatSessionManager.log_message(session, "USER", text)
 

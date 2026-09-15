@@ -34,7 +34,7 @@ class TestDispatchAlgorithms:
             state="Karnataka",
             postal_code="12345"
         )
-        
+
         pickup1 = PickupRequest.objects.create(
             citizen=citizen,
             address=addr,
@@ -43,7 +43,7 @@ class TestDispatchAlgorithms:
             status="PENDING",
             weight_kg=10
         )
-        
+
         pickup2 = PickupRequest.objects.create(
             citizen=citizen,
             address=addr,
