@@ -1,5 +1,5 @@
 """
-config/api_router.py â€” REST API Router Configuration
+config/api_router.py — REST API Router Configuration
 ======================================================
 
 PURPOSE:

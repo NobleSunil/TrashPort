@@ -57,7 +57,7 @@ class ChatbotRateLimiter:
             current_count = results[1]  # count before adding this message
 
             if current_count >= self.max_messages:
-                # Undo the zadd â€” we're rejecting this message
+                # Undo the zadd — we're rejecting this message
                 self.redis.zpopmax(key)
                 remaining = 0
                 return False, remaining

@@ -1,5 +1,5 @@
 """
-waste_management/notifications.py â€” Pickup Lifecycle Notification Dispatcher
+waste_management/notifications.py — Pickup Lifecycle Notification Dispatcher
 =============================================================================
 
 PURPOSE:
@@ -36,7 +36,7 @@ EMAIL TEMPLATES:
   falls back to a plain-text fallback (logs a warning).
 
 IMPACT:
-  - All functions catch and log exceptions silently â€” notification failures
+  - All functions catch and log exceptions silently — notification failures
     should NEVER cause the calling view to crash or show an error to users.
   - To add a new lifecycle event notification:
       1. Add a new function here.
@@ -61,7 +61,7 @@ def send_pickup_requested_notification(pickup):
     In-app notification: Created in the Notification model for in-dashboard display.
     Email: Sends a styled HTML pickup_confirmed email template.
 
-    IMPACT: Failure is caught and logged â€” does NOT raise or affect the booking.
+    IMPACT: Failure is caught and logged — does NOT raise or affect the booking.
     """
     try:
         citizen = pickup.citizen
@@ -118,7 +118,7 @@ def send_pickup_assigned_notification(pickup, collector=None):
         pickup    : The PickupRequest instance being updated.
         collector : The newly assigned collector User instance.
 
-    IMPACT: Failure is caught and logged â€” does NOT raise or affect the assignment.
+    IMPACT: Failure is caught and logged — does NOT raise or affect the assignment.
     """
     try:
         citizen = pickup.citizen
@@ -166,7 +166,7 @@ def send_pickup_cancelled_notification(pickup, reason="Cancelled by user or admi
         pickup : The PickupRequest instance being cancelled.
         reason : Human-readable cancellation reason (logged in message).
 
-    IMPACT: Failure is caught and logged â€” does NOT raise or affect the cancellation.
+    IMPACT: Failure is caught and logged — does NOT raise or affect the cancellation.
     """
     try:
         citizen = pickup.citizen
@@ -206,7 +206,7 @@ def send_payment_completed_notification(user, pickup, transaction, invoice_url=N
     Sends a payment receipt and invoice link to the citizen after a successful payment.
 
     Called from: trashport/payments/services.py â†’ PaymentGatewayService._mark_pickup_paid()
-    (NOT called from PickupRequest.save() â€” payments trigger this directly)
+    (NOT called from PickupRequest.save() — payments trigger this directly)
 
     In-app notification: Payment type, includes transaction ID and amount.
     Email: Sends payment_receipt email template with invoice download link.
@@ -217,7 +217,7 @@ def send_payment_completed_notification(user, pickup, transaction, invoice_url=N
         transaction : The PaymentTransaction record created by the gateway.
         invoice_url : URL to the printable invoice page (optional).
 
-    IMPACT: Failure is caught and logged â€” does NOT raise or affect payment marking.
+    IMPACT: Failure is caught and logged — does NOT raise or affect payment marking.
     """
     try:
         if not user:
@@ -230,7 +230,7 @@ def send_payment_completed_notification(user, pickup, transaction, invoice_url=N
         desc = getattr(transaction, "description", f"Payment for Pickup #{pickup.display_id}")
 
         # Format currency symbol
-        curr_sym = "â‚¹" if currency == "INR" else ("$" if currency == "USD" else f"{currency} ")
+        curr_sym = "₹" if currency == "INR" else ("$" if currency == "USD" else f"{currency} ")
         title = f"Payment Receipt: Pickup #{pickup.display_id}"
         message = (
             f"Payment of {curr_sym}{amount} for Pickup #{pickup.display_id} completed successfully. "

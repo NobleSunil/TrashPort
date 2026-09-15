@@ -1,10 +1,10 @@
 """
-trashport/collectors/views.py Ã¢â‚¬â€ Collector Role View Layer
+trashport/collectors/views.py — Collector Role View Layer
 ===========================================================
 
 PURPOSE:
   This file contains all view classes exclusively used by collectors (waste
-  collection staff). These are never called directly from URLs Ã¢â‚¬â€ they are
+  collection staff). These are never called directly from URLs — they are
   dispatched to by the role-based system in waste_management/views.py.
 
 HOW THESE VIEWS ARE REACHED:
@@ -15,25 +15,25 @@ HOW THESE VIEWS ARE REACHED:
   Same pattern applies to: PickupRequestDetailView, PickupStatusUpdateView
 
 CONNECTION MAP:
-  - waste_management/views.py       Ã¢â€ â€™ dispatches to CollectorDashboardView,
+  - waste_management/views.py       → dispatches to CollectorDashboardView,
                                        CollectorPickupRequestDetailView,
                                        CollectorPickupStatusUpdateView
-  - waste_management/models.py      Ã¢â€ â€™ PickupRequest, CollectorPayoutSetting
-  - trashport/collectors/models.py  Ã¢â€ â€™ CollectorAadhaarProfile (for Aadhaar sync)
-  - trashport/maps/models.py        Ã¢â€ â€™ CollectorLocation (GPS position for map)
-  - trashport/maps/services.py      Ã¢â€ â€™ GeoService.haversine_distance() (distance calc)
-  - trashport/payments/models.py    Ã¢â€ â€™ UPIPayoutRequest (payout history)
-  - waste_management/urls.py        Ã¢â€ â€™ /wallet/redeem-upi/ Ã¢â€ â€™ CollectorRedeemUPIView
+  - waste_management/models.py      → PickupRequest, CollectorPayoutSetting
+  - trashport/collectors/models.py  → CollectorAadhaarProfile (for Aadhaar sync)
+  - trashport/maps/models.py        → CollectorLocation (GPS position for map)
+  - trashport/maps/services.py      → GeoService.haversine_distance() (distance calc)
+  - trashport/payments/models.py    → UPIPayoutRequest (payout history)
+  - waste_management/urls.py        → /wallet/redeem-upi/ → CollectorRedeemUPIView
 
 COLLECTOR WORKFLOW:
-  1. Collector opens dashboard Ã¢â€ â€™ sees pending pickups sorted by distance
-  2. Collector "claims" a pickup Ã¢â€ â€™ PickupRequest.collector = user, status = ASSIGNED
-  3. Collector drives to location Ã¢â€ â€™ clicks "Mark In Transit" Ã¢â€ â€™ status = IN_TRANSIT
-  4. Collector arrives, weighs waste Ã¢â€ â€™ submits actual weight Ã¢â€ â€™ status = COMPLETED
-     Ã¢â‚¬Â¢ If actual > estimated: extra_fee = excess Ãƒâ€” fee_per_kg Ãƒâ€” 2 (2x surcharge)
-     Ã¢â‚¬Â¢ Collector earnings = base_min + (distance Ãƒâ€” rate_per_km) + (extra_fee Ãƒâ€” commission%)
-     Ã¢â‚¬Â¢ Collector wallet_balance is credited immediately on COMPLETED
-  5. Collector can release a claimed pickup Ã¢â€ â€™ status = PENDING (no penalty)
+  1. Collector opens dashboard → sees pending pickups sorted by distance
+  2. Collector "claims" a pickup → PickupRequest.collector = user, status = ASSIGNED
+  3. Collector drives to location → clicks "Mark In Transit" → status = IN_TRANSIT
+  4. Collector arrives, weighs waste → submits actual weight → status = COMPLETED
+     • If actual > estimated: extra_fee = excess × fee_per_kg × 2 (2x surcharge)
+     • Collector earnings = base_min + (distance × rate_per_km) + (extra_fee × commission%)
+     • Collector wallet_balance is credited immediately on COMPLETED
+  5. Collector can release a claimed pickup → status = PENDING (no penalty)
 
 AADHAAR VERIFICATION GATE:
   Collectors MUST be verified (user.is_verified = True) to claim or complete pickups.
@@ -89,22 +89,22 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
 
     Context variables provided to the template:
       role                  : User.Roles.COLLECTOR (string)
-      is_verified           : bool Ã¢â‚¬â€ whether collector passed Aadhaar verification
+      is_verified           : bool — whether collector passed Aadhaar verification
       verification_status   : "PENDING" / "APPROVED" / "REJECTED" string for badge display
-      wallet_balance        : Decimal Ã¢â‚¬â€ current cash balance available for UPI withdrawal
+      wallet_balance        : Decimal — current cash balance available for UPI withdrawal
       assigned_pickups      : QuerySet of ASSIGNED and IN_TRANSIT pickups
       completed_pickups     : QuerySet of COMPLETED pickups (newest first)
-      completed_count       : int Ã¢â‚¬â€ count of all completed jobs (for stats display)
-      total_earned          : Decimal Ã¢â‚¬â€ sum of collector_earnings across all completed jobs
+      completed_count       : int — count of all completed jobs (for stats display)
+      total_earned          : Decimal — sum of collector_earnings across all completed jobs
       unassigned_pickups    : List of PENDING PickupRequest objects sorted nearest-first
                               (each enriched with .calculated_distance_km and .calculated_earnings)
-      collector_lat/lng     : float Ã¢â‚¬â€ collector's GPS position (from CollectorLocation or Kerala default)
+      collector_lat/lng     : float — collector's GPS position (from CollectorLocation or Kerala default)
       unassigned_pickups_json: JSON string for Leaflet map pin rendering
       upi_payouts           : Last 10 UPIPayoutRequest records for this collector
-      total_redeemed_upi    : Decimal Ã¢â‚¬â€ total UPI redemptions so far
-      aadhaar_verified      : bool Ã¢â‚¬â€ True if Aadhaar verification passed
-      aadhaar_masked        : str  Ã¢â‚¬â€ "XXXX-XXXX-1234" display string
-      payout_settings       : CollectorPayoutSetting Ã¢â‚¬â€ base/km/commission rates for display
+      total_redeemed_upi    : Decimal — total UPI redemptions so far
+      aadhaar_verified      : bool — True if Aadhaar verification passed
+      aadhaar_masked        : str  — "XXXX-XXXX-1234" display string
+      payout_settings       : CollectorPayoutSetting — base/km/commission rates for display
     """
     template_name = "collector/dashboard.html"
 
@@ -168,21 +168,21 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         HTML rendering and Leaflet.js JSON map pins.
 
         Returns:
-            unassigned_list      : List[PickupRequest] Ã¢â‚¬â€ sorted nearest-first, max 50 items.
+            unassigned_list      : List[PickupRequest] — sorted nearest-first, max 50 items.
                                    Each item has .calculated_distance_km and .calculated_earnings
                                    injected as instance attributes.
-            col_lat, col_lng     : float Ã¢â‚¬â€ collector's GPS position (or Kerala default).
-            pickups_json_string  : str Ã¢â‚¬â€ JSON-serialized list of pickup pin data for Leaflet.
+            col_lat, col_lng     : float — collector's GPS position (or Kerala default).
+            pickups_json_string  : str — JSON-serialized list of pickup pin data for Leaflet.
 
         CONNECTION:
-          - trashport/maps/models.py    Ã¢â€ â€™ CollectorLocation (collector's live GPS position)
-          - trashport/maps/services.py  Ã¢â€ â€™ GeoService.haversine_distance() (straight-line km)
-          - waste_management/models.py  Ã¢â€ â€™ PickupRequest.effective_latitude/longitude (best GPS)
+          - trashport/maps/models.py    → CollectorLocation (collector's live GPS position)
+          - trashport/maps/services.py  → GeoService.haversine_distance() (straight-line km)
+          - waste_management/models.py  → PickupRequest.effective_latitude/longitude (best GPS)
                                           PickupRequest.calculate_collector_earnings() (payout preview)
 
         IMPACT:
           - If CollectorLocation has no row for this collector, Kerala default coordinates
-            are used (9.9312Ã‚Â°N, 76.2673Ã‚Â°E / Kochi area).
+            are used (9.9312°N, 76.2673°E / Kochi area).
           - Capped at 50 jobs to keep API response and map performance fast.
           - The haversine calculation is straight-line (not road distance). Actual
             travel distance will differ due to road routing.
@@ -292,9 +292,9 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
     pickups they're considering claiming.
 
     Context additions:
-      is_verified     : bool Ã¢â‚¬â€ guard for claim/complete action buttons in template
-      preview_earnings: Decimal Ã¢â‚¬â€ estimated earnings based on current payout settings
-      payout_settings : CollectorPayoutSetting Ã¢â‚¬â€ rates displayed in earnings breakdown
+      is_verified     : bool — guard for claim/complete action buttons in template
+      preview_earnings: Decimal — estimated earnings based on current payout settings
+      payout_settings : CollectorPayoutSetting — rates displayed in earnings breakdown
     """
     model = PickupRequest
     template_name = "collector/pickup_detail.html"
@@ -332,7 +332,7 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
 #
 # CONNECTION: Dispatched from PickupStatusUpdateView in waste_management/views.py.
 #             PickupRequest.save() does the earnings calculation and wallet credit
-#             automatically when status Ã¢â€ â€™ COMPLETED.
+#             automatically when status → COMPLETED.
 # ==============================================================================
 
 class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
@@ -357,16 +357,16 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
       - Reads actual_weight_kg from POST form input.
       - Sets pickup.actual_weight_kg, is_weight_verified = True, status = COMPLETED.
       - pickup.save() AUTOMATICALLY:
-          Ã¢â‚¬Â¢ Calculates extra_fee for excess weight (2x rate)
-          Ã¢â‚¬Â¢ Recalculates collector_earnings
-          Ã¢â‚¬Â¢ Credits citizen wallet_points
-          Ã¢â‚¬Â¢ Credits collector wallet_balance
-        (All of this happens inside PickupRequest.save() Ã¢â‚¬â€ see models.py)
+          • Calculates extra_fee for excess weight (2x rate)
+          • Recalculates collector_earnings
+          • Credits citizen wallet_points
+          • Credits collector wallet_balance
+        (All of this happens inside PickupRequest.save() — see models.py)
 
     Action: "cancel" (release)
       - Validates this collector owns the pickup.
       - Sets pickup.collector = None and status = PENDING.
-      - No penalty for releasing Ã¢â‚¬â€ pickup returns to the available pool.
+      - No penalty for releasing — pickup returns to the available pool.
     """
 
     def post(self, request, pk, *args, **kwargs):
@@ -443,7 +443,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
 
         # ---- ACTION: cancel / release ----
         elif action == "cancel" and pickup.collector == user:
-            # Collector changes their mind Ã¢â‚¬â€ release back to available pool
+            # Collector changes their mind — release back to available pool
             pickup.status = PickupRequest.StatusChoices.PENDING
             pickup.collector = None
             pickup.save()
@@ -459,7 +459,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
 # from completed pickups) to a UPI address.
 #
 # URL: /wallet/redeem-upi/  (POST only)
-# Dispatcher: CollectorRedeemUPIView in waste_management/views.py Ã¢â€ â€™ this class
+# Dispatcher: CollectorRedeemUPIView in waste_management/views.py → this class
 #
 # PROCESS:
 #   1. Validate collector is verified (is_verified = True)
@@ -470,8 +470,8 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
 #   6. Show success message with transaction reference
 #
 # CONNECTION:
-#   - trashport/payments/models.py Ã¢â€ â€™ UPIPayoutRequest (payout audit log)
-#   - trashport/users/models.py    Ã¢â€ â€™ User.wallet_balance (cash balance field)
+#   - trashport/payments/models.py → UPIPayoutRequest (payout audit log)
+#   - trashport/users/models.py    → User.wallet_balance (cash balance field)
 # ==============================================================================
 
 class CollectorRedeemUPIView(LoginRequiredMixin, View):
@@ -542,7 +542,7 @@ class CollectorRedeemUPIView(LoginRequiredMixin, View):
 
         messages.success(
             request,
-            f"Ã°Å¸Å½â€° Success! Rs. {amount:.2f} has been redeemed to UPI ID '{upi_id}'. "
+            f"🎉 Success! Rs. {amount:.2f} has been redeemed to UPI ID '{upi_id}'. "
             f"Transaction Reference: {ref_id}."
         )
         return redirect("waste_management:dashboard")

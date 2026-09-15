@@ -64,44 +64,89 @@
         </ul>
       </div>
 
-      <!-- Auto-Assign Pending Pickups -->
+      {# ------------------------------------------------------------------------- #}
+      {# 1. AUTO-ASSIGN DISPATCH TRIGGER                                          #}
+      {# Submits a POST request to run the nearest-neighbor / workload dispatch   #}
+      {# algorithm, matching all unassigned pending pickups to online collectors.  #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Form container submitting POST to pickup_auto_assign endpoint -->
       <form method="post" action="{% url 'waste_management:pickup_auto_assign' %}" class="d-inline">
+        <!-- Django CSRF protection token -->
         {% csrf_token %}
+        <!-- Submit button with browser confirmation dialog to prevent accidental triggers -->
         <button type="submit" class="btn btn-warning text-dark fw-bold shadow-sm" onclick="return confirm('Auto-assign all pending requests to available collectors?')">
+          <!-- Magic wand icon indicating automated algorithmic assignment -->
           <i class="bi bi-magic me-1"></i> Auto-Assign Pickups
         </button>
       </form>
 
-      <!-- Users Directory -->
+      {# ------------------------------------------------------------------------- #}
+      {# 2. USERS DIRECTORY                                                        #}
+      {# Navigates to the administrative user table to view, filter, and modify    #}
+      {# citizen, collector, and administrator accounts and permissions.          #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to system-wide user directory -->
       <a href="{% url 'waste_management:user_list' %}" class="btn btn-outline-dark shadow-sm">
+        <!-- People icon for user directory -->
         <i class="bi bi-people me-1"></i> Users Directory
       </a>
 
-      <!-- Onboard Collector -->
+      {# ------------------------------------------------------------------------- #}
+      {# 3. COLLECTOR ONBOARDING                                                   #}
+      {# Form to manually create and provision a pre-verified collector account   #}
+      {# with associated vehicle details and mobile phone credentials.            #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to collector registration and provisioning form -->
       <a href="{% url 'waste_management:collector_create' %}" class="btn btn-outline-success shadow-sm">
+        <!-- Person-plus icon for onboarding -->
         <i class="bi bi-person-plus me-1"></i> Onboard Collector
       </a>
 
-      <!-- Collector Payout Rates -->
+      {# ------------------------------------------------------------------------- #}
+      {# 4. COLLECTOR PAYOUT RATES                                                 #}
+      {# Configures commission formulas: base minimum payout, per-km transit      #}
+      {# rates, and extra-weight surcharge commission percentages.                 #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to collector payout formula and commission configuration -->
       <a href="{% url 'waste_management:collector_payout_settings' %}" class="btn btn-outline-primary shadow-sm">
+        <!-- Calculator icon representing rate formula configuration -->
         <i class="bi bi-calculator me-1"></i> Payout Rates
       </a>
 
-      <!-- Anonymous Feedback Box -->
+      {# ------------------------------------------------------------------------- #}
+      {# 5. ANONYMOUS CITIZEN FEEDBACK BOX                                         #}
+      {# Direct inbox for community feedback, whistleblowing, or bug reports.      #}
+      {# Displays a red notification counter pill when unreviewed items exist.    #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to anonymous feedback list with relative badge positioning -->
       <a href="{% url 'waste_management:anonymous_feedback_list' %}" class="btn btn-outline-info shadow-sm position-relative">
+        <!-- Shield lock icon denoting anonymous confidentiality -->
         <i class="bi bi-shield-lock-fill me-1"></i> Feedback Box
+        <!-- Conditional badge showing unreviewed message count -->
         {% if unreviewed_feedback_count > 0 %}
           <span class="badge bg-danger rounded-pill ms-1">{{ unreviewed_feedback_count }}</span>
         {% endif %}
       </a>
 
-      <!-- Pay-As-You-Use Rates -->
+      {# ------------------------------------------------------------------------- #}
+      {# 6. WASTE CATEGORY PRICING RATES                                           #}
+      {# List and manage pay-as-you-throw pricing per kg and recycling reward     #}
+      {# green points for categories (Plastic, Organic, E-Waste, Metal, etc.).    #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to waste categories pricing list -->
       <a href="{% url 'waste_management:category_list' %}" class="btn btn-outline-secondary shadow-sm">
+        <!-- Tag icon for pricing categories -->
         <i class="bi bi-tag-fill me-1"></i> Category Rates
       </a>
 
-      <!-- New Category Rate -->
+      {# ------------------------------------------------------------------------- #}
+      {# 7. CREATE NEW WASTE CATEGORY                                              #}
+      {# Administrative modal/form to register a new material category in the      #}
+      {# city waste taxonomy.                                                      #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to add new category form -->
       <a href="{% url 'waste_management:category_create' %}" class="btn btn-primary shadow-sm">
+        <!-- Plus icon for creating a new item -->
         <i class="bi bi-plus-circle me-1"></i> New Category
       </a>
     </div>
@@ -190,7 +235,7 @@
           </div>
           <h3 class="fw-bold mb-1 text-dark">{{ active_complaints }} <span class="fs-6 text-muted">Issues</span></h3>
           <div class="text-muted small d-flex justify-content-between align-items-center gap-2">
-            <span>{{ total_citizens }} Citizens Ã¢â‚¬Â¢ {{ total_collectors }} Collectors</span>
+            <span>{{ total_citizens }} Citizens • {{ total_collectors }} Collectors</span>
             <span class="text-primary fw-semibold small d-inline-flex align-items-center gap-1 text-nowrap">
               View Pending <i class="bi bi-arrow-down-circle-fill fs-6"></i>
             </span>
@@ -322,7 +367,7 @@
           Excess Weight Commission: <span class="text-warning text-dark">{{ collector_payout_setting.extra_weight_commission_percent }}%</span>
         </h5>
         <p class="text-muted small mb-0">
-          Formula: Max(Base Min, Base Min + (Distance Ãƒâ€” Rate/km) + (Extra Weight Fee Ãƒâ€” Commission %)).
+          Formula: Max(Base Min, Base Min + (Distance × Rate/km) + (Extra Weight Fee × Commission %)).
         </p>
       </div>
       <div>

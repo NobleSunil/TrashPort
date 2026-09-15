@@ -2,7 +2,7 @@
 {% block content %}
     <h3>Payment Receipt</h3>
     <p>Hello {{ user_name }},</p>
-    <p>We received your payment of <strong>{% if currency == 'INR' or not currency %}Ã¢â€šÂ¹{% elif currency == 'USD' %}${% else %}{{ currency }} {% endif %}{{ amount }}</strong>.</p>
+    <p>We received your payment of <strong>{% if currency == 'INR' or not currency %}₹{% elif currency == 'USD' %}${% else %}{{ currency }} {% endif %}{{ amount }}</strong>.</p>
     <p>Transaction ID: <code>{{ transaction_id }}</code></p>
     <p>Description: {{ description }}</p>
     {% if invoice_url %}

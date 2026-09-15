@@ -1,15 +1,31 @@
+"""
+Action Handler for TrashPort Conversational AI Chatbot.
+
+Translates parsed natural language intents and structured tool calls into
+asynchronous, database-backed transactional operations:
+  - Checking active pickup statuses
+  - Cancelling an uncollected pickup request
+  - Rescheduling pickup dates and time windows
+  - Creating new pickup bookings with address geocoding and category matching
+"""
+
 import logging
 from decimal import Decimal
 from asgiref.sync import sync_to_async
+from django.db import models
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 from trashport.core.waste_management.models import PickupRequest, Address, WasteCategory
 
 logger = logging.getLogger(__name__)
 
-def _parse_time(time_str):
+
+def _parse_time(time_str: str) -> timezone.datetime:
     """
-    Parses a datetime string into a timezone-aware datetime object.
+    Parse an ISO or standard datetime string into a timezone-aware datetime object.
+    
+    Raises:
+        ValueError: If time string cannot be parsed into a valid timestamp.
     """
     dt = parse_datetime(str(time_str))
     if not dt:
@@ -21,7 +37,12 @@ def _parse_time(time_str):
         dt = timezone.make_aware(dt)
     return dt
 
-def _sync_check_status(user):
+
+def _sync_check_status(user) -> dict:
+    """
+    Query all non-cancelled active pickups for the authenticated citizen user.
+    Formats pickup ID, date, status, and address into a user-friendly text message.
+    """
     pickups = (
         PickupRequest.objects.filter(citizen=user)
         .select_related("address")
@@ -42,10 +63,15 @@ def _sync_check_status(user):
                 parts.append(a.address_line2)
             parts.extend([a.city, a.state, a.postal_code])
             addr_str = f" | Address: {', '.join(filter(None, parts))}"
-        lines.append(f"- Pickup #{p.display_id}: {time_str} â€” {p.status}{addr_str}")
+        lines.append(f"- Pickup #{p.display_id}: {time_str} — {p.status}{addr_str}")
     return {"type": "text", "message": "Here are your active pickups:\n" + "\n".join(lines)}
 
-def _sync_cancel_pickup(user, pickup_id):
+
+def _sync_cancel_pickup(user, pickup_id: int) -> dict:
+    """
+    Cancel an existing uncollected pickup request.
+    Verifies ownership and validates that pickup has not already reached completion or transit.
+    """
     pickup = (
         PickupRequest.objects.filter(citizen=user)
         .filter(models.Q(user_pickup_number=pickup_id) | models.Q(id=pickup_id))
@@ -54,7 +80,7 @@ def _sync_cancel_pickup(user, pickup_id):
     if not pickup:
         return {"type": "text", "message": "Pickup not found or access denied."}
 
-    # Verify status is PENDING or CONFIRMED (in this DB we match PENDING or active states like ASSIGNED/AWAITING_PAYMENT)
+    # Verify status is PENDING or active uncollected states
     if pickup.status not in ["PENDING", "CONFIRMED", "AWAITING_PAYMENT", "ASSIGNED"]:
         return {"type": "text", "message": "Only pending or confirmed pickups can be cancelled."}
 
@@ -62,7 +88,11 @@ def _sync_cancel_pickup(user, pickup_id):
     pickup.save(update_fields=["status"])
     return {"type": "action_done", "message": "Your pickup has been cancelled."}
 
-def _sync_edit_pickup(user, pickup_id, new_time_str):
+
+def _sync_edit_pickup(user, pickup_id: int, new_time_str: str) -> dict:
+    """
+    Reschedule an existing pickup request to a new timestamp.
+    """
     pickup = (
         PickupRequest.objects.filter(citizen=user)
         .filter(models.Q(user_pickup_number=pickup_id) | models.Q(id=pickup_id))
@@ -76,10 +106,25 @@ def _sync_edit_pickup(user, pickup_id, new_time_str):
     pickup.save(update_fields=["schedule_date"])
     return {"type": "action_done", "message": f"Pickup rescheduled to {new_time_str}."}
 
-def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_type=None, address_id=None, address_details=None, category_val=None, weight_val=None):
-    # Find or create Address instance
+
+def _sync_book_pickup(
+    user,
+    address_val=None,
+    scheduled_time_str=None,
+    address_type=None,
+    address_id=None,
+    address_details=None,
+    category_val=None,
+    weight_val=None,
+) -> dict:
+    """
+    Create a new pickup request in the database via conversational parameters.
+    Handles address resolution (new vs saved), fuzzy waste category matching,
+    weight parsing, and initial state persistence.
+    """
     address_obj = None
 
+    # Case 1: Citizen specified a new address payload
     if address_type == "new" and address_details:
         address_obj = Address.objects.create(
             user=user,
@@ -87,8 +132,9 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
             city=address_details.get("city"),
             state=address_details.get("state"),
             postal_code=address_details.get("postal_code"),
-            is_default=False
+            is_default=False,
         )
+    # Case 2: Citizen specified an existing saved address ID
     elif address_type == "saved" and address_id:
         import re
         if str(address_id).isdigit():
@@ -108,7 +154,7 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
         if not address_obj:
             address_obj = Address.objects.filter(user=user, address_line1__icontains=str(address_val)).first()
 
-    # Default fallbacks
+    # Default fallbacks: default address, then any user address, or create default
     if not address_obj:
         address_obj = Address.objects.filter(user=user, is_default=True).first()
     if not address_obj:
@@ -120,9 +166,10 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
             city="Kochi",
             state="Kerala",
             postal_code="682001",
-            is_default=True
+            is_default=True,
         )
 
+    # Resolve WasteCategory
     category_obj = None
     if category_val:
         cat_str = str(category_val).strip()
@@ -146,10 +193,10 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
             name="General Waste",
             description="Default waste category",
             fee_per_kg=0.00,
-            points_per_kg=0
+            points_per_kg=0,
         )
 
-    # Parse weight_kg
+    # Parse estimated weight in kg
     parsed_weight = Decimal("1.00")
     if weight_val is not None:
         try:
@@ -170,19 +217,24 @@ def _sync_book_pickup(user, address_val=None, scheduled_time_str=None, address_t
         category=category_obj,
         weight_kg=parsed_weight,
         schedule_date=scheduled_time,
-        status="PENDING"
+        status="PENDING",
     )
 
-    # Force status to PENDING if save() logic auto-changes it to AWAITING_PAYMENT
+    # Ensure status stays PENDING if auto-transitioned
     if pickup.status != "PENDING":
         pickup.status = "PENDING"
         pickup.save(update_fields=["status"])
 
-    return {"type": "action_done", "message": f"Pickup #{pickup.display_id} ({category_obj.name}, {pickup.weight_kg} kg) booked for {scheduled_time_str}!"}
+    return {
+        "type": "action_done",
+        "message": f"Pickup #{pickup.display_id} ({category_obj.name}, {pickup.weight_kg} kg) booked for {scheduled_time_str}!",
+    }
+
 
 async def execute_action(user, parsed: dict) -> dict:
     """
-    Executes a parsed chatbot action in a database-safe async environment.
+    Execute a parsed chatbot action in a database-safe asynchronous environment.
+    Dispatches to corresponding synchronous handler wrapped with sync_to_async.
     """
     try:
         action = parsed.get("action")

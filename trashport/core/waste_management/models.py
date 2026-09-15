@@ -1,5 +1,5 @@
 """
-waste_management/models.py â€” Core Domain Models
+waste_management/models.py — Core Domain Models
 =================================================
 
 PURPOSE:
@@ -23,10 +23,10 @@ DATA FLOW OVERVIEW:
   4. Collector claims â†’ status = ASSIGNED
   5. Collector marks in transit â†’ status = IN_TRANSIT
   6. Collector completes (with actual weight) â†’ status = COMPLETED â†’
-       â€¢ Extra fee calculated if actual_weight > estimated weight
-       â€¢ Collector wallet credited with collector_earnings
-       â€¢ Citizen wallet credited with recycling points (if category gives points)
-       â€¢ Email/in-app notifications sent
+       • Extra fee calculated if actual_weight > estimated weight
+       • Collector wallet credited with collector_earnings
+       • Citizen wallet credited with recycling points (if category gives points)
+       • Email/in-app notifications sent
 
 IMPACT WARNINGS:
   - Modifying PickupRequest.save() affects the ENTIRE pickup lifecycle.
@@ -93,7 +93,7 @@ class Address(models.Model):
     state = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
 
-    # GPS coordinates â€” populated from citizen's map pin or device location.
+    # GPS coordinates — populated from citizen's map pin or device location.
     # These flow INTO PickupRequest when a pickup is created at this address.
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -102,7 +102,7 @@ class Address(models.Model):
     is_default = models.BooleanField(default=False)
     is_hidden = models.BooleanField(
         default=False,
-        help_text="Soft-delete flag â€” hidden from citizen view but retained in the database."
+        help_text="Soft-delete flag — hidden from citizen view but retained in the database."
     )
 
     # Auto-managed timestamps
@@ -162,13 +162,13 @@ class WasteCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
 
-    # Fee charged to citizen: pickup.fee = weight_kg Ã— fee_per_kg
+    # Fee charged to citizen: pickup.fee = weight_kg × fee_per_kg
     fee_per_kg = models.DecimalField(
         max_digits=6, decimal_places=2, default=0.00,
         help_text="Collection fee per kg"
     )
 
-    # Recycling reward points: pickup.points_earned = weight_kg Ã— points_per_kg
+    # Recycling reward points: pickup.points_earned = weight_kg × points_per_kg
     points_per_kg = models.IntegerField(
         default=0,
         help_text="Points rewarded per kg for recycling valuable metals (Copper, Aluminum, Steel)"
@@ -193,8 +193,8 @@ class WasteCategory(models.Model):
 #
 # FORMULA:
 #   earnings = max(base_min_payout,
-#                  base_min_payout + (distance_km Ã— rate_per_km)
-#                                  + (extra_fee Ã— extra_weight_commission_percent / 100))
+#                  base_min_payout + (distance_km × rate_per_km)
+#                                  + (extra_fee × extra_weight_commission_percent / 100))
 #
 # CONNECTION: PickupRequest.calculate_collector_earnings() calls get_settings().
 #             Admins update these values via waste_management/manage/payout-settings/.
@@ -245,7 +245,7 @@ class CollectorPayoutSetting(models.Model):
         Returns the active payout settings row, creating it with defaults if
         it doesn't exist yet.
 
-        Always use this method â€” never call .objects.first() directly, as that
+        Always use this method — never call .objects.first() directly, as that
         would return None on a fresh database and cause AttributeError crashes.
 
         IMPACT: The first call on a fresh DB creates a default row automatically.
@@ -268,23 +268,23 @@ class CollectorPayoutSetting(models.Model):
 #
 # LIFECYCLE (status flow):
 #   NEW â†’ AWAITING_PAYMENT (if fee > 0) â†’ PENDING â†’ ASSIGNED â†’ IN_TRANSIT â†’ COMPLETED
-#      â†˜ PENDING (if fee = 0, auto-paid)                                    â†˜ CANCELLED
+#      ↘ PENDING (if fee = 0, auto-paid)                                    ↘ CANCELLED
 #
 # KEY AUTOMATED BEHAVIORS (in save() override):
 #   On CREATE:
-#     â€¢ Assigns sequential user_pickup_number (per citizen, starts from 1)
-#     â€¢ Calculates fee = weight_kg Ã— category.fee_per_kg
-#     â€¢ Calculates points_earned = weight_kg Ã— category.points_per_kg
-#     â€¢ Sets status: AWAITING_PAYMENT (fee > 0) or PENDING (fee = 0)
-#     â€¢ Calculates initial collector_earnings estimate
-#     â€¢ Syncs GPS coordinates between PickupRequest and its Address
-#     â€¢ Sends "pickup requested" notification to citizen
+#     • Assigns sequential user_pickup_number (per citizen, starts from 1)
+#     • Calculates fee = weight_kg × category.fee_per_kg
+#     • Calculates points_earned = weight_kg × category.points_per_kg
+#     • Sets status: AWAITING_PAYMENT (fee > 0) or PENDING (fee = 0)
+#     • Calculates initial collector_earnings estimate
+#     • Syncs GPS coordinates between PickupRequest and its Address
+#     • Sends "pickup requested" notification to citizen
 #   On UPDATE:
-#     â€¢ Recalculates extra_fee if actual_weight > estimated weight (2Ã— rate)
-#     â€¢ Recalculates collector_earnings based on final distance and extra_fee
-#     â€¢ On COMPLETED transition: credits citizen points + collector wallet balance
-#     â€¢ On ASSIGNED transition: sends "collector assigned" notification
-#     â€¢ On CANCELLED transition: sends "pickup cancelled" notification
+#     • Recalculates extra_fee if actual_weight > estimated weight (2× rate)
+#     • Recalculates collector_earnings based on final distance and extra_fee
+#     • On COMPLETED transition: credits citizen points + collector wallet balance
+#     • On ASSIGNED transition: sends "collector assigned" notification
+#     • On CANCELLED transition: sends "pickup cancelled" notification
 #
 # CONNECTIONS:
 #   - trashport/citizens/views.py  â†’ citizen creates, pays, cancels, rates pickups
@@ -305,7 +305,7 @@ class PickupRequest(models.Model):
 
     Status Choices:
       PENDING          : Created and ready for collector to claim.
-      AWAITING_PAYMENT : Created but fee unpaid â€” waiting for citizen payment.
+      AWAITING_PAYMENT : Created but fee unpaid — waiting for citizen payment.
       ASSIGNED         : A collector has claimed this job.
       IN_TRANSIT       : Collector is on the way to pick up the waste.
       COMPLETED        : Waste collected, weight verified, earnings credited.
@@ -321,7 +321,7 @@ class PickupRequest(models.Model):
         CANCELLED = "CANCELLED", "Cancelled"
 
     # -------------------------------------------------------------------------
-    # Relationships â€” who is involved in this pickup?
+    # Relationships — who is involved in this pickup?
     # -------------------------------------------------------------------------
     citizen = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -342,14 +342,14 @@ class PickupRequest(models.Model):
     )
 
     # -------------------------------------------------------------------------
-    # Location â€” GPS coordinates
+    # Location — GPS coordinates
     # latitude/longitude can come from:
     #   1. The citizen's map pin (overrides address coordinates)
     #   2. The linked Address object (synced in save())
     #   3. Default Kerala fallback (9.9312, 76.2673) if neither is available
     #
     # Use effective_latitude / effective_longitude properties for display/maps.
-    # NEVER use raw latitude/longitude directly â€” they may be the Kerala default.
+    # NEVER use raw latitude/longitude directly — they may be the Kerala default.
     # -------------------------------------------------------------------------
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -361,7 +361,7 @@ class PickupRequest(models.Model):
     #   is_weight_verified: True once collector enters actual weight
     #
     # If actual_weight_kg > weight_kg:
-    #   extra_fee = (actual_weight_kg - weight_kg) Ã— fee_per_kg Ã— 2 (2x penalty)
+    #   extra_fee = (actual_weight_kg - weight_kg) × fee_per_kg × 2 (2x penalty)
     # -------------------------------------------------------------------------
     weight_kg = models.DecimalField(
         max_digits=6, decimal_places=2, default=1.00,
@@ -383,13 +383,13 @@ class PickupRequest(models.Model):
 
     # -------------------------------------------------------------------------
     # Financial fields
-    #   fee             : Amount citizen owes (weight_kg Ã— fee_per_kg + extra_fee)
+    #   fee             : Amount citizen owes (weight_kg × fee_per_kg + extra_fee)
     #   extra_fee       : Surcharge for excess weight (2x rate per kg over estimate)
     #   collector_earnings: What collector is paid on completion
     #   points_earned   : Green wallet points awarded to citizen on completion
     #
     # IMPACT: These are calculated automatically in save(). Do NOT set them
-    #         manually in views â€” the save() hook will overwrite them.
+    #         manually in views — the save() hook will overwrite them.
     # -------------------------------------------------------------------------
     fee = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.00,
@@ -497,8 +497,8 @@ class PickupRequest(models.Model):
 
         FORMULA (using current CollectorPayoutSetting values):
           earnings = base_min_payout
-                   + (distance_km Ã— rate_per_km)
-                   + (extra_fee Ã— extra_weight_commission_percent / 100)
+                   + (distance_km × rate_per_km)
+                   + (extra_fee × extra_weight_commission_percent / 100)
 
           Result is clamped to at least base_min_payout.
 
@@ -532,9 +532,9 @@ class PickupRequest(models.Model):
         2. SEQUENTIAL ID: Assign user_pickup_number as the next number in
            sequence for this citizen (1, 2, 3, ... per citizen).
 
-        3. FEE CALCULATION: fee = weight_kg Ã— category.fee_per_kg
+        3. FEE CALCULATION: fee = weight_kg × category.fee_per_kg
 
-        4. POINTS CALCULATION: points_earned = weight_kg Ã— category.points_per_kg
+        4. POINTS CALCULATION: points_earned = weight_kg × category.points_per_kg
 
         5. STATUS & PAYMENT:
            - fee > 0 â†’ status = AWAITING_PAYMENT, is_paid = False
@@ -548,8 +548,8 @@ class PickupRequest(models.Model):
         ON UPDATE (is_new = False):
         =====================================================================
         1. EXTRA WEIGHT: If actual_weight_kg > weight_kg:
-             extra_fee = (actual - estimated) Ã— fee_per_kg Ã— 2  (2x penalty rate)
-             fee = (weight_kg Ã— fee_per_kg) + extra_fee
+             extra_fee = (actual - estimated) × fee_per_kg × 2  (2x penalty rate)
+             fee = (weight_kg × fee_per_kg) + extra_fee
 
         2. RECALCULATE EARNINGS: collector_earnings = calculate_collector_earnings()
            (now includes the extra_fee commission)
@@ -613,7 +613,7 @@ class PickupRequest(models.Model):
                 self.status = self.StatusChoices.AWAITING_PAYMENT
                 self.is_paid = False
             else:
-                # Free pickup (e.g., recyclables) â€” immediately PENDING for collectors to claim
+                # Free pickup (e.g., recyclables) — immediately PENDING for collectors to claim
                 self.status = self.StatusChoices.PENDING
                 self.is_paid = True
 

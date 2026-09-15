@@ -1,15 +1,36 @@
+/**
+ * ==============================================================================
+ * TrashPort Design System — Core Project Stylesheet (project.css)
+ * ==============================================================================
+ *
+ * Typography:
+ *   - Primary UI: 'Fira Sans' (weights 300 to 900)
+ *   - Monospace & Numbers: 'Fira Code' (weights 400 to 600)
+ *
+ * Theme Aesthetics:
+ *   - Modern Eco-Clean Glassmorphism (Lucent Green Tint)
+ *   - Frosted backdrop filters with subtle radial micro-dots
+ *   - Polished emerald, slate, and amber status accent tokens
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap');
 
-/* Main font styling & Dot-grid background */
+/* ==============================================================================
+   1. GLOBAL CANVAS & BACKGROUND
+   ============================================================================== */
 body {
   font-family: 'Fira Sans', sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
+  /* Radial micro-dot background pattern */
   background-image: radial-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Nothing OS 5.0 Lucent Effect with Green Tint */
+/* ==============================================================================
+   2. LUCENT GLASSMORPHISM COMPONENTS
+   ============================================================================== */
+/* Frosted glass card with emerald-to-white gradient */
 .lucent-card {
   background: linear-gradient(135deg, rgba(236, 253, 245, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%);
   backdrop-filter: blur(16px) saturate(180%);
@@ -26,6 +47,7 @@ body {
   box-shadow: 0 16px 36px -10px rgba(5, 150, 105, 0.15);
 }
 
+/* Frosted horizontal header/bar */
 .lucent-bar {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) saturate(180%);
@@ -33,6 +55,7 @@ body {
   border-bottom: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+/* Status indicator pills */
 .lucent-pill-green {
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.3);
@@ -60,7 +83,9 @@ body {
   border-radius: 9999px;
 }
 
-/* Custom Card Overrides */
+/* ==============================================================================
+   3. BOOTSTRAP CARD & CONTAINER OVERRIDES
+   ============================================================================== */
 .card {
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(236, 253, 245, 0.6) 0%, rgba(255, 255, 255, 0.85) 100%);
@@ -77,7 +102,9 @@ body {
   box-shadow: 0 12px 28px rgba(5, 150, 105, 0.12) !important;
 }
 
-/* Header customization */
+/* ==============================================================================
+   4. NAVIGATION BAR STYLING
+   ============================================================================== */
 .navbar {
   background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(16px) saturate(180%);
@@ -92,7 +119,9 @@ body {
   color: #0f172a !important;
 }
 
-/* Buttons style */
+/* ==============================================================================
+   5. BUTTON VARIATIONS & HOVER STATES
+   ============================================================================== */
 .btn {
   border-radius: 10px;
   font-weight: 600;
@@ -117,7 +146,9 @@ body {
   border-color: #059669;
 }
 
-/* Forms styling */
+/* ==============================================================================
+   6. FORM INPUTS & INTERACTION STATES
+   ============================================================================== */
 .form-control, .form-select {
   border-radius: 10px;
   padding: 0.65rem 0.9rem;

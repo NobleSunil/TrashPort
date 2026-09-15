@@ -1,5 +1,5 @@
 """
-config/urls.py Ã¢â‚¬â€ Master URL Configuration (Root URL Router)
+config/urls.py — Master URL Configuration (Root URL Router)
 ============================================================
 
 PURPOSE:
@@ -8,31 +8,31 @@ PURPOSE:
   the global URL structure.
 
 URL STRUCTURE OVERVIEW:
-  /                    Ã¢â€ â€™ Home page (pages/home.html template)
-  /about/              Ã¢â€ â€™ About page (pages/about.html template)
-  /accounts/           Ã¢â€ â€™ django-allauth auth views (login, signup, logout, etc.)
-  /api/                Ã¢â€ â€™ REST API (config/api_router.py Ã¢â€ â€™ /api/users/, /api/addresses/, ...)
-  /api/schema/         Ã¢â€ â€™ drf-spectacular OpenAPI schema (JSON/YAML download)
-  /api/docs/           Ã¢â€ â€™ Swagger UI for interactive API exploration
-  /api/auth-token/     Ã¢â€ â€™ DRF token authentication endpoint
-  /<ADMIN_URL>/        Ã¢â€ â€™ Django admin panel (default: /django-admin/)
-  /api/maps/           Ã¢â€ â€™ Map API (collector GPS, road routing)
-  /api/collectors/     Ã¢â€ â€™ Collector Aadhaar OTP verification API
-  /                    Ã¢â€ â€™ All other URLs handled by waste_management/urls.py
+  /                    → Home page (pages/home.html template)
+  /about/              → About page (pages/about.html template)
+  /accounts/           → django-allauth auth views (login, signup, logout, etc.)
+  /api/                → REST API (config/api_router.py → /api/users/, /api/addresses/, ...)
+  /api/schema/         → drf-spectacular OpenAPI schema (JSON/YAML download)
+  /api/docs/           → Swagger UI for interactive API exploration
+  /api/auth-token/     → DRF token authentication endpoint
+  /<ADMIN_URL>/        → Django admin panel (default: /django-admin/)
+  /api/maps/           → Map API (collector GPS, road routing)
+  /api/collectors/     → Collector Aadhaar OTP verification API
+  /                    → All other URLs handled by waste_management/urls.py
                          (dashboard, pickups, addresses, complaints, payments, etc.)
 
 CONNECTION MAP:
-  - waste_management/urls.py     Ã¢â€ â€™ handles all citizen/collector/admin web UI URLs
-  - config/api_router.py         Ã¢â€ â€™ handles all /api/ REST endpoints
-  - trashport/maps/urls.py       Ã¢â€ â€™ handles /api/maps/ GPS and routing endpoints
-  - trashport/collectors/urls.py Ã¢â€ â€™ handles /api/collectors/aadhaar/ endpoints
-  - config/settings/base.py      Ã¢â€ â€™ ADMIN_URL, DEBUG mode for debug toolbar inclusion
+  - waste_management/urls.py     → handles all citizen/collector/admin web UI URLs
+  - config/api_router.py         → handles all /api/ REST endpoints
+  - trashport/maps/urls.py       → handles /api/maps/ GPS and routing endpoints
+  - trashport/collectors/urls.py → handles /api/collectors/aadhaar/ endpoints
+  - config/settings/base.py      → ADMIN_URL, DEBUG mode for debug toolbar inclusion
 
 ALLAUTH AUTH VIEWS (at /accounts/):
-  /accounts/login/      Ã¢â€ â€™ Sign in
-  /accounts/signup/     Ã¢â€ â€™ Register (role is set during signup)
-  /accounts/logout/     Ã¢â€ â€™ Sign out
-  /accounts/password/   Ã¢â€ â€™ Password change/reset flows
+  /accounts/login/      → Sign in
+  /accounts/signup/     → Register (role is set during signup)
+  /accounts/logout/     → Sign out
+  /accounts/password/   → Password change/reset flows
 
 IMPACT:
   - Changing a URL prefix here changes ALL sub-URLs under it.

@@ -76,10 +76,10 @@
                     <select name="role" id="id_role" required
                         class="w-full px-3.5 py-2.5 bg-slate-50 border {% if form.role.errors %}border-rose-300{% else %}border-slate-200{% endif %} rounded-xl text-slate-800 font-medium appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer pr-10 text-sm transition-all">
                         <option value="CITIZEN" {% if form.role.value == "CITIZEN" or not form.role.value %}selected{% endif %}>
-                            Citizen Ã¢â‚¬â€œ Book pickups, earn wallet rewards
+                            Citizen – Book pickups, earn wallet rewards
                         </option>
                         <option value="COLLECTOR" {% if form.role.value == "COLLECTOR" %}selected{% endif %}>
-                            Collector Ã¢â‚¬â€œ Accept jobs, instant verification payouts
+                            Collector – Accept jobs, instant verification payouts
                         </option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">

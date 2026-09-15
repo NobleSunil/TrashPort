@@ -1,10 +1,10 @@
 """
-trashport/citizens/views.py Ã¢â‚¬â€ Citizen Role View Layer
+trashport/citizens/views.py — Citizen Role View Layer
 ======================================================
 
 PURPOSE:
   This file contains all view classes exclusively used by citizen users.
-  These views are never called directly from the top-level URL config Ã¢â‚¬â€
+  These views are never called directly from the top-level URL config —
   they are dispatched to by the role-based system in waste_management/views.py
   or accessed directly through trashport/citizens/urls.py.
 
@@ -16,17 +16,17 @@ HOW THESE VIEWS ARE REACHED:
   ComplaintListView, ComplaintDetailView, PaymentCheckoutView, etc.
 
 CONNECTION MAP:
-  - waste_management/views.py       Ã¢â€ â€™ dispatches most views here
-  - waste_management/urls.py        Ã¢â€ â€™ registers dispatcher URLs
-  - trashport/citizens/urls.py      Ã¢â€ â€™ registers citizen-specific extra URLs
+  - waste_management/views.py       → dispatches most views here
+  - waste_management/urls.py        → registers dispatcher URLs
+  - trashport/citizens/urls.py      → registers citizen-specific extra URLs
                                       (wallet, redeem coupon, anonymous feedback)
-  - waste_management/models.py      Ã¢â€ â€™ Address, PickupRequest, Complaint, WasteCategory
-  - trashport/payments/services.py  Ã¢â€ â€™ PaymentGatewayService (card/UPI/wallet checkout)
-  - trashport/payments/models.py    Ã¢â€ â€™ PaymentTransaction, WalletHistory
-  - trashport/notifications/models.py Ã¢â€ â€™ Notification (in-app alerts on dashboard)
+  - waste_management/models.py      → Address, PickupRequest, Complaint, WasteCategory
+  - trashport/payments/services.py  → PaymentGatewayService (card/UPI/wallet checkout)
+  - trashport/payments/models.py    → PaymentTransaction, WalletHistory
+  - trashport/notifications/models.py → Notification (in-app alerts on dashboard)
 
 VIEW INVENTORY:
-  CitizenDashboardView         : Main hub Ã¢â‚¬â€ active pickups, wallet, complaints, history.
+  CitizenDashboardView         : Main hub — active pickups, wallet, complaints, history.
   AddressListView              : List all saved addresses.
   AddressCreateView            : Register a new address with GPS map pin.
   AddressUpdateView            : Edit an existing address.
@@ -41,17 +41,17 @@ VIEW INVENTORY:
   CitizenPaymentSuccessView    : Payment receipt display after successful payment.
   CitizenInvoiceView           : Printable tax invoice for a paid pickup.
   CitizenWalletView            : Recycling points wallet + coupon redemption.
-  CitizenRedeemCouponView      : Convert 100 pts Ã¢â€ â€™ Rs. 10 coupon stored in session.
+  CitizenRedeemCouponView      : Convert 100 pts → Rs. 10 coupon stored in session.
   CitizenRemoveCouponView      : Cancel active coupon, refund 100 pts.
   SubmitAnonymousFeedbackView  : Accept anonymous feedback (no login required).
 
 WALLET / COUPON FLOW:
   1. Citizen earns points when pickups are COMPLETED (via WalletService.adjust_points
      called in PickupRequest.save()).
-  2. Citizen visits CitizenWalletView Ã¢â€ â€™ sees balance and can redeem coupon.
-  3. CitizenRedeemCouponView: deducts 100 pts Ã¢â€ â€™ stores coupon in request.session.
-  4. At CitizenPaymentCheckoutView: reads session coupon Ã¢â€ â€™ applies Rs. 10 discount.
-  5. CitizenRemoveCouponView: removes session coupon Ã¢â€ â€™ refunds 100 pts.
+  2. Citizen visits CitizenWalletView → sees balance and can redeem coupon.
+  3. CitizenRedeemCouponView: deducts 100 pts → stores coupon in request.session.
+  4. At CitizenPaymentCheckoutView: reads session coupon → applies Rs. 10 discount.
+  5. CitizenRemoveCouponView: removes session coupon → refunds 100 pts.
 
 IMPACT:
   - Changing CitizenPaymentCheckoutView affects the payment UX for ALL citizens.
@@ -391,7 +391,7 @@ class CitizenPickupStatusUpdateView(LoginRequiredMixin, View):
                     from trashport.services.notifications.services import NotificationService
                     NotificationService.create_notification(
                         user=request.user,
-                        title=f"Pickup #{pickup.display_id} Cancelled Ã¢â‚¬â€ Refund Initiated",
+                        title=f"Pickup #{pickup.display_id} Cancelled — Refund Initiated",
                         message=f"Pickup #{pickup.display_id} was cancelled ({reason}). Your refund of Rs. {pickup.fee} will be credited to your original payment method within 3 to 7 business days.",
                         notification_type=Notification.Types.PAYMENT
                     )
@@ -463,9 +463,9 @@ class CitizenComplaintDetailView(LoginRequiredMixin, DetailView):
 
 class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
     """
-    GET  Ã¢â‚¬â€ Renders the payment checkout page for a pickup request that
+    GET  — Renders the payment checkout page for a pickup request that
             requires payment (status = AWAITING_PAYMENT, is_paid = False).
-    POST Ã¢â‚¬â€ Routes the payment to the appropriate PaymentGatewayService method
+    POST — Routes the payment to the appropriate PaymentGatewayService method
             based on the selected payment_method (card / upi / wallet).
     """
     template_name = "citizen/payment_checkout.html"
@@ -719,7 +719,7 @@ class CitizenWalletView(LoginRequiredMixin, TemplateView):
 
 class CitizenRedeemCouponView(LoginRequiredMixin, View):
     """
-    POST Ã¢â‚¬â€ Deducts 100 wallet points and stores a Rs. 10 coupon in the session.
+    POST — Deducts 100 wallet points and stores a Rs. 10 coupon in the session.
     The coupon can then be applied at any pickup payment checkout (reducing Rs. 10 from total cost).
     Supports redirecting back to checkout via 'next' query or form parameter.
     """

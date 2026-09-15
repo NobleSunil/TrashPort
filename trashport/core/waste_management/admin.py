@@ -33,23 +33,27 @@ from .models import Address, WasteCategory, PickupRequest, Complaint
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
+    """Admin configuration for citizen addresses and default pickup locations."""
     list_display = ["id", "user", "address_line1", "city", "state", "postal_code", "is_default"]
     list_filter = ["city", "state", "is_default"]
     search_fields = ["user__email", "address_line1", "city"]
 
 @admin.register(WasteCategory)
 class WasteCategoryAdmin(admin.ModelAdmin):
+    """Admin configuration for waste material categories, pricing rates, and incentive points."""
     list_display = ["id", "name", "fee_per_kg", "points_per_kg", "created_at"]
     search_fields = ["name"]
 
 @admin.register(PickupRequest)
 class PickupRequestAdmin(admin.ModelAdmin):
+    """Admin configuration for inspecting, filtering, and debugging pickup request lifecycles."""
     list_display = ["id", "citizen", "collector", "category", "weight_kg", "fee", "points_earned", "is_paid", "status", "schedule_date"]
     list_filter = ["status", "is_paid", "category"]
     search_fields = ["citizen__email", "collector__email", "id"]
 
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
+    """Admin configuration for viewing citizen complaint tickets and resolution statuses."""
     list_display = ["id", "citizen", "pickup_request", "title", "status", "created_at"]
     list_filter = ["status"]
     search_fields = ["citizen__email", "title", "description"]
@@ -59,6 +63,7 @@ from .models import CollectorPayoutSetting
 
 @admin.register(CollectorPayoutSetting)
 class CollectorPayoutSettingAdmin(admin.ModelAdmin):
+    """Admin configuration for viewing and tuning collector commission formulas and payout rates."""
     list_display = ["id", "base_min_payout", "rate_per_km", "extra_weight_commission_percent", "updated_at"]
 
 
@@ -66,6 +71,7 @@ from .models import AnonymousFeedback
 
 @admin.register(AnonymousFeedback)
 class AnonymousFeedbackAdmin(admin.ModelAdmin):
+    """Admin configuration for anonymous public feedback with inline review status checkbox."""
     list_display = ["id", "category", "subject", "is_reviewed", "created_at"]
     list_filter = ["category", "is_reviewed", "created_at"]
     search_fields = ["subject", "message"]

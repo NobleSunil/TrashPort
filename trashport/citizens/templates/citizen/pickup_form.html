@@ -43,7 +43,7 @@
                   <label class="form-label fw-bold small text-muted">Option A: Select Saved Address</label>
                   {{ form.address }}
                 </div>
-                <div class="text-center text-muted small my-2 fw-bold">Ã¢â‚¬â€ OR ENTER NEW ADDRESS BELOW Ã¢â‚¬â€</div>
+                <div class="text-center text-muted small my-2 fw-bold">— OR ENTER NEW ADDRESS BELOW —</div>
               {% endif %}
 
               <div class="row g-2">
@@ -102,7 +102,7 @@
                   </div>
                 </div>
                 <div class="form-text small text-muted mt-1">
-                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM Ã¢â‚¬â€œ 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM – 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
                 </div>
               </div>
             </div>
@@ -175,8 +175,8 @@
       });
 
       let baseMaps = {
-        "Ã°Å¸â€œÂ Street Map (OSM)": streetLayer,
-        "Ã°Å¸â€ºÂ°Ã¯Â¸Â Satellite View": satelliteLayer
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
       };
 
       let map = L.map('mapPicker', {
@@ -500,7 +500,7 @@
         updateHiddenSchedule();
       }
 
-      // Ã¢â€â‚¬Ã¢â€â‚¬ Dynamic Category Weight Limit Ã¢â€â‚¬Ã¢â€â‚¬
+      // -------------------------------------------------------------------------------------------------------- Dynamic Category Weight Limit --------------------------------------------------------------------------------------------------------
       const categoriesData = {{ categories_json|safe|default:"{}" }};
       const categorySelect = document.getElementById("id_category");
       const weightInput = document.getElementById("id_weight_kg");

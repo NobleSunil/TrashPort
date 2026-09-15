@@ -2,8 +2,8 @@
 URL configuration for the Collectors app.
 
 Aadhaar verification routes (COLLECTOR-SCOPED):
-  /api/collectors/aadhaar/initiate/  â€” validate Aadhaar number, generate demo OTP
-  /api/collectors/aadhaar/verify/    â€” verify OTP, mark collector as aadhaar_verified
+  /api/collectors/aadhaar/initiate/  — validate Aadhaar number, generate demo OTP
+  /api/collectors/aadhaar/verify/    — verify OTP, mark collector as aadhaar_verified
 
 All other routes delegate to the shared waste_management views.
 """
@@ -21,8 +21,8 @@ urlpatterns = [
     path("jobs/<int:pk>/status/", PickupStatusUpdateView.as_view(), name="job_status"),
 
     # -------------------------------------------------------------------------
-    # Aadhaar verification â€” Collector signup only
-    # GET  /api/collectors/aadhaar/  â€” Page (HTML form)
+    # Aadhaar verification — Collector signup only
+    # GET  /api/collectors/aadhaar/  — Page (HTML form)
     # POST /api/collectors/aadhaar/initiate/
     # POST /api/collectors/aadhaar/verify/
     # -------------------------------------------------------------------------

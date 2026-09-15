@@ -37,23 +37,46 @@ from .models import Address, WasteCategory, PickupRequest, Complaint
 User = get_user_model()
 
 class UserShortSerializer(serializers.ModelSerializer):
+    """
+    Lightweight user serializer for nested API payloads.
+
+    Exposes only non-sensitive identifiers: user ID, display name, email, and role.
+    """
     class Meta:
         model = User
         fields = ["id", "name", "email", "role"]
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    """
+    Serializer for citizen residential and commercial pickup addresses.
+
+    Handles geolocation coordinates (latitude, longitude) and postal details.
+    """
     class Meta:
         model = Address
         fields = "__all__"
 
+
 class WasteCategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for waste categories and recycling material types.
+
+    Includes pricing metrics (fee_per_kg), reward multiplier (points_per_kg),
+    and maximum allowable weight constraints.
+    """
     class Meta:
         model = WasteCategory
         fields = "__all__"
 
 
 class PickupRequestSerializer(serializers.ModelSerializer):
+    """
+    Comprehensive serializer for waste pickup requests.
+
+    Embeds nested read-only details for citizen, assigned collector, address,
+    and waste category. Calculates pricing, earnings, and reward point projections.
+    """
     citizen_details = UserShortSerializer(source="citizen", read_only=True)
     collector_details = UserShortSerializer(source="collector", read_only=True)
     address_details = AddressSerializer(source="address", read_only=True)
@@ -71,6 +94,10 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         ]
 
     def validate_schedule_date(self, value):
+        """
+        Validate that scheduled pickup time is at least 3 hours into the future.
+        Prevents instant-demand overload and allows collectors adequate transit time.
+        """
         min_allowed_time = timezone.now() + timedelta(hours=3)
         if value < min_allowed_time:
             raise serializers.ValidationError("Pickup must be scheduled at least 3 hours in advance from the current time.")
@@ -78,6 +105,11 @@ class PickupRequestSerializer(serializers.ModelSerializer):
 
 
 class ComplaintSerializer(serializers.ModelSerializer):
+    """
+    Serializer for citizen complaint tickets and disputes.
+
+    Embeds citizen user details and associated pickup request reference.
+    """
     citizen_details = UserShortSerializer(source="citizen", read_only=True)
     pickup_request_details = PickupRequestSerializer(source="pickup_request", read_only=True)
 

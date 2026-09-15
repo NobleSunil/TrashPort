@@ -1,11 +1,25 @@
-/* TrashPort Dashboard Stylesheet */
+/**
+ * ==============================================================================
+ * TrashPort Dashboard Stylesheet (dashboard.css)
+ * ==============================================================================
+ *
+ * Micro-interactions, stat counters, and responsive status badges for:
+ *   - Citizen overview hub (pickups, green points wallet, address cards)
+ *   - Collector active assignments board & daily earnings
+ *   - Administrator operations & live fleet telemetry
+ */
+
+/* Stat summary card with smooth hover lift */
 .stat-card {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .stat-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.08);
 }
+
+/* Rounded pill status badges (Pending, In Transit, Completed, Cancelled) */
 .badge-status {
   display: inline-flex;
   align-items: center;

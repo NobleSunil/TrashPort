@@ -614,7 +614,7 @@
                       Rs. {{ pickup.fee }}
                       {% if pickup.status == 'CANCELLED' and pickup.is_paid %}
                         <div class="small text-danger fw-semibold" style="font-size:0.75rem;">
-                          <i class="fas fa-undo-alt me-1"></i>Refund in 3Ã¢â‚¬â€œ7 days
+                          <i class="fas fa-undo-alt me-1"></i>Refund in 3–7 days
                         </div>
                       {% endif %}
                     {% else %}
@@ -945,7 +945,7 @@
       if (btn) btn.disabled = false;
     });
   }
-  // Ã¢â€â‚¬Ã¢â€â‚¬ History Filter Functionality Ã¢â€â‚¬Ã¢â€â‚¬
+  // -------------------------------------------------------------------------------------------------------- History Filter Functionality --------------------------------------------------------------------------------------------------------
   document.querySelectorAll("#historyFilterGroup button").forEach(btn => {
     btn.addEventListener("click", function () {
       document.querySelectorAll("#historyFilterGroup button").forEach(b => b.classList.remove("active"));

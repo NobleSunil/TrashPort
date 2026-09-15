@@ -1,5 +1,5 @@
 """
-trashport/payments/services.py â€” Payment Gateway and Wallet Service Layer
+trashport/payments/services.py — Payment Gateway and Wallet Service Layer
 ==========================================================================
 
 PURPOSE:
@@ -7,7 +7,7 @@ PURPOSE:
   the intermediary between the view layer (citizens/views.py) and the payment
   data models (payments/models.py).
 
-  All three payment methods (Card, UPI, Wallet) go through this layer â€”
+  All three payment methods (Card, UPI, Wallet) go through this layer —
   never directly through the view. This ensures consistent audit trail creation,
   wallet point deduction logic, and pickup status transitions.
 
@@ -21,7 +21,7 @@ CONNECTION MAP:
                                         (called from _mark_pickup_paid)
 
 DUMMY / SIMULATED GATEWAY:
-  This is a SIMULATED payment gateway â€” no real money changes hands.
+  This is a SIMULATED payment gateway — no real money changes hands.
   Specific test card numbers produce specific outcomes (success or decline).
   UPI payments always succeed for any syntactically valid UPI ID.
   Wallet payments succeed if the user has enough points.
@@ -44,16 +44,16 @@ FLOW FOR EACH PAYMENT METHOD:
   3. process_wallet_payment()â†’ Calculates required points â†’ deducts via WalletService â†’ _mark_pickup_paid()
 
   _mark_pickup_paid() (shared helper):
-    â€¢ Sets pickup.is_paid = True and pickup.status = PENDING
-    â€¢ Saves pickup to DB
-    â€¢ Sends payment receipt notification + email (with invoice link)
+    • Sets pickup.is_paid = True and pickup.status = PENDING
+    • Saves pickup to DB
+    • Sends payment receipt notification + email (with invoice link)
 
 RETURN FORMAT (all methods return a dict):
   Success: {"success": True, "transaction_id": ..., "amount": ..., "method": ..., ...}
   Failure: {"success": False, "error_code": ..., "error_message": ...}
 
 IMPACT:
-  - All public methods use @db_transaction.atomic â€” if anything fails mid-payment,
+  - All public methods use @db_transaction.atomic — if anything fails mid-payment,
     the entire transaction (DB writes) is rolled back.
   - Changing POINTS_TO_INR_RATE affects all wallet redemptions immediately.
   - Changing _mark_pickup_paid() affects how all payment methods finalize a pickup.
@@ -81,8 +81,8 @@ logger = logging.getLogger(__name__)
 # ==============================================================================
 
 DUMMY_CARDS = {
-    "4242424242424242": (True, None),           # Visa â€” always succeeds
-    "5555555555554444": (True, None),           # Mastercard â€” always succeeds
+    "4242424242424242": (True, None),           # Visa — always succeeds
+    "5555555555554444": (True, None),           # Mastercard — always succeeds
     "4000000000000002": (False, "card_declined"),
     "4000000000009995": (False, "insufficient_funds"),
     "4000000000000069": (False, "expired_card"),
@@ -176,7 +176,7 @@ class StripePaymentService:
 #   - trashport/admins/views.py  â†’ AdminWalletAdjustView for manual admin adjustments
 #
 # IMPACT:
-#   - Always use this service to change wallet_points â€” never set user.wallet_points
+#   - Always use this service to change wallet_points — never set user.wallet_points
 #     directly, as this method creates the WalletHistory audit record.
 #   - Uses @atomic to ensure points deduction and history record are always in sync.
 # ==============================================================================
@@ -229,7 +229,7 @@ class WalletService:
 # The primary payment processing service for the checkout flow.
 # Handles three payment methods: CARD, UPI, and WALLET.
 #
-# All methods are @db_transaction.atomic â€” if anything fails mid-method,
+# All methods are @db_transaction.atomic — if anything fails mid-method,
 # all DB changes in that method call are rolled back.
 #
 # All methods call _mark_pickup_paid() on success to:
@@ -310,11 +310,11 @@ class PaymentGatewayService:
                 payment_method=PaymentTransaction.PaymentMethods.STRIPE,
                 status=PaymentTransaction.Statuses.COMPLETED,
                 transaction_id=txn_id,
-                description=f"Pickup #{pickup.id} â€” Card payment by {card_name}",
+                description=f"Pickup #{pickup.id} — Card payment by {card_name}",
             )
             # Mark pickup as paid and transition to PENDING (enters collector queue)
             PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
-            logger.info(f"[Gateway] Card payment SUCCESS â€” {txn_id} â€” Rs. {amount} for pickup #{pickup.id}")
+            logger.info(f"[Gateway] Card payment SUCCESS — {txn_id} — Rs. {amount} for pickup #{pickup.id}")
             return {
                 "success": True,
                 "transaction_id": txn_id,
@@ -332,10 +332,10 @@ class PaymentGatewayService:
                 payment_method=PaymentTransaction.PaymentMethods.STRIPE,
                 status=PaymentTransaction.Statuses.FAILED,
                 transaction_id=txn_id,
-                description=f"Pickup #{pickup.id} â€” Card payment FAILED ({decline_code})",
+                description=f"Pickup #{pickup.id} — Card payment FAILED ({decline_code})",
             )
             error_msg = _DECLINE_MESSAGES.get(decline_code, "Payment failed. Please try again.")
-            logger.warning(f"[Gateway] Card payment FAILED â€” {decline_code} â€” pickup #{pickup.id}")
+            logger.warning(f"[Gateway] Card payment FAILED — {decline_code} — pickup #{pickup.id}")
             return {
                 "success": False,
                 "error_code": decline_code,
@@ -385,10 +385,10 @@ class PaymentGatewayService:
             payment_method=PaymentTransaction.PaymentMethods.STRIPE,
             status=PaymentTransaction.Statuses.COMPLETED,
             transaction_id=txn_id,
-            description=f"Pickup #{pickup.id} â€” UPI payment via {upi_id}",
+            description=f"Pickup #{pickup.id} — UPI payment via {upi_id}",
         )
         PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
-        logger.info(f"[Gateway] UPI payment SUCCESS â€” {txn_id} â€” Rs. {amount} for pickup #{pickup.id}")
+        logger.info(f"[Gateway] UPI payment SUCCESS — {txn_id} — Rs. {amount} for pickup #{pickup.id}")
         return {
             "success": True,
             "transaction_id": txn_id,
@@ -405,7 +405,7 @@ class PaymentGatewayService:
         Redeems citizen wallet points to pay the pickup fee.
 
         CONVERSION: POINTS_TO_INR_RATE = Rs. 0.10 per point.
-          Required points = ceil(fee / 0.10) = fee Ã— 10
+          Required points = ceil(fee / 0.10) = fee × 10
 
         STEP-BY-STEP:
           1. If fee = 0.00 (coupon fully covers it):
@@ -434,7 +434,7 @@ class PaymentGatewayService:
                 payment_method=PaymentTransaction.PaymentMethods.WALLET,
                 status=PaymentTransaction.Statuses.COMPLETED,
                 transaction_id=txn_id,
-                description=f"Pickup #{pickup.id} â€” Fully covered by coupon / wallet points",
+                description=f"Pickup #{pickup.id} — Fully covered by coupon / wallet points",
             )
             PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
             return {
@@ -451,7 +451,7 @@ class PaymentGatewayService:
         current_points = getattr(user, "wallet_points", 0)
 
         if current_points < required_points:
-            # Not enough points â€” show detailed shortfall message
+            # Not enough points — show detailed shortfall message
             shortfall_inr = (required_points - current_points) * POINTS_TO_INR_RATE
             return {
                 "success": False,
@@ -474,7 +474,7 @@ class PaymentGatewayService:
             payment_method=PaymentTransaction.PaymentMethods.WALLET,
             status=PaymentTransaction.Statuses.COMPLETED,
             transaction_id=txn_id,
-            description=f"Pickup #{pickup.id} â€” Wallet redemption ({required_points:,} pts)",
+            description=f"Pickup #{pickup.id} — Wallet redemption ({required_points:,} pts)",
         )
 
         # --- Deduct points from user wallet (creates WalletHistory record) ---
@@ -485,7 +485,7 @@ class PaymentGatewayService:
         )
 
         PaymentGatewayService._mark_pickup_paid(pickup, transaction=txn)
-        logger.info(f"[Gateway] Wallet payment SUCCESS â€” {txn_id} â€” {required_points} pts for pickup #{pickup.id}")
+        logger.info(f"[Gateway] Wallet payment SUCCESS — {txn_id} — {required_points} pts for pickup #{pickup.id}")
         return {
             "success": True,
             "transaction_id": txn_id,
@@ -511,7 +511,7 @@ class PaymentGatewayService:
 
         IMPACT:
           - After this runs, the pickup is visible to collectors as PENDING.
-          - The invoice URL uses 'waste_management:payment_invoice' â€” if the URL
+          - The invoice URL uses 'waste_management:payment_invoice' — if the URL
             name changes in urls.py, update this reverse() call.
           - Exception in notification is caught and logged; does NOT fail the payment.
 
