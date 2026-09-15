@@ -1,3 +1,47 @@
+"""
+config/urls.py — Master URL Configuration (Root URL Router)
+============================================================
+
+PURPOSE:
+  The top-level URL configuration file. Django loads this file first when
+  any request arrives. It includes all sub-apps via include() and defines
+  the global URL structure.
+
+URL STRUCTURE OVERVIEW:
+  /                    → Home page (pages/home.html template)
+  /about/              → About page (pages/about.html template)
+  /accounts/           → django-allauth auth views (login, signup, logout, etc.)
+  /api/                → REST API (config/api_router.py → /api/users/, /api/addresses/, ...)
+  /api/schema/         → drf-spectacular OpenAPI schema (JSON/YAML download)
+  /api/docs/           → Swagger UI for interactive API exploration
+  /api/auth-token/     → DRF token authentication endpoint
+  /<ADMIN_URL>/        → Django admin panel (default: /django-admin/)
+  /api/maps/           → Map API (collector GPS, road routing)
+  /api/collectors/     → Collector Aadhaar OTP verification API
+  /                    → All other URLs handled by waste_management/urls.py
+                         (dashboard, pickups, addresses, complaints, payments, etc.)
+
+CONNECTION MAP:
+  - waste_management/urls.py     → handles all citizen/collector/admin web UI URLs
+  - config/api_router.py         → handles all /api/ REST endpoints
+  - trashport/maps/urls.py       → handles /api/maps/ GPS and routing endpoints
+  - trashport/collectors/urls.py → handles /api/collectors/aadhaar/ endpoints
+  - config/settings/base.py      → ADMIN_URL, DEBUG mode for debug toolbar inclusion
+
+ALLAUTH AUTH VIEWS (at /accounts/):
+  /accounts/login/      → Sign in
+  /accounts/signup/     → Register (role is set during signup)
+  /accounts/logout/     → Sign out
+  /accounts/password/   → Password change/reset flows
+
+IMPACT:
+  - Changing a URL prefix here changes ALL sub-URLs under it.
+  - The waste_management include has NO prefix (path("", include(...))), meaning
+    ALL waste_management URLs are at the root domain level.
+  - DEBUG toolbar is only mounted when settings.DEBUG = True (local dev only).
+  - Adding a new sub-app: create its urls.py, then add an include() line here.
+"""
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin

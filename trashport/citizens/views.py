@@ -1,4 +1,67 @@
 """
+trashport/citizens/views.py — Citizen Role View Layer
+======================================================
+
+PURPOSE:
+  This file contains all view classes exclusively used by citizen users.
+  These views are never called directly from the top-level URL config —
+  they are dispatched to by the role-based system in waste_management/views.py
+  or accessed directly through trashport/citizens/urls.py.
+
+HOW THESE VIEWS ARE REACHED:
+  1. Citizen visits /dashboard/
+  2. DashboardView (waste_management/views.py) sees user.role == CITIZEN
+  3. Delegates to CitizenDashboardView defined here
+  Same pattern applies to: PickupRequestDetailView, PickupStatusUpdateView,
+  ComplaintListView, ComplaintDetailView, PaymentCheckoutView, etc.
+
+CONNECTION MAP:
+  - waste_management/views.py       → dispatches most views here
+  - waste_management/urls.py        → registers dispatcher URLs
+  - trashport/citizens/urls.py      → registers citizen-specific extra URLs
+                                      (wallet, redeem coupon, anonymous feedback)
+  - waste_management/models.py      → Address, PickupRequest, Complaint, WasteCategory
+  - trashport/payments/services.py  → PaymentGatewayService (card/UPI/wallet checkout)
+  - trashport/payments/models.py    → PaymentTransaction, WalletHistory
+  - trashport/notifications/models.py → Notification (in-app alerts on dashboard)
+
+VIEW INVENTORY:
+  CitizenDashboardView         : Main hub — active pickups, wallet, complaints, history.
+  AddressListView              : List all saved addresses.
+  AddressCreateView            : Register a new address with GPS map pin.
+  AddressUpdateView            : Edit an existing address.
+  AddressDeleteView            : Soft-delete (hides address, keeps for history integrity).
+  CitizenPickupRequestCreateView : Book a new waste collection with address + category.
+  CitizenPickupRequestDetailView : View details of a specific pickup.
+  CitizenPickupStatusUpdateView  : Cancel, rate, or initiate payment on a pickup.
+  CitizenComplaintListView     : List all complaints filed by this citizen.
+  CitizenComplaintCreateView   : File a new complaint against a pickup.
+  CitizenComplaintDetailView   : View a single complaint.
+  CitizenPaymentCheckoutView   : Multi-method payment checkout (card/UPI/wallet).
+  CitizenPaymentSuccessView    : Payment receipt display after successful payment.
+  CitizenInvoiceView           : Printable tax invoice for a paid pickup.
+  CitizenWalletView            : Recycling points wallet + coupon redemption.
+  CitizenRedeemCouponView      : Convert 100 pts → Rs. 10 coupon stored in session.
+  CitizenRemoveCouponView      : Cancel active coupon, refund 100 pts.
+  SubmitAnonymousFeedbackView  : Accept anonymous feedback (no login required).
+
+WALLET / COUPON FLOW:
+  1. Citizen earns points when pickups are COMPLETED (via WalletService.adjust_points
+     called in PickupRequest.save()).
+  2. Citizen visits CitizenWalletView → sees balance and can redeem coupon.
+  3. CitizenRedeemCouponView: deducts 100 pts → stores coupon in request.session.
+  4. At CitizenPaymentCheckoutView: reads session coupon → applies Rs. 10 discount.
+  5. CitizenRemoveCouponView: removes session coupon → refunds 100 pts.
+
+IMPACT:
+  - Changing CitizenPaymentCheckoutView affects the payment UX for ALL citizens.
+  - Changing CitizenPickupRequestCreateView.form_valid() affects how pickups are created
+    and how GPS coordinates are captured from the map.
+  - Changing AddressDeleteView from soft-delete to hard-delete WILL break historical
+    pickup records that reference deleted addresses (FK will be NULL).
+"""
+
+"""
 Citizen-specific views for managing user addresses, booking pickup requests, paying bills, and logging complaints.
 """
 
@@ -450,8 +513,7 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
 
     def get(self, request, pk, *args, **kwargs):
         pickup = self._get_pickup(request, pk)
-        context = self._build_checkout_context(request, pickup)
-        return self._render(request, context)
+        return render(request, self.template_name, self._build_checkout_context(request, pickup))
 
     def post(self, request, pk, *args, **kwargs):
         pickup = self._get_pickup(request, pk)
@@ -483,7 +545,7 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
                     error_msg="All card details (Card Number, Name on Card, Expiry Date, CVV) are mandatory.",
                     active_method="card"
                 )
-                return self._render(request, context)
+                return render(request, self.template_name, context)
 
             pickup.fee = discounted_fee
             result = PaymentGatewayService.process_card_payment(
@@ -538,11 +600,9 @@ class CitizenPaymentCheckoutView(LoginRequiredMixin, View):
         else:
             error_msg = result.get("error_message", "Payment failed. Please try again.") if result else "Payment processing error."
             context = self._build_checkout_context(request, pickup, error_msg=error_msg, active_method=method)
-            return self._render(request, context)
+            return render(request, self.template_name, context)
 
-    def _render(self, request, context):
-        from django.shortcuts import render
-        return render(request, self.template_name, context)
+
 
 
 class CitizenPaymentSuccessView(LoginRequiredMixin, View):
@@ -563,7 +623,6 @@ class CitizenPaymentSuccessView(LoginRequiredMixin, View):
             status=PaymentTransaction.Statuses.COMPLETED,
         ).order_by("-created_at").first()
 
-        from django.shortcuts import render
         return render(request, "citizen/payment_success.html", {
             "pickup": pickup,
             "result": result,
@@ -614,7 +673,6 @@ class CitizenInvoiceView(LoginRequiredMixin, View):
         invoice_year = pickup.created_at.year if pickup.created_at else timezone.now().year
         invoice_number = f"INV-{invoice_year}-{pickup.id:05d}"
 
-        from django.shortcuts import render
         return render(request, self.template_name, {
             "pickup": pickup,
             "transaction": transaction,

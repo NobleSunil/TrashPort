@@ -1,20 +1,59 @@
 """
 Admin-specific views for managing pickup requests, categories, complaints, and statistics.
+=========================================================================================
+
+PURPOSE:
+  This file contains ALL view classes that are exclusively used by Administrator users.
+  Each view is dispatched to from waste_management/views.py via the RoleDispatchView
+  system, which checks user.role == ADMIN before forwarding here.
+
+CONNECTION MAP:
+  - waste_management/views.py   → dispatches to views in this file (DashboardView, etc.)
+  - waste_management/urls.py    → URL endpoints resolve through the dispatchers above
+  - trashport/admins/urls.py    → API-scoped admin routes (live map, reports)
+  - trashport/admins/forms.py   → form classes used by create/update views here
+  - waste_management/models.py  → PickupRequest, WasteCategory, Complaint, CollectorPayoutSetting
+  - trashport/payments/models.py → UPIPayoutRequest for payout history
+
+IMPACT:
+  - Adding a new admin feature: create the view class here, then add a dispatcher
+    in waste_management/views.py and register the URL in waste_management/urls.py.
+  - Modifying aggregation queries affects dashboard KPI cards and Chart.js graphs.
+  - CSV export views directly stream to browser — changes affect downloaded files.
 """
 
+import csv
 import json
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
+from trashport.payments.models import UPIPayoutRequest
 from trashport.users.models import User
-from waste_management.models import Complaint, PickupRequest, WasteCategory
-from .forms import CollectorCreationForm, WalletPointAdjustmentForm, WasteCategoryForm
+from waste_management.models import (
+    AnonymousFeedback,
+    CollectorPayoutSetting,
+    Complaint,
+    PickupRequest,
+    WasteCategory,
+)
+from .forms import (
+    CollectorCreationForm,
+    CollectorPayoutSettingForm,
+    WalletPointAdjustmentForm,
+    WasteCategoryForm,
+)
 
 
 class AdminLiveMapView(LoginRequiredMixin, TemplateView):
@@ -58,7 +97,6 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         total_collector_payouts = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("collector_earnings"))["total"] or 0
         total_extra_charges = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.COMPLETED).aggregate(total=Sum("extra_fee"))["total"] or 0
         
-        from trashport.payments.models import UPIPayoutRequest
         total_upi_redeemed = UPIPayoutRequest.objects.filter(status=UPIPayoutRequest.Statuses.COMPLETED).aggregate(total=Sum("amount"))["total"] or 0
 
         # Dynamic Filters & Limit for UPI Payouts Table
@@ -173,6 +211,7 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["collector_payout_setting"] = CollectorPayoutSetting.get_settings()
         context["unreviewed_feedback_count"] = AnonymousFeedback.objects.filter(is_reviewed=False).count()
         context["recent_anonymous_feedbacks"] = AnonymousFeedback.objects.all().order_by("-created_at")[:6]
+
         return context
 
 
@@ -257,7 +296,6 @@ class AdminComplaintDetailView(LoginRequiredMixin, DetailView):
         return redirect("waste_management:complaint_detail", pk=pk)
 
 
-from waste_management.models import AnonymousFeedback
 
 class AdminAnonymousFeedbackListView(LoginRequiredMixin, ListView):
     """
@@ -334,8 +372,6 @@ class WasteCategoryUpdateView(LoginRequiredMixin, UpdateView):
 # Collector Payout Settings View
 # ==============================================================================
 
-from waste_management.models import CollectorPayoutSetting
-from .forms import CollectorPayoutSettingForm
 
 class CollectorPayoutSettingUpdateView(LoginRequiredMixin, UpdateView):
     """
@@ -469,7 +505,6 @@ class AdminUserDetailView(LoginRequiredMixin, DetailView):
         context["addresses"] = target.addresses.all() if hasattr(target, "addresses") else []
         context["wallet_form"] = WalletPointAdjustmentForm()
         if target.role == User.Roles.COLLECTOR:
-            from trashport.payments.models import UPIPayoutRequest
             completed_qs = PickupRequest.objects.filter(collector=target, status=PickupRequest.StatusChoices.COMPLETED)
             context["collector_completed_count"] = completed_qs.count()
             context["collector_total_weight"] = completed_qs.aggregate(total=Sum("weight_kg"))["total"] or 0
@@ -524,7 +559,7 @@ class AdminWalletAdjustView(LoginRequiredMixin, View):
     or cash balance for a collector.
     """
     def post(self, request, pk, *args, **kwargs):
-        from decimal import Decimal
+
         target = get_object_or_404(User, pk=pk)
         
         # Check if collector cash adjustment or citizen point adjustment
@@ -596,11 +631,6 @@ class AdminAutoAssignPickupsView(LoginRequiredMixin, View):
 # ==============================================================================
 # Operations & Analytics Report View
 # ==============================================================================
-
-from datetime import date, datetime, timedelta
-from django.utils import timezone
-from django.utils.dateparse import parse_date
-
 
 class AdminOperationsReportView(LoginRequiredMixin, TemplateView):
     """
@@ -848,9 +878,6 @@ class AdminOperationsReportView(LoginRequiredMixin, TemplateView):
 # ==============================================================================
 # Data Export Views (CSV Output)
 # ==============================================================================
-
-import csv
-from django.http import HttpResponse
 
 
 class AdminExportPickupsCSVView(LoginRequiredMixin, View):

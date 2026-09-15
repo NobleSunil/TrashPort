@@ -1,8 +1,16 @@
 """
-trashport/collectors/aadhaar_service.py
+trashport/collectors/aadhaar_service.py — Simulated Aadhaar Verification Utilities
+====================================================================================
 
-Pure-Python utility functions for the simulated Aadhaar verification flow.
-No Django ORM imports — easy to unit-test in isolation.
+PURPOSE:
+  Pure-Python utility functions for the simulated Aadhaar verification flow.
+  No Django ORM imports — easy to unit-test in isolation.
+
+CONNECTION MAP:
+  - trashport/collectors/aadhaar_views.py → imports and calls all functions here
+                                            (initiate OTP, validate number, verify OTP)
+  - trashport/collectors/models.py        → CollectorAadhaarProfile (stores hash + status)
+  - No direct dependency on waste_management models.
 
 =============================================================================
 ACADEMIC PROJECT / DEMO MODE — IMPORTANT NOTICE
@@ -28,9 +36,22 @@ SDK calls, keeping all hashing/masking logic intact.
 Functions:
   verhoeff_validate(number)  — Verhoeff checksum check (real Aadhaar format)
   generate_demo_otp()        — Random 6-digit OTP
-  sha256_hash(value)         — SHA-256 hex digest
-  mask_aadhaar(number)       — Returns "XXXX XXXX XXXX<last4>"
-  DEMO_AADHAAR_NUMBERS       — 5 fictional test numbers with valid checksums
+  hash_aadhaar(aadhaar_number) — SHA-256 hash (raw number NEVER stored)
+  mask_aadhaar(aadhaar_number) — "XXXX-XXXX-1234" display format
+  is_valid_aadhaar(number)   — Format + Verhoeff validity check
+  store_otp_in_cache(uid, otp) — Stores OTP in Django cache with 5-min TTL
+  verify_otp_from_cache(uid, otp) — Validates OTP from cache
+
+SECURITY NOTE:
+  The raw 12-digit Aadhaar number is NEVER written to the database.
+  Only the SHA-256 hash (hash_aadhaar) and masked display (mask_aadhaar)
+  are persisted in CollectorAadhaarProfile.
+
+IMPACT:
+  - Changing hash_aadhaar() will invalidate ALL existing hashed records.
+    Never change the hash algorithm after records exist without migrating all hashes.
+  - Changing the OTP cache TTL (currently 5 minutes) affects how long
+    collectors have to enter their OTP before it expires.
 """
 
 import hashlib

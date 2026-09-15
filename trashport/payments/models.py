@@ -1,3 +1,32 @@
+"""
+trashport/payments/models.py — Payment and Wallet Data Models
+==============================================================
+
+PURPOSE:
+  Defines three database tables that track all financial activity in TrashPort:
+
+  1. PaymentTransaction : Records every payment attempt (success or failure).
+                          Acts as an immutable financial audit ledger.
+  2. WalletHistory      : Logs every change to a citizen's recycling points wallet
+                          (credits from recycling, debits for coupon redemptions).
+  3. UPIPayoutRequest   : Records every collector wallet cash withdrawal to UPI.
+
+CONNECTION MAP:
+  - trashport/payments/services.py   → creates PaymentTransaction records
+                                       and WalletHistory via WalletService.adjust_points()
+  - trashport/collectors/views.py    → creates UPIPayoutRequest on cash withdrawal
+  - trashport/citizens/views.py      → reads PaymentTransaction for receipt display
+  - trashport/admins/views.py        → reads UPIPayoutRequest for collector payout totals
+  - waste_management/notifications.py→ reads PaymentTransaction for receipt email
+
+IMPACT:
+  - PaymentTransaction records are NEVER deleted (financial audit trail).
+  - WalletHistory is the audit log for all point changes. Always use
+    WalletService.adjust_points() to modify wallet_points (never manually).
+  - UPIPayoutRequest.status defaults to COMPLETED (simulated instant payout).
+    For real async UPI, change default to PENDING and update on callback.
+"""
+
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _

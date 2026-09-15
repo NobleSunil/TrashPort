@@ -1,3 +1,34 @@
+"""
+trashport/maps/services.py — Geospatial Calculation and Routing Service
+========================================================================
+
+PURPOSE:
+  Provides geospatial utilities for distance calculation and route generation.
+  Used by the collector dashboard map to show pickup locations and by the
+  admin live-map to display collector and pickup positions.
+
+CONNECTION MAP:
+  - trashport/collectors/views.py → GeoService.haversine_distance() to sort
+                                    unassigned pickups by proximity to collector
+  - trashport/maps/views.py       → get_road_route_osrm() for route line drawing
+                                    on the Leaflet interactive map
+  - trashport/maps/urls.py        → exposes /api/maps/road-route/ endpoint
+
+THREE LEVELS OF ROUTING (in fallback order):
+  1. OSRM (openstreetmap.de) : Real road-following routes via HTTP API.
+                                Results cached 15 minutes in Django cache.
+  2. Alternative OSRM server : router.project-osrm.org as second attempt.
+  3. Street grid fallback     : generate_curved_road_waypoints() produces
+                                realistic multi-turn city road paths locally
+                                when both OSRM servers are unreachable.
+
+IMPACT:
+  - haversine_distance() is a straight-line estimate, NOT road distance.
+    It is used for sorting only. Actual route distances come from OSRM.
+  - If OSRM endpoints change, update the URL strings in get_road_route_osrm().
+  - Cache TTL (900 seconds = 15 minutes) can be adjusted in get_road_route_osrm().
+"""
+
 import math
 from typing import Tuple, List, Dict
 
@@ -6,7 +37,24 @@ class GeoService:
     @staticmethod
     def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """
-        Calculate the great-circle distance between two points on the Earth in kilometers.
+        Calculates the straight-line (great-circle) distance between two GPS points.
+
+        Uses the Haversine formula which accounts for Earth's spherical shape.
+        This gives the shortest distance over the earth's surface ("as the crow flies"),
+        NOT the road driving distance.
+
+        Used by: collectors/views.py to sort unassigned pickups by proximity.
+
+        Args:
+            lat1, lon1 : GPS coordinates of point A (e.g., collector position).
+            lat2, lon2 : GPS coordinates of point B (e.g., pickup location).
+
+        Returns:
+            float: Distance in kilometers, rounded to 2 decimal places.
+
+        Example:
+            dist = GeoService.haversine_distance(9.9312, 76.2673, 10.0104, 76.3530)
+            # Returns approximately 10.31 km
         """
         R = 6371.0  # Earth's radius in kilometers
         dlat = math.radians(lat2 - lat1)
@@ -23,7 +71,24 @@ class GeoService:
     @staticmethod
     def get_optimized_route(start: Tuple[float, float], waypoints: List[Tuple[float, float]]) -> List[Dict]:
         """
-        Greedy nearest-neighbor path optimization for collection vehicles.
+        Greedy nearest-neighbor path optimizer for collection vehicles.
+
+        Orders a list of pickup waypoints to minimize total travel distance,
+        starting from the collector's current position. Uses a greedy algorithm:
+        always go to the nearest unvisited pickup next.
+
+        Used by: Admin live-map and batch dispatch to suggest efficient routes.
+
+        Args:
+            start     : (lat, lon) tuple — starting position (collector's location).
+            waypoints : List of (lat, lon) tuples — pickup locations to visit.
+
+        Returns:
+            List of dicts: [{"latitude": ..., "longitude": ..., "distance_from_prev_km": ...}, ...]
+            Ordered from nearest to farthest in the greedy sequence.
+
+        NOTE: This is O(n²) — not suitable for very large waypoint lists.
+              For > 100 waypoints, consider a proper TSP solver.
         """
         if not waypoints:
             return []
@@ -51,9 +116,22 @@ class GeoService:
     @staticmethod
     def generate_curved_road_waypoints(start_lat: float, start_lng: float, end_lat: float, end_lng: float) -> List[List[float]]:
         """
-        Generates realistic multi-segment road waypoints following street grid turns 
-        (Manhattan turn points with smooth street curve geometry) when OSRM routing servers 
-        are unreachable, ensuring maps NEVER show a straight single string line.
+        OFFLINE FALLBACK: Generates realistic multi-turn road-like waypoints
+        without requiring any external API.
+
+        When OSRM servers are unreachable, this function simulates a city street
+        grid path using an L-shaped or S-shaped multi-leg route:
+          Leg 1: Start → Street Turn 1    (60% of the way, offset laterally)
+          Leg 2: Turn 1 → Street Turn 2   (85% of the way, offset back)
+          Leg 3: Turn 2 → End             (final stretch)
+
+        Micro-wobbles (sinusoidal offsets) are added along each leg to simulate
+        real road curvature blocks instead of perfectly straight diagonal lines.
+
+        Used by: get_road_route_osrm() as the 3rd-level fallback.
+
+        IMPACT: The turn point offsets (0.60, 0.20, 0.12) control the shape of
+                the simulated route. Adjust for more or fewer bends.
         """
         points = []
         dlat = end_lat - start_lat
@@ -101,10 +179,31 @@ class GeoService:
     @staticmethod
     def get_road_route_osrm(start_lat: float, start_lng: float, end_lat: float, end_lng: float) -> Dict:
         """
-        Queries OSRM public demo routing service to get actual road coordinates, 
-        distance, and travel duration following real turn-by-turn driving paths.
-        Results are cached for 15 minutes.
-        Falls back to realistic curved street waypoints if services are unavailable.
+        Gets real road-following route coordinates between two GPS points.
+
+        FALLBACK CHAIN (tried in order):
+          1. Django cache check: returns cached result if available (15 min TTL).
+          2. router.project-osrm.org: Public OSRM demo server.
+          3. routing.openstreetmap.de: Alternative routing server.
+          4. generate_curved_road_waypoints(): Local offline fallback.
+
+        Returns a dict:
+          {
+            "coordinates": [[lat, lon], [lat, lon], ...],  # Leaflet [lat, lon] format
+            "distance_km": float,   # Road distance in km
+            "duration_mins": int,   # Estimated travel time in minutes
+            "provider": str,        # "osrm" or "street_grid_fallback"
+          }
+
+        Cache:
+          Key format: osrm_route_{start_lat}_{start_lng}_{end_lat}_{end_lng}
+          TTL: 900 seconds (15 minutes)
+
+        IMPACT:
+          - If OSRM server URLs change, update the endpoints list below.
+          - Speed assumption for fallback duration: 25 km/h average city speed.
+          - Coordinate format: OSRM returns [lon, lat] (GeoJSON) which is
+            converted to Leaflet's [lat, lon] format in the response.
         """
         cache_key = f"osrm_route_{round(start_lat, 4)}_{round(start_lng, 4)}_{round(end_lat, 4)}_{round(end_lng, 4)}"
         try:

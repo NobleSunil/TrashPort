@@ -1,3 +1,34 @@
+"""
+waste_management/serializers.py — DRF Serializers for Core Models
+===================================================================
+
+PURPOSE:
+  Defines Django REST Framework serializers that convert model instances
+  to/from JSON for the REST API endpoints registered in config/api_router.py.
+
+SERIALIZERS:
+  UserShortSerializer     : Minimal user data (id, name, email, role) used as
+                            nested read-only fields in other serializers.
+  AddressSerializer       : Full address model serialization (all fields).
+  WasteCategorySerializer : Full category serialization (all fields).
+  PickupRequestSerializer : Full pickup serialization with nested citizen,
+                            collector, address, and category detail objects.
+                            Validates schedule_date is at least 3 hours in future.
+  ComplaintSerializer     : Full complaint serialization with nested citizen
+                            and pickup_request details.
+
+CONNECTION MAP:
+  - config/api_router.py          → registers ViewSets that use these serializers
+  - waste_management/views.py     → AddressViewSet, WasteCategoryViewSet, etc.
+  - trashport/admins/serializers.py → (DELETED — duplicates removed in cleanup)
+
+IMPACT:
+  - Adding a field to a serializer exposes it in the JSON API response.
+  - Removing a field hides it from API consumers without a migration.
+  - The schedule_date validation in PickupRequestSerializer (min 3 hours ahead)
+    applies to API requests only — not to admin-created pickups via the view layer.
+"""
+
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers

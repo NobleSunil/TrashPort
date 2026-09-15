@@ -1,3 +1,33 @@
+"""
+waste_management/admin.py — Django Admin Panel Registrations
+=============================================================
+
+PURPOSE:
+  Registers all waste_management models into Django's /admin/ panel.
+  Admins can browse, search, filter, and edit records directly from the
+  built-in admin interface at settings.ADMIN_URL (default: /django-admin/).
+
+  These registrations are for emergency data management and debugging only.
+  Day-to-day admin operations use the custom AdminDashboardView UI instead.
+
+MODELS REGISTERED:
+  Address              : View citizen pickup addresses, filter by city/state.
+  WasteCategory        : View/edit categories, pricing, and point rates.
+  PickupRequest        : Full pickup history with status, payment, and collector filters.
+  Complaint            : View and manage citizen complaints.
+  CollectorPayoutSetting: View and edit collector payout formula settings.
+  AnonymousFeedback    : Review anonymous feedback; mark as reviewed inline.
+
+CONNECTION MAP:
+  - waste_management/models.py → all model classes registered here
+  - config/urls.py             → path(settings.ADMIN_URL, admin.site.urls)
+
+IMPACT:
+  - Modifying list_display changes which columns appear in the admin list view.
+  - Adding list_editable allows inline editing (currently used for AnonymousFeedback.is_reviewed).
+  - These admin classes do NOT affect the main TrashPort UI — only the /admin/ panel.
+"""
+
 from django.contrib import admin
 from .models import Address, WasteCategory, PickupRequest, Complaint
 

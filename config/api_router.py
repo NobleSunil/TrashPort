@@ -1,12 +1,36 @@
 """
-REST API Router Configuration.
+config/api_router.py — REST API Router Configuration
+======================================================
 
-Registers REST framework ViewSets into automatic URL routing structures:
-- /api/users/           -> User management & profile viewset
-- /api/addresses/       -> Citizen pickup address book
-- /api/waste-categories/-> Waste classification catalog & rates
-- /api/pickup-requests/ -> Waste collection scheduling and lifecycle
-- /api/complaints/      -> Citizen grievance and feedback tickets
+PURPOSE:
+  Registers all Django REST Framework ViewSets into automatic URL routes.
+  This is the central registry for all JSON API endpoints at /api/....
+
+ROUTED ENDPOINTS:
+  /api/users/           → UserViewSet          (trashport/users/api/views.py)
+  /api/addresses/       → AddressViewSet       (waste_management/views.py)
+  /api/waste-categories/→ WasteCategoryViewSet (waste_management/views.py)
+  /api/pickup-requests/ → PickupRequestViewSet (waste_management/views.py)
+  /api/complaints/      → ComplaintViewSet     (waste_management/views.py)
+
+INCLUDED IN:
+  config/urls.py → path("api/", include("config.api_router"))
+
+ROUTER TYPE:
+  - DEBUG=True  → DefaultRouter  (includes browsable /api/ root listing)
+  - DEBUG=False → SimpleRouter   (no browsable root, faster, no extra URL)
+
+CONNECTION MAP:
+  - config/urls.py        → includes this file at /api/ prefix
+  - waste_management/views.py → provides the ViewSet classes
+  - trashport/users/api/views.py → provides UserViewSet
+
+IMPACT:
+  - Adding a new ViewSet: import it here and call router.register().
+  - Changing a basename affects the auto-generated URL names
+    (e.g., "address-list", "address-detail", "address-create", etc.).
+  - All endpoints are currently public (AllowAny). To restrict access,
+    add permission_classes to each ViewSet class.
 """
 
 from django.conf import settings

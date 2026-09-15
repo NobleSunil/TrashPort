@@ -1,18 +1,60 @@
 """
-trashport/collectors/aadhaar_views.py
+trashport/collectors/aadhaar_views.py — Aadhaar OTP Verification API Endpoints
+================================================================================
 
-JSON API views for the simulated Aadhaar OTP verification flow.
-Scoped exclusively to Collector users — other roles are rejected.
+PURPOSE:
+  JSON API views that implement the two-step simulated Aadhaar OTP verification
+  flow for collector onboarding. Scoped exclusively to Collector users.
 
-Endpoints:
-  POST /api/collectors/aadhaar/initiate/  — validate Aadhaar, generate OTP
-  POST /api/collectors/aadhaar/verify/    — check OTP, mark verified
+CONNECTION MAP:
+  - trashport/collectors/urls.py     → registers the two endpoints:
+      POST /api/collectors/aadhaar/initiate/ → AadhaarInitiateView
+      POST /api/collectors/aadhaar/verify/   → AadhaarVerifyView
+  - trashport/collectors/aadhaar_service.py → all validation, OTP, and hash logic
+  - trashport/collectors/models.py   → CollectorAadhaarProfile (stores hash + status)
+  - trashport/collectors/views.py    → _sync_aadhaar_status() reads the profile
+                                        and syncs user.is_verified on dashboard load
 
-DEMO / ACADEMIC PROJECT:
-  AADHAAR_MODE = demo (read from settings)
-  No calls to UIDAI or any live government API are made.
+TWO-STEP FLOW:
+  Step 1 — AadhaarInitiateView (POST /aadhaar/initiate/):
+    1. Verify user is a COLLECTOR (role check)
+    2. Validate Aadhaar format + Verhoeff checksum
+    3. Generate 6-digit OTP → store in Django cache for 5 minutes
+    4. In DEMO mode: log OTP to server console (INFO level)
+    5. Return JSON {"success": true, "uid": <hash-based session ID>}
+
+  Step 2 — AadhaarVerifyView (POST /aadhaar/verify/):
+    1. Read UID + OTP from request
+    2. Validate OTP against Django cache entry
+    3. On success:
+       a. Create or update CollectorAadhaarProfile (aadhaar_verified = True)
+       b. Store hash_aadhaar(number) and mask_aadhaar(number) in profile
+       c. Set user.is_verified = True, user.verification_status = "APPROVED"
+    4. Return JSON {"success": true} or {"success": false, "error": ...}
+
+SCOPE GUARD:
+  Both endpoints check user.role == COLLECTOR. Admins and citizens cannot
+  initiate Aadhaar verification (returns HTTP 403 Forbidden JSON).
+
+DEMO / ACADEMIC PROJECT NOTE:
+  AADHAAR_MODE = demo
+  This implementation is a simulated flow for a college/university project.
+  It does NOT connect to UIDAI or any live government authentication service.
+  Doing so without an AUA/KUA license (Aadhaar Act 2016, Section 4) is illegal.
   OTPs are logged to the Django logger at INFO level as:
       [DEMO MODE - OTP: xxxxxx]
+
+FIELD SECURITY NOTE:
+  - aadhaar_hash   : SHA-256 hash of the raw Aadhaar number (NEVER stored as plaintext)
+  - aadhaar_masked : Display string like "XXXX-XXXX-1234" (last 4 digits only)
+  - Raw 12-digit Aadhaar number is ONLY held in memory during verification,
+    then immediately discarded.
+
+IMPACT:
+  - To connect to real Aadhaar API: replace OTP generation in
+    AadhaarInitiateView with licensed provider SDK call.
+  - To change OTP expiry: modify the cache TTL in aadhaar_service.store_otp_in_cache().
+  - Role guard logic is in each view — if new roles need Aadhaar, update both views.
 """
 
 import json

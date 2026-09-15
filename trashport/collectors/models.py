@@ -1,16 +1,39 @@
 """
-Collector domain models — Aadhaar Verification Profile.
+trashport/collectors/models.py — Collector Domain Models
+=========================================================
 
-SCOPE: This module contains the CollectorAadhaarProfile model, which stores
-Aadhaar verification state EXCLUSIVELY for Collector users. It is intentionally
-kept separate from the shared users.User table so that adding/modifying this
-model has absolutely zero effect on Admin, Citizen, or any other role.
+PURPOSE:
+  Contains the CollectorAadhaarProfile model, which stores Aadhaar verification
+  state exclusively for Collector users. Intentionally kept separate from the
+  shared users.User table so that adding/modifying this model has zero effect
+  on Admin, Citizen, or any other role.
+
+CONNECTION MAP:
+  - trashport/collectors/aadhaar_views.py  → creates/updates CollectorAadhaarProfile
+                                              on successful OTP verification
+  - trashport/collectors/views.py          → _sync_aadhaar_status() reads profile
+                                              to sync user.is_verified on dashboard load
+  - trashport/collectors/aadhaar_service.py → provides hash/mask functions
+                                              used to set profile fields
+  - trashport/users/models.py              → User.is_verified and verification_status
+                                              are synced FROM this profile status
+
+FIELD SECURITY NOTE:
+  - aadhaar_hash   : SHA-256 hash of raw Aadhaar number (NEVER stored as plaintext)
+  - aadhaar_masked : Display string like "XXXX-XXXX-1234" (last 4 digits only)
+  - Raw 12-digit Aadhaar number is ONLY held in memory during verification.
 
 DEMO / ACADEMIC PROJECT NOTE:
   AADHAAR_MODE = demo
   This implementation is a simulated flow for a college/university project.
   It does NOT connect to UIDAI or any live government authentication service.
   Doing so without an AUA/KUA license (Aadhaar Act 2016, Section 4) is illegal.
+
+IMPACT:
+  - Deleting a CollectorAadhaarProfile will reset that collector's verification
+    status. Their dashboard will show "Not Verified" until re-verified.
+  - Setting aadhaar_verified=True directly (bypassing aadhaar_views.py) is
+    possible for admin testing but should not be done in production.
 """
 
 import uuid

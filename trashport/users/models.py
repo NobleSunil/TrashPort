@@ -1,3 +1,49 @@
+"""
+trashport/users/models.py — Custom User Model and Role System
+==============================================================
+
+PURPOSE:
+  Defines the central User model that all three roles (CITIZEN, COLLECTOR, ADMIN)
+  share. Uses Django's AbstractUser for authentication, extending it with
+  role-specific fields grouped by purpose:
+    - Role & Verification : role, is_verified, verification_status
+    - Contact & Profile   : name, phone, profile_picture
+    - Citizen Wallet      : wallet_points (recycling points, NOT cash)
+    - Collector Wallet    : wallet_balance (cash earnings from completed pickups)
+
+3-ROLE ARCHITECTURE:
+  A single User table serves all three roles. The user.role field
+  determines which dashboard, views, and capabilities a user has access to.
+
+  CITIZEN  : Books pickups, pays fees, earns recycling points.
+  COLLECTOR: Claims and completes pickup jobs, earns cash wallet_balance.
+  ADMIN    : Manages users, categories, dispatches, and views reports.
+
+CONNECTION MAP:
+  - waste_management/views.py      → checks user.role to dispatch to correct view
+  - waste_management/models.py     → PickupRequest.citizen, .collector FK to User
+  - trashport/payments/services.py → WalletService.adjust_points() modifies wallet_points
+  - trashport/collectors/views.py  → reads/writes wallet_balance for collector earnings
+  - trashport/collectors/models.py → CollectorAadhaarProfile OneToOne to User
+  - trashport/notifications/models.py → Notification.user FK to User
+  - config/api_router.py           → UserViewSet exposes users via REST API
+
+WALLET TYPES (two separate fields, one per role):
+  wallet_points  (int)     : CITIZEN recycling reward points (1 pt = Rs. 0.10)
+                             Earned by completing pickups with recyclable waste.
+                             Spent by redeeming coupons (100 pts = Rs. 10 off).
+  wallet_balance (Decimal) : COLLECTOR cash earnings in INR.
+                             Credited when a pickup is marked COMPLETED.
+                             Withdrawn to UPI via CollectorRedeemUPIView.
+
+IMPACT:
+  - Changing Roles choices affects the role dispatch system in waste_management/views.py.
+  - wallet_points and wallet_balance are separate by design — never conflate them.
+  - is_verified is set True by admin approval or auto-set by Aadhaar verification sync.
+  - Changing AUTH_USER_MODEL in settings after first migration is very difficult —
+    this model should not be replaced without a full database migration plan.
+"""
+
 from typing import ClassVar
 from decimal import Decimal
 from django.conf import settings
