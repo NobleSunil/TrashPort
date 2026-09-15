@@ -1,1 +1,0 @@
-# Payments test package
