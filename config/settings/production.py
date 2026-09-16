@@ -14,9 +14,21 @@ ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS",
     default=["trashport.shop", "www.trashport.shop", "trashport.com", "localhost", "127.0.0.1"],
 )
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=["https://trashport.shop", "https://www.trashport.shop", "https://trashport.com"],
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        env.list(
+            "DJANGO_CSRF_TRUSTED_ORIGINS",
+            default=env.list("CSRF_TRUSTED_ORIGINS", default=[]),
+        )
+        + [
+            "https://trashport.shop",
+            "https://www.trashport.shop",
+            "https://trashport.com",
+            "http://13.232.202.220",
+            "http://localhost:8001",
+            "http://127.0.0.1:8001",
+        ]
+    )
 )
 
 # DATABASES
