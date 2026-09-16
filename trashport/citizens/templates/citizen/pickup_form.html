@@ -507,6 +507,17 @@
       const maxWeightDisplay = document.getElementById("maxWeightDisplay");
       const weightHelp = document.getElementById("weightLimitHelp");
 
+      // Ensure dropdown options always display category name
+      if (categorySelect && categoriesData) {
+        Array.from(categorySelect.options).forEach(opt => {
+          if (!opt.value) {
+            opt.textContent = "Select Waste Category...";
+          } else if (categoriesData[opt.value] && categoriesData[opt.value].name) {
+            opt.textContent = categoriesData[opt.value].name;
+          }
+        });
+      }
+
       function updateCategoryWeightLimit() {
         if (!categorySelect || !weightInput) return;
         const catId = categorySelect.value;
