@@ -81,12 +81,13 @@ class PickupRequestSerializer(serializers.ModelSerializer):
     collector_details = UserShortSerializer(source="collector", read_only=True)
     address_details = AddressSerializer(source="address", read_only=True)
     category_details = WasteCategorySerializer(source="category", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
         model = PickupRequest
         fields = [
             "id", "citizen", "citizen_details", "collector", "collector_details",
-            "address", "address_details", "latitude", "longitude", "category", "category_details",
+            "address", "address_details", "latitude", "longitude", "category", "category_name", "category_details",
             "weight_kg", "quantity_estimate", "actual_weight_kg", "extra_fee", "distance_km",
             "fee", "collector_earnings", "points_earned", "is_paid",
             "schedule_date", "status", "feedback_rating", "feedback_comments",

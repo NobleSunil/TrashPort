@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django import forms
 from django.utils import timezone
-from trashport.core.waste_management.models import Address, PickupRequest, Complaint
+from trashport.core.waste_management.models import Address, PickupRequest, Complaint, WasteCategory
 
 
 class AddressForm(forms.ModelForm):
@@ -57,6 +57,11 @@ class PickupRequestForm(forms.ModelForm):
         if user:
             # Only display addresses belonging to the logged-in citizen
             self.fields["address"].queryset = Address.objects.filter(user=user, is_hidden=False)
+
+        if "category" in self.fields:
+            self.fields["category"].queryset = WasteCategory.objects.all().order_by("name")
+            self.fields["category"].label_from_instance = lambda obj: obj.name
+            self.fields["category"].empty_label = "Select Waste Category..."
 
         # Enforce minimum schedule date: at least 3 hours from current time
         now_local = timezone.localtime(timezone.now())
