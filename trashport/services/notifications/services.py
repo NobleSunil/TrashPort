@@ -32,18 +32,40 @@ IMPACT:
 """
 
 import logging
+
+from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.conf import settings
+
 from .models import Notification
 
+# Logger instance for tracking email delivery and notification events
 logger = logging.getLogger(__name__)
 
 
+# ==============================================================================
+# Notification Service Layer
+# ==============================================================================
 class NotificationService:
+    """
+    Centralized service class responsible for:
+    1. Generating in-app notification database records
+    2. Rendering and sending multi-part (HTML & plain-text) transactional emails
+    """
+
     @staticmethod
     def create_notification(user, title: str, message: str, notification_type: str = Notification.Types.SYSTEM):
-        """Creates an in-app notification record."""
+        """
+        Creates an in-app notification database record for the given user.
+        Parameters:
+            user (User): Recipient user instance
+            title (str): Brief summary heading
+            message (str): Full notification message body
+            notification_type (str): Category (PICKUP, PAYMENT, COMPLAINT, SYSTEM)
+        Returns:
+            Notification: The newly created model instance
+        """
+        # Save notification to PostgreSQL database
         return Notification.objects.create(
             user=user,
             title=title,
@@ -53,16 +75,28 @@ class NotificationService:
 
     @staticmethod
     def send_email_notification(to_email: str, subject: str, template_base: str, context: dict):
-        """Renders HTML and text email templates and sends email."""
+        """
+        Renders HTML and plain-text email templates and sends the message via SMTP.
+        Parameters:
+            to_email (str): Recipient email address
+            subject (str): Email subject line
+            template_base (str): Base template filename (e.g. 'pickup_assigned')
+            context (dict): Dynamic variables passed to the Django template engine
+        """
+        # Attempt to render both HTML and plain-text versions of the email template
         try:
             html_message = render_to_string(f"emails/{template_base}.html", context)
             text_message = render_to_string(f"emails/{template_base}.txt", context)
         except Exception as e:
+            # Fallback if specific template files are unavailable
             logger.warning(f"Template rendering fallback for {template_base}: {e}")
             html_message = f"<p>{subject}</p>"
             text_message = subject
 
+        # Retrieve sender email from Django configuration (defaults to support email)
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "support@trashport.local")
+
+        # Dispatch email through configured Django email backend
         try:
             send_mail(
                 subject=subject,
@@ -70,7 +104,7 @@ class NotificationService:
                 from_email=from_email,
                 recipient_list=[to_email],
                 html_message=html_message,
-                fail_silently=True,
+                fail_silently=True,  # Prevent uncaught exceptions from breaking web requests
             )
             logger.info(f"Email sent to {to_email}: {subject}")
         except Exception as e:
