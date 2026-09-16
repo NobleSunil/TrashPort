@@ -45,8 +45,15 @@ def _get_redirect_uri(request) -> str:
     """Build the callback URI dynamically based on the current host, or use override if set."""
     override = getattr(settings, "GOOGLE_OAUTH_REDIRECT_URI", "") or os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "")
     if override:
-        return override.strip()
-    return request.build_absolute_uri("/users/google/callback/")
+        uri = override.strip()
+    else:
+        uri = request.build_absolute_uri("/users/google/callback/")
+        # For public domains (Cloudflare/EC2), always enforce https scheme
+        host = request.get_host().split(":")[0].lower()
+        if host not in ("localhost", "127.0.0.1", "0.0.0.0") and uri.startswith("http://"):
+            uri = "https://" + uri[7:]
+    logger.info(f"Google OAuth redirect_uri: {uri}")
+    return uri
 
 
 def _get_flow(request) -> Flow:
