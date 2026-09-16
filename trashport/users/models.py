@@ -44,8 +44,9 @@ IMPACT:
     this model should not be replaced without a full database migration plan.
 """
 
-from typing import ClassVar
 from decimal import Decimal
+from typing import ClassVar
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -63,16 +64,19 @@ class User(AbstractUser):
     Base entity containing core credentials and authentication identity.
     Role-specific attributes are normalized into CitizenProfile and CollectorProfile.
     """
+    # Define primary user roles available in the TrashPort platform
     class Roles(models.TextChoices):
-        CITIZEN = "CITIZEN", "Citizen"
-        COLLECTOR = "COLLECTOR", "Collector"
-        ADMIN = "ADMIN", "Admin"
+        CITIZEN = "CITIZEN", "Citizen"        # Books waste pickups, pays fees, earns reward points
+        COLLECTOR = "COLLECTOR", "Collector"  # Picks up waste, receives payouts, submits documents
+        ADMIN = "ADMIN", "Admin"              # System administrator overseeing operations
 
+    # Verification workflow states for users requiring approval (e.g. Collectors)
     class VerificationStatus(models.TextChoices):
         PENDING = "PENDING", _("Pending Verification")
         APPROVED = "APPROVED", _("Approved / Verified")
         REJECTED = "REJECTED", _("Rejected")
 
+    # Core user role stored directly on the user record for fast permission dispatching
     role = CharField(
         _("Role"),
         max_length=20,
@@ -80,6 +84,7 @@ class User(AbstractUser):
         default=Roles.CITIZEN,
     )
 
+    # Status indicating whether the user's account documents have been vetted by an admin
     verification_status = CharField(
         _("Verification Status"),
         max_length=20,
@@ -87,6 +92,7 @@ class User(AbstractUser):
         default=VerificationStatus.PENDING,
     )
 
+    # External unique identifier when authenticating via Firebase or Google Sign-In
     firebase_uid = CharField(
         _("Firebase UID"),
         max_length=255,
@@ -94,16 +100,20 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
+    # Full name of the user (replaces separate first_name / last_name for cleaner input)
     name = CharField(_("Name of User"), blank=True, max_length=255)
-    first_name = None  # type: ignore[assignment]
-    last_name = None  # type: ignore[assignment]
+    first_name = None  # type: ignore[assignment]  # Removed in favor of single 'name' field
+    last_name = None  # type: ignore[assignment]   # Removed in favor of single 'name' field
+    # Email is unique and acts as the primary authentication username
     email = EmailField(_("email address"), unique=True)
     phone_number = CharField(_("Phone Number"), max_length=20, blank=True, null=True)
-    username = None  # type: ignore[assignment]
+    username = None  # type: ignore[assignment]    # Removed; email is used as USERNAME_FIELD
 
+    # Configure email as the unique identifier for Django authentication
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
+    # Custom manager for user and superuser creation
     objects: ClassVar[UserManager] = UserManager()
 
     @property
@@ -221,9 +231,13 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         """
-        Custom save method.
-        Filters out property names from update_fields and auto-creates appropriate role profiles.
+        Custom save method:
+        - Sanitizes update_fields to only contain real database columns (excluding proxy properties)
+        - Auto-approves verification for Citizens and Admins on creation
+        - Sets verification to PENDING for new Collectors awaiting admin review
+        - Synchronizes any pending property attributes to the corresponding 3NF profile table
         """
+        # Ensure only actual database fields are passed in update_fields to prevent OperationalError
         update_fields = kwargs.get("update_fields")
         if update_fields is not None:
             valid_fields = [f.name for f in self._meta.fields]
@@ -231,19 +245,26 @@ class User(AbstractUser):
             if not kwargs["update_fields"]:
                 kwargs.pop("update_fields")
 
+        # Handle initial verification status for new user registrations
         is_new = not self.pk
         if is_new:
+            # Citizens and Admins do not require manual document approval
             if self.role in [self.Roles.CITIZEN, self.Roles.ADMIN]:
                 self.verification_status = self.VerificationStatus.APPROVED
+            # Collectors require administrative document verification before taking orders
             elif self.role == self.Roles.COLLECTOR:
                 if not self.verification_status:
                     self.verification_status = self.VerificationStatus.PENDING
 
+        # Persist the core User model first to guarantee primary key (self.pk) exists
         super().save(*args, **kwargs)
 
+        # Synchronize role-specific profiles in accordance with 3NF database architecture
         if self.role == self.Roles.COLLECTOR:
+            # Ensure CollectorProfile exists
             collector_profile, _ = CollectorProfile.objects.get_or_create(user=self)
             dirty = False
+            # Flush any pending property values set before the user was saved to database
             if hasattr(self, "_pending_wallet_balance"):
                 collector_profile.wallet_balance = self._pending_wallet_balance
                 delattr(self, "_pending_wallet_balance")
@@ -259,6 +280,7 @@ class User(AbstractUser):
             if dirty:
                 collector_profile.save()
         else:
+            # For CITIZEN and ADMIN, ensure CitizenProfile exists for points storage
             citizen_profile, _ = CitizenProfile.objects.get_or_create(user=self)
             if hasattr(self, "_pending_wallet_points"):
                 citizen_profile.wallet_points = self._pending_wallet_points
@@ -266,18 +288,25 @@ class User(AbstractUser):
                 citizen_profile.save()
 
     def get_absolute_url(self) -> str:
+        # Standard Django helper returning the canonical URL for this user
         return reverse("users:detail")
 
 
+# ==============================================================================
+# 3NF Profile Model: Citizen Profile
+# ==============================================================================
 class CitizenProfile(models.Model):
     """
     3NF Profile model holding citizen-specific attributes.
+    Separated from the core User table to eliminate null columns for other roles.
     """
+    # 1-to-1 relationship linking back to the parent user
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="citizen_profile",
     )
+    # Recycling reward points earned by citizens through completed recyclable collections
     wallet_points = models.IntegerField(
         _("Wallet Points"),
         default=0,
@@ -288,15 +317,21 @@ class CitizenProfile(models.Model):
         return f"CitizenProfile({self.user.email}) - {self.wallet_points} pts"
 
 
+# ==============================================================================
+# 3NF Profile Model: Collector Profile
+# ==============================================================================
 class CollectorProfile(models.Model):
     """
     3NF Profile model holding collector-specific attributes.
+    Contains professional credentials and cash wallet balance for payout processing.
     """
+    # 1-to-1 relationship linking back to the parent collector user
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="collector_profile",
     )
+    # Cash balance (in INR) earned from completing waste collections
     wallet_balance = models.DecimalField(
         _("Wallet Balance (Rs.)"),
         max_digits=10,
@@ -304,12 +339,14 @@ class CollectorProfile(models.Model):
         default=Decimal("0.00"),
         help_text=_("Cash earnings balance for collectors from completed waste pickups."),
     )
+    # Vehicle registration number used during waste collection rounds
     vehicle_number = CharField(
         _("Vehicle Number"),
         max_length=50,
         blank=True,
         null=True,
     )
+    # Commercial driving or collection license number
     license_number = CharField(
         _("Driver / Collector License"),
         max_length=50,

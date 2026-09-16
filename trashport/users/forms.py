@@ -1,4 +1,15 @@
+# ==============================================================================
+# TrashPort - User Account Forms
+# ==============================================================================
+# This module defines Django and django-allauth forms used for:
+# - Admin user creation and change
+# - Public registration (Signup) with role selection (Citizen / Collector)
+# - Profile updates (name, phone, email, and password setup)
+# ==============================================================================
+
 import re
+
+from allauth.account.adapter import get_adapter
 from allauth.account.forms import SignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from django import forms
@@ -9,7 +20,14 @@ from django.utils.translation import gettext_lazy as _
 from .models import User
 
 
+# ==============================================================================
+# 1. Django Admin User Management Forms
+# ==============================================================================
 class UserAdminChangeForm(admin_forms.UserChangeForm):
+    """
+    Form used within Django admin to modify existing User records.
+    Maps email as the primary credential field.
+    """
     class Meta(admin_forms.UserChangeForm.Meta):
         model = User
         field_classes = {"email": EmailField}
@@ -17,7 +35,8 @@ class UserAdminChangeForm(admin_forms.UserChangeForm):
 
 class UserAdminCreationForm(admin_forms.AdminUserCreationForm):
     """
-    Form for User Creation in the Admin Area.
+    Form used within Django admin to create brand new User records.
+    Enforces unique email validation.
     """
     class Meta(admin_forms.UserCreationForm.Meta):
         model = User
@@ -28,11 +47,15 @@ class UserAdminCreationForm(admin_forms.AdminUserCreationForm):
         }
 
 
-from allauth.account.adapter import get_adapter
-
+# ==============================================================================
+# 2. Public User Registration Form (Allauth Signup)
+# ==============================================================================
 class UserSignupForm(SignupForm):
     """
-    Form rendered on user sign up section.
+    Extended django-allauth signup form.
+    Captures:
+    - User's full name
+    - Selected platform role (Citizen or Collector)
     """
     role = forms.ChoiceField(
         choices=[("CITIZEN", "Citizen"), ("COLLECTOR", "Collector")],
@@ -46,14 +69,17 @@ class UserSignupForm(SignupForm):
     )
 
     def clean_name(self):
+        # Validate that the full name only contains alphabetical characters and whitespace
         name = self.cleaned_data.get("name")
         if not re.match(r'^[a-zA-Z\s]+$', name):
             raise forms.ValidationError("Name must contain only letters and spaces.")
         return name
 
     def save(self, request):
+        # Delegate user object creation to allauth adapter
         adapter = get_adapter(request)
         user = adapter.new_user(request)
+        # Assign custom registration fields before saving
         user.role = self.cleaned_data["role"]
         user.name = self.cleaned_data["name"]
         adapter.save_user(request, user, self)
@@ -61,15 +87,23 @@ class UserSignupForm(SignupForm):
         return user
 
 
+# ==============================================================================
+# 3. Social Account Signup Form
+# ==============================================================================
 class UserSocialSignupForm(SocialSignupForm):
     """
-    Renders the form when user signs up using social accounts.
+    Form rendered when a user signs up using third-party social accounts (e.g. Google OAuth).
     """
 
 
+# ==============================================================================
+# 4. User Profile & Password Update Form
+# ==============================================================================
 class UserProfileUpdateForm(forms.ModelForm):
     """
-    Form for updating User profile: name, email, phone_number, and set/change password.
+    Form for authenticated users to update their profile:
+    - Name, Email, Phone Number
+    - Optional password change or initial setup (for Google OAuth users)
     """
     new_password = forms.CharField(
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Enter new password"}),
@@ -88,12 +122,14 @@ class UserProfileUpdateForm(forms.ModelForm):
         }
 
     def clean_name(self):
+        # Ensure user name contains valid text characters
         name = self.cleaned_data.get("name")
         if name and not re.match(r'^[a-zA-Z\s]+$', name):
             raise forms.ValidationError(_("Name must contain only letters and spaces."))
         return name
 
     def clean_phone_number(self):
+        # Validate format of contact phone number (optional, but must be 7-15 digits if provided)
         phone = self.cleaned_data.get("phone_number")
         if phone:
             phone_stripped = phone.strip()
@@ -103,21 +139,25 @@ class UserProfileUpdateForm(forms.ModelForm):
         return phone
 
     def clean_email(self):
+        # Validate unique email address (excluding the current user's own record)
         email = self.cleaned_data.get("email", "").strip().lower()
         if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError(_("This email is already in use by another account."))
         return email
 
     def clean_new_password(self):
+        # Validate minimum password length constraint if a new password was supplied
         password = self.cleaned_data.get("new_password")
         if password and len(password) < 8:
             raise forms.ValidationError(_("Password must be at least 8 characters long."))
         return password
 
     def save(self, commit=True):
+        # Update model fields without immediate commit to permit password hashing
         user = super().save(commit=False)
         new_password = self.cleaned_data.get("new_password")
         if new_password:
+            # Hash password securely using Django's PBKDF2 / Argon2 algorithm
             user.set_password(new_password)
         if commit:
             user.save()
