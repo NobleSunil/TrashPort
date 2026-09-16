@@ -416,6 +416,7 @@ CHATBOT_MAX_HISTORY = env.int("CHATBOT_MAX_HISTORY", default=10)
 
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+GOOGLE_OAUTH_REDIRECT_URI = env("GOOGLE_OAUTH_REDIRECT_URI", default="")
 
 # AADHAAR VERIFICATION (DEMO / ACADEMIC PROJECT)
 # ------------------------------------------------------------------------------

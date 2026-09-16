@@ -12,8 +12,21 @@ SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
     default="DSTnNUI41z2UIY4ZH107TfYMmeNCE0low80fgCTv7VNf04PPSF0o4WPYmuxKov94",
 )
-# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["localhost", "0.0.0.0", "127.0.0.1", "trashport.shop", "www.trashport.shop"],
+)
+CSRF_TRUSTED_ORIGINS = env.list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default=[
+        "http://localhost:8001",
+        "http://127.0.0.1:8001",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://trashport.shop",
+        "https://www.trashport.shop",
+    ],
+)
 
 # CACHES
 # ------------------------------------------------------------------------------

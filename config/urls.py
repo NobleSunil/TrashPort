@@ -52,6 +52,7 @@ from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView
 from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework.authtoken.views import obtain_auth_token
+from trashport.users.views_google_oauth import google_oauth_callback
 
 urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
@@ -64,6 +65,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # User management
     path("users/", include("trashport.users.urls", namespace="users")),
+    path("accounts/google/login/callback/", view=google_oauth_callback, name="google_oauth_callback_alias"),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
     path("", include("trashport.core.waste_management.urls")),

@@ -42,7 +42,10 @@ SCOPES = [
 ]
 
 def _get_redirect_uri(request) -> str:
-    """Build the callback URI dynamically based on the current host."""
+    """Build the callback URI dynamically based on the current host, or use override if set."""
+    override = getattr(settings, "GOOGLE_OAUTH_REDIRECT_URI", "") or os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "")
+    if override:
+        return override.strip()
     return request.build_absolute_uri("/users/google/callback/")
 
 
