@@ -111,7 +111,7 @@ lint.isort.force-single-line = true
 keep_full_version = true
 
 # ==== pytest ====
-[tool.pytest]
+[tool.pytest.ini_options]
 addopts = [
   "--ds=config.settings.test",
   "--reuse-db",
