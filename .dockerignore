@@ -14,3 +14,10 @@ htmlcov/
 node_modules/
 .vscode/
 .idea/
+.env
+.env.*
+serviceAccountKey*.json
+keys/*.json
+!keys/serviceAccountKey.example.json
+*.pem
+*.key
