@@ -176,37 +176,52 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
     def _get_unassigned_pickup_data(self, user):
         """
         Fetches all unassigned PENDING pickups, calculates distance from the
-        collector's hub or GPS position, and returns data formatted for both
-        HTML rendering and Leaflet.js JSON map pins.
-        Filters strictly within the 20 km hub service radius when a hub is assigned.
+        collector's live GPS position (or hub anchor / default), and returns data
+        strictly filtered within the 25 km collector operating range.
+        Dynamically aligns user.hub to the nearest active Hub within 25 km.
         """
-        # --- Get reference position (Collector Hub anchor if set, else live location or Kerala default) ---
-        if user.hub:
+        # --- 1. Determine reference position: live GPS takes precedence ---
+        col_location = CollectorLocation.objects.filter(collector=user).first()
+        if col_location:
+            col_lat = float(col_location.latitude)
+            col_lng = float(col_location.longitude)
+            # Auto-align hub to nearest hub based on live location if within 25 km
+            from trashport.core.waste_management.models import Hub
+            hubs = list(Hub.objects.filter(is_active=True))
+            if hubs:
+                nearest_hub = min(
+                    hubs,
+                    key=lambda h: GeoService.haversine_distance(col_lat, col_lng, float(h.latitude), float(h.longitude))
+                )
+                nearest_dist = GeoService.haversine_distance(col_lat, col_lng, float(nearest_hub.latitude), float(nearest_hub.longitude))
+                if nearest_dist <= 25.0 and user.hub != nearest_hub:
+                    user.hub = nearest_hub
+                    user.save()
+        elif user.hub:
             col_lat = float(user.hub.latitude)
             col_lng = float(user.hub.longitude)
         else:
-            col_location = CollectorLocation.objects.filter(collector=user).first()
-            col_lat = float(col_location.latitude) if col_location else 9.9312
-            col_lng = float(col_location.longitude) if col_location else 76.2673
+            col_lat = 9.9312
+            col_lng = 76.2673
 
-        # --- Fetch all unassigned pickups (PENDING or AWAITING_PAYMENT without a collector) ---
+        # --- 2. Fetch all unassigned pickups (PENDING or AWAITING_PAYMENT without a collector) ---
         unassigned_qs = PickupRequest.objects.filter(
             status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT],
             collector__isnull=True
         ).select_related("citizen", "address", "category")
 
-        # --- Annotate each pickup with distance and earnings preview ---
+        # --- 3. Annotate each pickup with distance and earnings preview ---
         unassigned_list = list(unassigned_qs)
         for p in unassigned_list:
             plat = float(p.effective_latitude)
             plng = float(p.effective_longitude)
-            # Straight-line (haversine) distance from reference anchor to pickup location
+            # Straight-line (haversine) distance from collector's live location to pickup location
             p.calculated_distance_km = GeoService.haversine_distance(col_lat, col_lng, plat, plng)
             p.calculated_earnings = p.calculate_collector_earnings()
 
-        # If collector has an assigned hub, filter strictly to 20 km service radius
-        if user.hub:
-            unassigned_list = [p for p in unassigned_list if p.calculated_distance_km <= 20.0]
+        # --- 4. Strict 25 km service range limit for all collectors ---
+        MAX_COLLECTOR_RANGE_KM = 25.0
+        unassigned_list = [p for p in unassigned_list if p.calculated_distance_km <= MAX_COLLECTOR_RANGE_KM]
 
         # --- Sort nearest first, cap at 50 ---
         unassigned_list.sort(key=lambda item: item.calculated_distance_km)
@@ -306,6 +321,23 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         pickup = self.object
+
+        # Determine collector's reference location
+        col_location = CollectorLocation.objects.filter(collector=user).first()
+        if col_location:
+            col_lat, col_lng = float(col_location.latitude), float(col_location.longitude)
+        elif user.hub:
+            col_lat, col_lng = float(user.hub.latitude), float(user.hub.longitude)
+        else:
+            col_lat, col_lng = 9.9312, 76.2673
+
+        plat = float(pickup.effective_latitude)
+        plng = float(pickup.effective_longitude)
+        dist_km = GeoService.haversine_distance(col_lat, col_lng, plat, plng)
+
+        context["distance_from_collector_km"] = dist_km
+        context["is_within_collector_range"] = (dist_km <= 25.0)
+
         # Gate flag: if not verified, template hides claim/complete action buttons
         context["is_verified"] = getattr(user, "is_verified", False)
         # Preview how much the collector would earn if they claim and complete this job
@@ -319,7 +351,7 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
 # Collector Pickup Status Update View
 # ==============================================================================
 # Handles all collector status actions via POST:
-#   - claim   : collector takes ownership of a PENDING pickup
+#   - claim   : collector takes ownership of a PENDING pickup (guarded by 25 km limit)
 #   - transit : collector is now driving to the pickup location
 #   - complete: collector submits measured weight; completes job; credits wallet
 #   - cancel  : collector releases the pickup back to PENDING
@@ -342,6 +374,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
 
     Action: "claim"
       - Validates pickup is PENDING or AWAITING_PAYMENT (not already taken).
+      - Enforces 25 km collection range from collector's live location / hub.
       - Sets pickup.collector = current user and pickup.status = ASSIGNED.
       - pickup.save() triggers the assignment notification (see models.py).
 
@@ -358,12 +391,12 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
           • Recalculates collector_earnings
           • Credits citizen wallet_points
           • Credits collector wallet_balance
-        (All of this happens inside PickupRequest.save() — see models.py)
+        (All of this happens inside PickupRequest.save() —  see models.py)
 
     Action: "cancel" (release)
       - Validates this collector owns the pickup.
       - Sets pickup.collector = None and status = PENDING.
-      - No penalty for releasing — pickup returns to the available pool.
+      - No penalty for releasing —  pickup returns to the available pool.
     """
 
     def post(self, request, pk, *args, **kwargs):
@@ -387,6 +420,26 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
             if pickup.status not in [PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT]:
                 messages.error(request, "This pickup request is no longer available to claim.")
             else:
+                # 25 km collection range guard
+                col_location = CollectorLocation.objects.filter(collector=user).first()
+                if col_location:
+                    col_lat, col_lng = float(col_location.latitude), float(col_location.longitude)
+                elif user.hub:
+                    col_lat, col_lng = float(user.hub.latitude), float(user.hub.longitude)
+                else:
+                    col_lat, col_lng = 9.9312, 76.2673
+
+                plat = float(pickup.effective_latitude)
+                plng = float(pickup.effective_longitude)
+                dist_km = GeoService.haversine_distance(col_lat, col_lng, plat, plng)
+
+                if dist_km > 25.0:
+                    messages.error(
+                        request,
+                        f"Cannot claim pickup: this location is {dist_km:.1f} km away, which exceeds your maximum 25 km collection range."
+                    )
+                    return redirect("waste_management:pickup_detail", pk=pk)
+
                 pickup.collector = user
                 pickup.status = PickupRequest.StatusChoices.ASSIGNED
                 # save() triggers send_pickup_assigned_notification() in models.py

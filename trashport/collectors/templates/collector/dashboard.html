@@ -739,7 +739,7 @@
           </div>
           <div>
             <p class="section-title">Nearby Pickup Opportunities (Nearest-First)</p>
-            <p class="section-subtitle">Prioritized by distance from your current live GPS position</p>
+            <p class="section-subtitle">Prioritized by distance from your current live GPS position (strictly within 25 km range)</p>
           </div>
         </div>
 
@@ -749,8 +749,8 @@
             <i class="fas fa-crosshairs me-1"></i> <span id="gpsBtnLabel">Use Real-Time GPS</span>
           </button>
           <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-success radius-btn active" data-max-dist="9999">
-              <i class="fas fa-globe me-1"></i> All ({{ unassigned_pickups|length }})
+            <button type="button" class="btn btn-success radius-btn active" data-max-dist="25" id="allRadiusBtn">
+              <i class="fas fa-globe me-1"></i> All (<span id="inRangeCount">{{ unassigned_pickups|length }}</span>)
             </button>
             <button type="button" class="btn btn-outline-success radius-btn" data-max-dist="5">
               &lt; 5 km
@@ -758,8 +758,8 @@
             <button type="button" class="btn btn-outline-warning radius-btn" data-max-dist="15">
               &lt; 15 km
             </button>
-            <button type="button" class="btn btn-outline-primary radius-btn" data-max-dist="30">
-              &lt; 30 km
+            <button type="button" class="btn btn-outline-primary radius-btn" data-max-dist="25">
+              &lt; 25 km
             </button>
           </div>
         </div>
@@ -850,13 +850,22 @@
                   {% endif %}
                 </td>
               </tr>
+            <tr id="noJobsInRangeRow" style="display: none;">
+              <td colspan="8">
+                <div class="empty-state py-4 text-center">
+                  <div class="empty-state-icon text-muted mb-2"><i class="fas fa-map-marker-slash fa-2x"></i></div>
+                  <p class="empty-state-title fw-bold text-dark mb-1">No pickups within selected range</p>
+                  <p class="empty-state-desc text-muted mb-0 small">There are no pickup opportunities within this distance (max 25 km collection range).</p>
+                </div>
+              </td>
+            </tr>
             {% empty %}
               <tr>
                 <td colspan="8">
                   <div class="empty-state">
                     <div class="empty-state-icon"><i class="fas fa-box-open"></i></div>
                     <p class="empty-state-title">No pending jobs available</p>
-                    <p class="empty-state-desc">All pickups have been assigned. Check back soon!</p>
+                    <p class="empty-state-desc">There are currently no unassigned pickups within your 25 km collection range. Check back soon!</p>
                   </div>
                 </td>
               </tr>
@@ -1052,18 +1061,28 @@
         iconSize: [36, 36],
         iconAnchor: [18, 18],
         popupAnchor: [0, -18]
-      });
-    }
-
+     const MAX_COLLECTOR_RANGE_KM = 25.0;
+    let currentActiveMaxDist = MAX_COLLECTOR_RANGE_KM;
     let currentCollectorLat = collectorLat;
     let currentCollectorLng = collectorLng;
     let liveAccuracyCircle = null;
     let liveWatchId = null;
 
+    // 25 km Collector Service Range Boundary Circle
+    let collectorRangeCircle = L.circle([collectorLat, collectorLng], {
+      radius: 25000,
+      color: '#16a34a',
+      fillColor: '#22c55e',
+      fillOpacity: 0.05,
+      weight: 2,
+      dashArray: '6, 6'
+    }).addTo(map);
+    collectorRangeCircle.bindTooltip("25 km Collector Service Range", { sticky: true, direction: 'top' });
+
     // Collector Truck Marker
     let colMarker = L.marker([collectorLat, collectorLng], {
       icon: createIcon("fa-truck", "bg-success", true)
-    }).addTo(map).bindPopup("<b>🚚 Your Live Location</b><br>Collector Vehicle Position");
+    }).addTo(map).bindPopup("<b>🚚 Your Live Location</b><br>Collector Vehicle Position<br><span class=\"badge bg-success mt-1\">25 km Service Range Active</span>");
 
     // In-map Floating Locate Button
     const LocateControl = L.Control.extend({
@@ -1084,6 +1103,175 @@
       }
     });
     map.addControl(new LocateControl());
+
+    let pickupMarkers = [];
+    let previewPolyline = null;
+
+    function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+      let pts = [];
+      let dLat = eLat - sLat;
+      let dLng = eLng - sLng;
+      let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+      let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+      let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+      let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+      let count = 16;
+      for (let i = 0; i <= count; i++) {
+        let t = i / count;
+        let lat, lng;
+        if (t < 0.5) {
+          let subT = t * 2.0;
+          lat = (1 - subT) * sLat + subT * turn1Lat;
+          lng = (1 - subT) * sLng + subT * turn1Lng;
+        } else if (t < 0.85) {
+          let subT = (t - 0.5) / 0.35;
+          lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+          lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+        } else {
+          let subT = (t - 0.85) / 0.15;
+          lat = (1 - subT) * turn2Lat + subT * eLat;
+          lng = (1 - subT) * turn2Lng + subT * eLng;
+        }
+        let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+        let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+        pts.push([lat + wLat, lng + wLng]);
+      }
+      return pts;
+    }
+
+    function renderOpportunityMarkers(maxDist = currentActiveMaxDist) {
+      pickupMarkers.forEach(m => map.removeLayer(m));
+      pickupMarkers = [];
+
+      const effectiveMax = Math.min(maxDist, MAX_COLLECTOR_RANGE_KM);
+      let bounds = [[currentCollectorLat, currentCollectorLng]];
+
+      unassignedPickups.forEach(p => {
+        if (p.distance_km <= effectiveMax) {
+          bounds.push([p.latitude, p.longitude]);
+
+          let pinBg = "bg-success";
+          if (p.distance_km > 5 && p.distance_km <= 15) pinBg = "bg-warning";
+          if (p.distance_km > 15) pinBg = "bg-primary";
+
+          let pinIcon = createIcon("fa-map-pin", pinBg);
+
+          let claimButtonHtml = isVerified ? `
+            <form method="post" action="/waste-management/pickups/${p.id}/status/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+              <input type="hidden" name="action" value="claim">
+              <button type="submit" class="btn btn-sm btn-success w-100 fw-bold mt-2 shadow-sm">
+                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
+              </button>
+            </form>
+          ` : `
+            <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>
+              <i class="fas fa-lock me-1"></i> Admin Verification Required
+            </button>
+          `;
+
+          let popupHtml = `
+            <div class="p-1" style="min-width: 220px;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-success mb-0">Pickup #${p.id}</h6>
+                <span class="badge ${pinBg} text-white">${p.distance_km} km</span>
+              </div>
+              <div class="small mb-1"><strong>Customer:</strong> ${p.citizen_name}</div>
+              <div class="small mb-1"><strong>Address:</strong> ${p.address}</div>
+              <div class="small mb-1"><strong>Category:</strong> <span class="badge bg-light text-dark border">${p.category} (${p.weight_kg}kg)</span></div>
+              <div class="small fw-bold text-success mb-1">Est. Earning: Rs. ${p.earnings.toFixed(2)}</div>
+              ${claimButtonHtml}
+            </div>
+          `;
+
+          let marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(map).bindPopup(popupHtml);
+
+          marker.on('click', () => {
+            let roadWaypoints = generateClientRoadCurve(currentCollectorLat, currentCollectorLng, p.latitude, p.longitude);
+            if (previewPolyline) map.removeLayer(previewPolyline);
+            previewPolyline = L.polyline(roadWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
+
+            fetch(`/api/maps/route/?start_lat=${currentCollectorLat}&start_lng=${currentCollectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
+              .then(res => res.json())
+              .then(routeData => {
+                if (routeData && routeData.coordinates && routeData.coordinates.length > 2 && previewPolyline) {
+                  previewPolyline.setLatLngs(routeData.coordinates);
+                }
+              })
+              .catch(err => {});
+          });
+
+          pickupMarkers.push(marker);
+        }
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
+      } else {
+        map.setView([currentCollectorLat, currentCollectorLng], 12);
+      }
+    }
+
+    function applyRangeFilter(maxDist) {
+      currentActiveMaxDist = Math.min(maxDist, MAX_COLLECTOR_RANGE_KM);
+      renderOpportunityMarkers(currentActiveMaxDist);
+
+      const tableRows = document.querySelectorAll('#availableJobsTable .pickup-job-row');
+      let visibleCount = 0;
+      let totalInRangeCount = 0;
+
+      tableRows.forEach(row => {
+        const rowDist = parseFloat(row.getAttribute('data-distance')) || 0;
+        if (rowDist <= MAX_COLLECTOR_RANGE_KM) {
+          totalInRangeCount++;
+        }
+        if (rowDist <= currentActiveMaxDist) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const inRangeSpan = document.getElementById('inRangeCount');
+      if (inRangeSpan) inRangeSpan.textContent = totalInRangeCount;
+
+      const noJobsRow = document.getElementById('noJobsInRangeRow');
+      if (noJobsRow) {
+        noJobsRow.style.display = (visibleCount === 0) ? '' : 'none';
+      }
+    }
+
+    function recalculateDistances(lat, lng) {
+      unassignedPickups.forEach(p => {
+        const R = 6371;
+        const dLat = (p.latitude - lat) * Math.PI / 180;
+        const dLon = (p.longitude - lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        p.distance_km = parseFloat((R * c).toFixed(1));
+
+        const row = document.getElementById('pickup-row-' + p.id);
+        if (row) {
+          row.setAttribute('data-distance', p.distance_km);
+          const proxCell = row.querySelector('[data-label="Proximity"]');
+          if (proxCell) {
+            if (p.distance_km <= 5.0) {
+              proxCell.innerHTML = `<span class="badge bg-success text-white p-2" title="Immediate priority (< 5km)"><i class="fas fa-bolt me-1"></i> ${p.distance_km} km (Near)</span>`;
+            } else if (p.distance_km <= 15.0) {
+              proxCell.innerHTML = `<span class="badge bg-warning text-dark p-2" title="Nearby pickup (< 15km)"><i class="fas fa-map-marker-alt me-1"></i> ${p.distance_km} km</span>`;
+            } else if (p.distance_km <= 25.0) {
+              proxCell.innerHTML = `<span class="badge bg-primary text-white p-2" title="Within Range (< 25km)"><i class="fas fa-route me-1"></i> ${p.distance_km} km</span>`;
+            } else {
+              proxCell.innerHTML = `<span class="badge bg-danger text-white p-2" title="Out of Range (> 25km)"><i class="fas fa-ban me-1"></i> ${p.distance_km} km (Out of Range)</span>`;
+            }
+          }
+        }
+      });
+      applyRangeFilter(currentActiveMaxDist);
+    }
 
     // High-Accuracy Live Location Handler
     function locateCollectorLive(flyTo = true) {
@@ -1111,25 +1299,27 @@
           currentCollectorLat = lat;
           currentCollectorLng = lng;
 
-          // Update Collector Marker
           colMarker.setLatLng([lat, lng]);
-          colMarker.bindPopup(`<b>🚚 Your Live Location</b><br>Collector Position (±${Math.round(accuracy)}m accuracy)`).openPopup();
+          colMarker.bindPopup(`<b>🚚 Your Live Location</b><br>Collector Position (±${Math.round(accuracy)}m accuracy)<br><span class="badge bg-success mt-1">25 km Service Range Active</span>`).openPopup();
 
-          // Pulse & Accuracy Circle
+          if (collectorRangeCircle) {
+            collectorRangeCircle.setLatLng([lat, lng]);
+          }
+
           if (liveAccuracyCircle) {
-            liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+            liveAccuracyCircle.setLatLng([lat, lng]).setRadius(Math.min(accuracy, 25000));
           } else {
             liveAccuracyCircle = L.circle([lat, lng], {
-              radius: accuracy,
+              radius: Math.min(accuracy, 25000),
               color: '#16a34a',
               fillColor: '#22c55e',
-              fillOpacity: 0.18,
+              fillOpacity: 0.15,
               weight: 1.5
             }).addTo(map);
           }
 
           if (flyTo) {
-            map.flyTo([lat, lng], Math.max(map.getZoom(), 14), { duration: 1.2 });
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 12), { duration: 1.2 });
           }
 
           if (badge && accuracyText) {
@@ -1145,25 +1335,9 @@
             }, 3000);
           }
 
-          // Recalculate distances for all opportunities relative to real-time location
-          unassignedPickups.forEach(p => {
-            const R = 6371;
-            const dLat = (p.latitude - lat) * Math.PI / 180;
-            const dLon = (p.longitude - lng) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            p.distance_km = parseFloat((R * c).toFixed(1));
+          recalculateDistances(lat, lng);
 
-            const row = document.getElementById('pickup-row-' + p.id);
-            if (row) {
-              row.setAttribute('data-distance', p.distance_km);
-            }
-          });
-          renderOpportunityMarkers();
-
-          // Transmit location to server in background to save as collector's current location
+          // Transmit location to server in background to save as collector's current location & align hub
           fetch('/api/maps/locations/update/', {
             method: 'POST',
             headers: {
@@ -1226,14 +1400,17 @@
               currentCollectorLat = lat;
               currentCollectorLng = lng;
               colMarker.setLatLng([lat, lng]);
+              if (collectorRangeCircle) {
+                collectorRangeCircle.setLatLng([lat, lng]);
+              }
               if (liveAccuracyCircle) {
-                liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+                liveAccuracyCircle.setLatLng([lat, lng]).setRadius(Math.min(accuracy, 25000));
               } else {
                 liveAccuracyCircle = L.circle([lat, lng], {
-                  radius: accuracy,
+                  radius: Math.min(accuracy, 25000),
                   color: '#16a34a',
                   fillColor: '#22c55e',
-                  fillOpacity: 0.18,
+                  fillOpacity: 0.15,
                   weight: 1.5
                 }).addTo(map);
               }
@@ -1243,6 +1420,8 @@
                 badge.classList.remove('d-none');
                 accuracyText.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
               }
+              recalculateDistances(lat, lng);
+
               fetch('/api/maps/locations/update/', {
                 method: 'POST',
                 headers: {
@@ -1268,116 +1447,9 @@
       });
     }
 
-    // Auto-locate collector on page load — use live GPS as the default position
+    // Auto-locate collector on page load — use live GPS as the default position
     if (navigator.geolocation) {
       locateCollectorLive(true);
-    }
-
-    let pickupMarkers = [];
-    let previewPolyline = null;
-
-    function renderOpportunityMarkers(maxDist = 9999) {
-      // Clear existing pickup markers
-      pickupMarkers.forEach(m => map.removeLayer(m));
-      pickupMarkers = [];
-
-      let bounds = [[currentCollectorLat, currentCollectorLng]];
-
-      unassignedPickups.forEach(p => {
-        if (p.distance_km <= maxDist) {
-          bounds.push([p.latitude, p.longitude]);
-
-          let pinBg = "bg-success";
-          if (p.distance_km > 5 && p.distance_km <= 15) pinBg = "bg-warning";
-          if (p.distance_km > 15) pinBg = "bg-primary";
-
-          let pinIcon = createIcon("fa-map-pin", pinBg);
-
-          let claimButtonHtml = isVerified ? `
-            <form method="post" action="/waste-management/pickups/${p.id}/status/">
-              <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-              <input type="hidden" name="action" value="claim">
-              <button type="submit" class="btn btn-sm btn-success w-100 fw-bold mt-2 shadow-sm">
-                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
-              </button>
-            </form>
-          ` : `
-            <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>
-              <i class="fas fa-lock me-1"></i> Admin Verification Required
-            </button>
-          `;
-
-          let popupHtml = `
-            <div class="p-1" style="min-width: 220px;">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <h6 class="fw-bold text-success mb-0">Pickup #${p.id}</h6>
-                <span class="badge ${pinBg} text-white">${p.distance_km} km</span>
-              </div>
-              <div class="small mb-1"><strong>Customer:</strong> ${p.citizen_name}</div>
-              <div class="small mb-1"><strong>Address:</strong> ${p.address}</div>
-              <div class="small mb-1"><strong>Category:</strong> <span class="badge bg-light text-dark border">${p.category} (${p.weight_kg}kg)</span></div>
-              <div class="small fw-bold text-success mb-1">Est. Earning: Rs. ${p.earnings.toFixed(2)}</div>
-              ${claimButtonHtml}
-            </div>
-          `;
-
-          let marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(map).bindPopup(popupHtml);
-
-          function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
-            let pts = [];
-            let dLat = eLat - sLat;
-            let dLng = eLng - sLng;
-            let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
-            let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
-            let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
-            let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
-            let count = 16;
-            for (let i = 0; i <= count; i++) {
-              let t = i / count;
-              let lat, lng;
-              if (t < 0.5) {
-                let subT = t * 2.0;
-                lat = (1 - subT) * sLat + subT * turn1Lat;
-                lng = (1 - subT) * sLng + subT * turn1Lng;
-              } else if (t < 0.85) {
-                let subT = (t - 0.5) / 0.35;
-                lat = (1 - subT) * turn1Lat + subT * turn2Lat;
-                lng = (1 - subT) * turn1Lng + subT * turn2Lng;
-              } else {
-                let subT = (t - 0.85) / 0.15;
-                lat = (1 - subT) * turn2Lat + subT * eLat;
-                lng = (1 - subT) * turn2Lng + subT * eLng;
-              }
-              let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
-              let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
-              pts.push([lat + wLat, lng + wLng]);
-            }
-            return pts;
-          }
-
-          // Click marker to preview turn-by-turn road route!
-          marker.on('click', () => {
-            let roadWaypoints = generateClientRoadCurve(currentCollectorLat, currentCollectorLng, p.latitude, p.longitude);
-            if (previewPolyline) map.removeLayer(previewPolyline);
-            previewPolyline = L.polyline(roadWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
-
-            fetch(`/api/maps/route/?start_lat=${currentCollectorLat}&start_lng=${currentCollectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
-              .then(res => res.json())
-              .then(routeData => {
-                if (routeData && routeData.coordinates && routeData.coordinates.length > 2 && previewPolyline) {
-                  previewPolyline.setLatLngs(routeData.coordinates);
-                }
-              })
-              .catch(err => {});
-          });
-
-          pickupMarkers.push(marker);
-        }
-      });
-
-      if (bounds.length > 1) {
-        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
-      }
     }
 
     // Allow collector to drag truck marker or click map to manually position their location
@@ -1395,7 +1467,11 @@
       currentCollectorLat = lat;
       currentCollectorLng = lng;
       colMarker.setLatLng([lat, lng]);
-      colMarker.bindPopup(`<b>🚚 Your Location Set</b><br>Manually pinned location`).openPopup();
+      colMarker.bindPopup(`<b>🚚 Your Location Set</b><br>Manually pinned location<br><span class="badge bg-success mt-1">25 km Service Range Active</span>`).openPopup();
+
+      if (collectorRangeCircle) {
+        collectorRangeCircle.setLatLng([lat, lng]);
+      }
 
       if (liveAccuracyCircle) {
         liveAccuracyCircle.setLatLng([lat, lng]).setRadius(25);
@@ -1408,23 +1484,7 @@
         accuracyText.textContent = `Pinned: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       }
 
-      // Recalculate distances relative to new location
-      unassignedPickups.forEach(p => {
-        const R = 6371;
-        const dLat = (p.latitude - lat) * Math.PI / 180;
-        const dLon = (p.longitude - lng) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        p.distance_km = parseFloat((R * c).toFixed(1));
-
-        const row = document.getElementById('pickup-row-' + p.id);
-        if (row) {
-          row.setAttribute('data-distance', p.distance_km);
-        }
-      });
-      renderOpportunityMarkers();
+      recalculateDistances(lat, lng);
 
       // Persist to server
       fetch('/api/maps/locations/update/', {
@@ -1443,11 +1503,11 @@
       }).catch(err => console.log('Location sync:', err));
     }
 
-    renderOpportunityMarkers(9999);
+    // Initialize with 25 km range filter
+    applyRangeFilter(MAX_COLLECTOR_RANGE_KM);
 
     // 3. Radius Expansion Toolbar Event Handlers
     const radiusBtns = document.querySelectorAll('#radiusToolbar .radius-btn');
-    const tableRows = document.querySelectorAll('#availableJobsTable .pickup-job-row');
 
     radiusBtns.forEach(btn => {
       btn.addEventListener('click', function () {
@@ -1460,20 +1520,8 @@
         this.classList.remove('btn-outline-success');
         this.classList.add('btn-success');
 
-        const maxDist = parseFloat(this.getAttribute('data-max-dist')) || 9999;
-
-        // Filter Leaflet Map Markers
-        renderOpportunityMarkers(maxDist);
-
-        // Filter Table Rows
-        tableRows.forEach(row => {
-          const rowDist = parseFloat(row.getAttribute('data-distance')) || 0;
-          if (rowDist <= maxDist) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
-        });
+        const maxDist = parseFloat(this.getAttribute('data-max-dist')) || MAX_COLLECTOR_RANGE_KM;
+        applyRangeFilter(maxDist);
       });
     });
 
@@ -1505,30 +1553,13 @@
             gpsLabel.textContent = 'Live GPS Active';
             gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
 
-            // Update Truck Marker position on map
             colMarker.setLatLng([liveLat, liveLng]);
-            map.setView([liveLat, liveLng], 14);
+            if (collectorRangeCircle) {
+              collectorRangeCircle.setLatLng([liveLat, liveLng]);
+            }
+            map.setView([liveLat, liveLng], 13);
 
-            // Re-render markers and recalculate distances locally
-            unassignedPickups.forEach(p => {
-              // Haversine approx
-              const R = 6371;
-              const dLat = (p.latitude - liveLat) * Math.PI / 180;
-              const dLon = (p.longitude - liveLng) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(liveLat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              p.distance_km = parseFloat((R * c).toFixed(1));
-
-              const row = document.getElementById('pickup-row-' + p.id);
-              if (row) {
-                row.setAttribute('data-distance', p.distance_km);
-              }
-            });
-
-            // Re-sort table and markers
-            renderOpportunityMarkers();
+            recalculateDistances(liveLat, liveLng);
 
             // Persist location to backend
             fetch('/api/maps/locations/update/', {

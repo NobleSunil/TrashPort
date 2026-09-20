@@ -28,19 +28,38 @@ class CollectorLocationListView(generics.ListAPIView):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_collector_location_view(request):
-    """Updates live GPS coordinates for the authenticated collector."""
+    """Updates live GPS coordinates for the authenticated collector and aligns nearest Hub."""
     serializer = UpdateLocationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+
+    lat = float(serializer.validated_data["latitude"])
+    lng = float(serializer.validated_data["longitude"])
 
     loc, created = CollectorLocation.objects.update_or_create(
         collector=request.user,
         defaults={
-            "latitude": serializer.validated_data["latitude"],
-            "longitude": serializer.validated_data["longitude"],
+            "latitude": lat,
+            "longitude": lng,
             "speed": serializer.validated_data.get("speed", 0.0),
             "heading": serializer.validated_data.get("heading", 0.0),
         }
     )
+
+    # If the user is a collector, dynamically align their active hub to the nearest hub within 25 km
+    if getattr(request.user, "role", None) == "COLLECTOR":
+        from trashport.core.waste_management.models import Hub
+        from trashport.core.maps.services import GeoService
+        hubs = list(Hub.objects.filter(is_active=True))
+        if hubs:
+            nearest_hub = min(
+                hubs,
+                key=lambda h: GeoService.haversine_distance(lat, lng, float(h.latitude), float(h.longitude))
+            )
+            dist_to_hub = GeoService.haversine_distance(lat, lng, float(nearest_hub.latitude), float(nearest_hub.longitude))
+            if dist_to_hub <= 25.0 and request.user.hub != nearest_hub:
+                request.user.hub = nearest_hub
+                request.user.save()
+
     return Response(CollectorLocationSerializer(loc).data, status=status.HTTP_200_OK)
 
 

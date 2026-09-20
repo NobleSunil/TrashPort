@@ -56,17 +56,30 @@ class UserSignupForm(SignupForm):
     Captures:
     - User's full name
     - Selected platform role (Citizen or Collector)
+    - Operating Hub / Panchayath (required for Collectors)
     """
     role = forms.ChoiceField(
         choices=[("CITIZEN", "Citizen"), ("COLLECTOR", "Collector")],
         required=True,
-        widget=forms.Select(attrs={"class": "form-select"})
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_role"})
     )
     name = forms.CharField(
         max_length=255,
         required=True,
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Full Name"})
     )
+    hub = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        empty_label="Select your Operating Hub / Panchayath",
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_hub"}),
+        help_text=_("Collection Hub to which this collector is assigned"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from trashport.core.waste_management.models import Hub
+        self.fields["hub"].queryset = Hub.objects.filter(is_active=True).select_related("city").order_by("city__name", "name")
 
     def clean_name(self):
         # Validate that the full name only contains alphabetical characters and whitespace
@@ -75,6 +88,14 @@ class UserSignupForm(SignupForm):
             raise forms.ValidationError("Name must contain only letters and spaces.")
         return name
 
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get("role")
+        hub = cleaned_data.get("hub")
+        if role == "COLLECTOR" and not hub:
+            self.add_error("hub", "Collectors must specify their operating Hub / Panchayath.")
+        return cleaned_data
+
     def save(self, request):
         # Delegate user object creation to allauth adapter
         adapter = get_adapter(request)
@@ -82,6 +103,8 @@ class UserSignupForm(SignupForm):
         # Assign custom registration fields before saving
         user.role = self.cleaned_data["role"]
         user.name = self.cleaned_data["name"]
+        if user.role == "COLLECTOR" and self.cleaned_data.get("hub"):
+            user.hub = self.cleaned_data["hub"]
         adapter.save_user(request, user, self)
         self.custom_signup(request, user)
         return user

@@ -141,7 +141,12 @@
 
         {% if pickup.status == 'PENDING' %}
           <p class="text-muted small">This job is pending. Claim it to assign it to yourself.</p>
-          {% if is_verified %}
+          {% if not is_within_collector_range %}
+            <div class="alert alert-danger py-2 px-3 small mb-0 d-inline-flex align-items-center gap-2">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>This pickup is {{ distance_from_collector_km|floatformat:1 }} km away, exceeding your 25 km collection range limit. You cannot claim this job.</span>
+            </div>
+          {% elif is_verified %}
             <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
               {% csrf_token %}
               <input type="hidden" name="action" value="claim">

@@ -247,6 +247,7 @@ class User(AbstractUser):
         profile = self._get_collector_profile()
         profile.hub = value
         profile.save()
+        self.collector_profile = profile
 
     def save(self, *args, **kwargs):
         """
@@ -302,6 +303,7 @@ class User(AbstractUser):
                 dirty = True
             if dirty:
                 collector_profile.save()
+                self.collector_profile = collector_profile
         else:
             # For CITIZEN and ADMIN, ensure CitizenProfile exists for points storage
             citizen_profile, _ = CitizenProfile.objects.get_or_create(user=self)

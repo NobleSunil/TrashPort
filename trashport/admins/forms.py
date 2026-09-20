@@ -103,8 +103,13 @@ class CityForm(forms.ModelForm):
     class Meta:
         model = City
         fields = ["name", "state", "is_active"]
+        labels = {
+            "name": "City / Grama Panchayath Name",
+            "state": "State",
+            "is_active": "Operational Status",
+        }
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kochi"}),
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kochi / Kumarakom Grama Panchayat"}),
             "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kerala"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -114,8 +119,16 @@ class HubForm(forms.ModelForm):
     class Meta:
         model = Hub
         fields = ["name", "city", "latitude", "longitude", "address", "is_active"]
+        labels = {
+            "name": "Hub / Facility Name",
+            "city": "Assigned City / Panchayath",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "address": "Physical Address / Landmark",
+            "is_active": "Active Hub",
+        }
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kochi Central Hub"}),
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kumarakom Panchayath Hub"}),
             "city": forms.Select(attrs={"class": "form-select"}),
             "latitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "9.931200"}),
             "longitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "76.267300"}),
