@@ -770,6 +770,9 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2 px-1">
           <div class="d-flex align-items-center flex-wrap gap-2">
             <span class="small fw-bold text-dark"><i class="fas fa-map-marked-alt text-success me-1"></i> Interactive Pickup Map &amp; Route Previewer</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              <i class="fas fa-warehouse me-1"></i> Collector Hubs
+            </span>
             <span id="liveLocationAccuracyBadge" class="badge bg-success-subtle text-success border border-success-subtle d-none">
               <i class="fas fa-satellite-dish me-1"></i> <span id="accuracyText">GPS: Accurate</span>
             </span>
@@ -1086,6 +1089,52 @@
     let colMarker = L.marker([collectorLat, collectorLng], {
       icon: createIcon("fa-truck", "bg-success", true)
     }).addTo(map).bindPopup("<b>🚚 Your Live Location</b><br>Collector Vehicle Position<br><span class=\"badge bg-success mt-1\">25 km Service Range Active</span>");
+
+    // Collector Hubs Markers (Grama Panchayaths & Regional Hubs)
+    const collectorHubs = {{ hubs_json|safe|default:"[]" }};
+    let hubMarkers = [];
+
+    collectorHubs.forEach(h => {
+      const isCurrent = h.is_current;
+      const hubBg = isCurrent ? 'bg-primary' : 'bg-secondary';
+      const hubBorder = isCurrent ? 'style="width: 38px; height: 38px; font-size: 16px; border: 3px solid #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);"' : 'style="width: 32px; height: 32px; font-size: 14px; border: 2px solid white;"';
+
+      const hubIcon = L.divIcon({
+        className: 'custom-hub-icon',
+        html: `<div class="shadow rounded-circle d-flex align-items-center justify-content-center text-white ${hubBg}" ${hubBorder}>
+                <i class="fas fa-warehouse"></i>
+               </div>`,
+        iconSize: isCurrent ? [38, 38] : [32, 32],
+        iconAnchor: isCurrent ? [19, 19] : [16, 16],
+        popupAnchor: [0, -18]
+      });
+
+      const currentBadge = isCurrent
+        ? '<div class="badge bg-warning text-dark w-100 py-1 mb-1"><i class="fas fa-star me-1"></i>Your Assigned Hub</div>'
+        : `<form method="post" action="/dashboard/" class="mt-2">
+             <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+             <input type="hidden" name="hub_id" value="${h.id}">
+             <button type="submit" class="btn btn-sm btn-outline-primary w-100 fw-bold">
+               <i class="fas fa-exchange-alt me-1"></i> Switch to this Hub
+             </button>
+           </form>`;
+
+      const hubPopup = `
+        <div class="p-1" style="min-width: 210px;">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <h6 class="fw-bold text-primary mb-0"><i class="fas fa-warehouse me-1"></i>${h.name}</h6>
+          </div>
+          <div class="small fw-semibold text-dark mb-1"><i class="fas fa-map-marker-alt text-danger me-1"></i>${h.city}</div>
+          <div class="small text-muted mb-2">${h.address}</div>
+          ${currentBadge}
+        </div>
+      `;
+
+      const m = L.marker([h.latitude, h.longitude], { icon: hubIcon })
+        .addTo(map)
+        .bindPopup(hubPopup);
+      hubMarkers.push(m);
+    });
 
     // In-map Floating Locate Button
     const LocateControl = L.Control.extend({

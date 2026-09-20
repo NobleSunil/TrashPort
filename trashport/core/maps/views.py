@@ -133,9 +133,24 @@ def live_map_data_view(request):
             "updated_at": c.updated_at.strftime("%H:%M:%S"),
         })
 
+    from trashport.core.waste_management.models import Hub
+    hubs_qs = Hub.objects.filter(is_active=True).select_related("city")
+    hubs_data = []
+    for h in hubs_qs:
+        hubs_data.append({
+            "id": h.id,
+            "name": h.name,
+            "city": h.city.name,
+            "latitude": float(h.latitude),
+            "longitude": float(h.longitude),
+            "address": h.address,
+            "vehicle_count": h.vehicles.count(),
+        })
+
     return Response({
         "pickups": pickups_data,
         "collectors": collectors_data,
+        "hubs": hubs_data,
     }, status=status.HTTP_200_OK)
 
 

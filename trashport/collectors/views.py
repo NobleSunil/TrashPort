@@ -157,10 +157,24 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         # Syncs user.is_verified with the Aadhaar pro        # --- Payout formula settings (for display in dashboard sidebar) ---
         context["payout_settings"] = CollectorPayoutSetting.get_settings()
 
-        # --- Hub registration context ---
+        # --- Hub registration context & Map Display ---
         from trashport.core.waste_management.models import Hub
+        available_hubs_qs = Hub.objects.filter(is_active=True).select_related("city").order_by("city__name", "name")
         context["collector_hub"] = user.hub
-        context["available_hubs"] = Hub.objects.filter(is_active=True).select_related("city").order_by("city__name", "name")
+        context["available_hubs"] = available_hubs_qs
+        hubs_list = [
+            {
+                "id": h.id,
+                "name": h.name,
+                "city": h.city.name,
+                "latitude": float(h.latitude),
+                "longitude": float(h.longitude),
+                "address": h.address,
+                "is_current": bool(user.hub and user.hub.id == h.id),
+            }
+            for h in available_hubs_qs
+        ]
+        context["hubs_json"] = json.dumps(hubs_list)
         return context
 
     def post(self, request, *args, **kwargs):
