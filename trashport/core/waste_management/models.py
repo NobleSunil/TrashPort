@@ -109,6 +109,16 @@ class Address(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Optional normalized city reference
+    city_ref = models.ForeignKey(
+        "City",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="addresses",
+        help_text="Normalized city reference"
+    )
+
     def save(self, *args, **kwargs):
         """
         Override: When this address is set as default, automatically
@@ -120,6 +130,10 @@ class Address(models.Model):
         if self.is_default:
             # Clear the is_default flag on all other visible addresses for this user
             Address.objects.filter(user=self.user, is_hidden=False).exclude(pk=self.pk).update(is_default=False)
+        if not self.city_ref and self.city:
+            matched = City.objects.filter(name__iexact=self.city.strip()).first()
+            if matched:
+                self.city_ref = matched
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -262,6 +276,149 @@ class CollectorPayoutSetting(models.Model):
             )
         return settings_obj
 
+# ==============================================================================
+# City & Hub Infrastructure Models (3NF Normalized)
+# ==============================================================================
+# Represents operational cities, central collection hubs, and fleet vehicles.
+# Each city has an active hub serving as the route start/end anchor and
+# reference point for the 20 km service radius.
+# ==============================================================================
+
+class City(models.Model):
+    """
+    Municipal/regional jurisdiction serviced by TrashPort.
+    """
+    name = models.CharField(max_length=100, unique=True, help_text="City name")
+    state = models.CharField(max_length=100, default="Kerala")
+    is_active = models.BooleanField(default=True, help_text="Whether service is enabled in this city")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "City"
+        verbose_name_plural = "Cities"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name}, {self.state}"
+
+    @property
+    def active_hub(self):
+        return self.hubs.filter(is_active=True).first()
+
+    def has_active_hub(self) -> bool:
+        return self.hubs.filter(is_active=True).exists()
+
+    @property
+    def has_active_collectors(self) -> bool:
+        from trashport.users.models import User
+        return User.objects.filter(
+            role=User.Roles.COLLECTOR,
+            is_active=True,
+            verification_status=User.VerificationStatus.APPROVED,
+            collector_profile__hub__city=self,
+            collector_profile__hub__is_active=True
+        ).exists()
+
+
+class Hub(models.Model):
+    """
+    Central waste collection hub for a city.
+    Acts as:
+      1. Starting point of vehicle collection routes
+      2. Ending point of vehicle collection routes
+      3. Reference anchor point for the 20 km service radius
+    """
+    name = models.CharField(max_length=150, unique=True)
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name="hubs")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    address = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Hub"
+        verbose_name_plural = "Hubs"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.city.name})"
+
+    def active_collector_count(self) -> int:
+        from trashport.users.models import User
+        return self.collectors.filter(
+            user__is_active=True,
+            user__verification_status=User.VerificationStatus.APPROVED
+        ).count()
+
+
+class Vehicle(models.Model):
+    """
+    Collection vehicle assigned to a hub.
+    Enforces maximum pickup capacity per trip/route (default: 5 pickups).
+    """
+    class StatusChoices(models.TextChoices):
+        AVAILABLE = "AVAILABLE", "Available"
+        ASSIGNED = "ASSIGNED", "Assigned"
+        ON_ROUTE = "ON_ROUTE", "On Route"
+        FULL = "FULL", "Full"
+        MAINTENANCE = "MAINTENANCE", "Maintenance"
+        OFFLINE = "OFFLINE", "Offline"
+
+    vehicle_number = models.CharField(max_length=50, unique=True)
+    hub = models.ForeignKey(Hub, on_delete=models.CASCADE, related_name="vehicles")
+    driver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_vehicles",
+        help_text="Collector assigned to drive this vehicle"
+    )
+    max_capacity = models.PositiveIntegerField(
+        default=5,
+        validators=[MinValueValidator(1)],
+        help_text="Maximum pickup capacity per route/trip (default 5)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.AVAILABLE
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Vehicle"
+        verbose_name_plural = "Vehicles"
+        ordering = ["vehicle_number"]
+
+    def __str__(self):
+        return f"{self.vehicle_number} ({self.hub.name})"
+
+    @property
+    def current_route(self):
+        return self.routes.filter(status__in=["PLANNED", "ACTIVE"]).first()
+
+    @property
+    def current_pickup_count(self) -> int:
+        route = self.current_route
+        if not route:
+            return 0
+        return route.route_pickups.filter(
+            status__in=["PENDING", "ON_ROUTE", "PICKED_UP"]
+        ).count()
+
+    @property
+    def remaining_capacity(self) -> int:
+        return max(0, self.max_capacity - self.current_pickup_count)
+
+    def is_full(self) -> bool:
+        return self.remaining_capacity <= 0
+
+
 
 # ==============================================================================
 # PickupRequest Model
@@ -316,11 +473,16 @@ class PickupRequest(models.Model):
     """
 
     class StatusChoices(models.TextChoices):
+        REQUESTED = "REQUESTED", "Requested"
         PENDING = "PENDING", "Pending"
         AWAITING_PAYMENT = "AWAITING_PAYMENT", "Awaiting Payment"
         ASSIGNED = "ASSIGNED", "Assigned"
         IN_TRANSIT = "IN_TRANSIT", "In Transit"
+        ON_ROUTE = "ON_ROUTE", "On Route"
+        PICKED_UP = "PICKED_UP", "Picked Up"
         COMPLETED = "COMPLETED", "Completed"
+        HELD = "HELD", "Held"
+        REJECTED = "REJECTED", "Rejected"
         CANCELLED = "CANCELLED", "Cancelled"
 
     # -------------------------------------------------------------------------
@@ -336,6 +498,22 @@ class PickupRequest(models.Model):
         on_delete=models.SET_NULL,
         blank=True, null=True,             # null = not yet assigned
         related_name="assigned_pickups"    # collector.assigned_pickups.all()
+    )
+    city = models.ForeignKey(
+        City,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pickup_requests",
+        help_text="City/jurisdiction where pickup takes place"
+    )
+    hub = models.ForeignKey(
+        Hub,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pickup_requests",
+        help_text="Operating hub responsible for this pickup"
     )
     address = models.ForeignKey(
         Address, on_delete=models.SET_NULL, null=True, blank=True
@@ -682,6 +860,140 @@ class PickupRequest(models.Model):
 
     def __str__(self):
         return f"Pickup #{self.display_id} ({self.status}) for {self.citizen.email}"
+
+    @property
+    def active_route(self):
+        rp = self.route_assignments.filter(route__status__in=["PLANNED", "ACTIVE"]).first()
+        return rp.route if rp else None
+
+    def distance_from_hub(self) -> float:
+        """Returns Haversine distance in km from the operating hub."""
+        if not self.hub:
+            return 0.0
+        from trashport.core.maps.services import GeoService
+        return GeoService.haversine_distance(
+            float(self.hub.latitude),
+            float(self.hub.longitude),
+            float(self.effective_latitude),
+            float(self.effective_longitude)
+        )
+
+    def is_within_hub_radius(self, max_km: float = 20.0) -> bool:
+        """Checks whether the pickup coordinates are within the hub's 20 km service radius."""
+        if not self.hub:
+            return False
+        return self.distance_from_hub() <= max_km
+
+
+# ==============================================================================
+# Route & RoutePickup Models (Capacity-Aware 3NF Routing)
+# ==============================================================================
+
+class Route(models.Model):
+    """
+    Vehicle collection trip route.
+    Mandatory business rules:
+      1. Every route must START at the Hub
+      2. Every route must END at the Hub
+      3. Maximum 5 pickups per route/trip
+    """
+    class StatusChoices(models.TextChoices):
+        PLANNED = "PLANNED", "Planned"
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="routes")
+    hub = models.ForeignKey(Hub, on_delete=models.CASCADE, related_name="routes")
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PLANNED
+    )
+    total_distance_km = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Total calculated route distance starting and ending at Hub"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Route"
+        verbose_name_plural = "Routes"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Route #{self.id} - {self.vehicle.vehicle_number} ({self.status})"
+
+    def get_ordered_stops(self):
+        return self.route_pickups.select_related("pickup_request", "pickup_request__citizen", "pickup_request__address").order_by("sequence")
+
+    def get_waypoints(self):
+        """
+        Returns full waypoint sequence starting at Hub and ending at Hub:
+        [(hub_lat, hub_lng), (stop1_lat, stop1_lng), ..., (hub_lat, hub_lng)]
+        """
+        hub_coords = (float(self.hub.latitude), float(self.hub.longitude))
+        points = [hub_coords]
+        for stop in self.get_ordered_stops():
+            points.append((float(stop.pickup_request.effective_latitude), float(stop.pickup_request.effective_longitude)))
+        points.append(hub_coords)
+        return points
+
+    def calculate_total_distance(self) -> Decimal:
+        from trashport.core.maps.services import GeoService
+        waypoints = self.get_waypoints()
+        total = 0.0
+        for i in range(len(waypoints) - 1):
+            p1 = waypoints[i]
+            p2 = waypoints[i + 1]
+            total += GeoService.haversine_distance(p1[0], p1[1], p2[0], p2[1])
+        dist = round(Decimal(str(total)), 2)
+        self.total_distance_km = dist
+        return dist
+
+
+class RoutePickup(models.Model):
+    """
+    Associates a PickupRequest with a Route in a designated stop sequence.
+    Enforces uniqueness so a pickup cannot be scheduled twice on the same route,
+    and sequence numbers remain unique per route.
+    """
+    class StatusChoices(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ON_ROUTE = "ON_ROUTE", "On Route"
+        PICKED_UP = "PICKED_UP", "Picked Up"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+        SKIPPED = "SKIPPED", "Skipped"
+
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="route_pickups")
+    pickup_request = models.ForeignKey(
+        PickupRequest,
+        on_delete=models.CASCADE,
+        related_name="route_assignments"
+    )
+    sequence = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Route Pickup Stop"
+        verbose_name_plural = "Route Pickup Stops"
+        ordering = ["sequence"]
+        unique_together = [("route", "pickup_request"), ("route", "sequence")]
+
+    def __str__(self):
+        return f"Stop #{self.sequence}: Pickup #{self.pickup_request.display_id} on Route #{self.route_id}"
 
 
 # ==============================================================================

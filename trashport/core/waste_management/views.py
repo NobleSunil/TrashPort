@@ -52,13 +52,27 @@ from rest_framework import viewsets
 # IMPACT: Removing any of these imports will break the corresponding URL route.
 # ---------------------------------------------------------------------------
 
-from .models import Address, WasteCategory, PickupRequest, Complaint
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status as drf_status
+
+from .models import (
+    Address, WasteCategory, PickupRequest, Complaint,
+    City, Hub, Vehicle, Route, RoutePickup
+)
 from .serializers import (
     AddressSerializer,
     WasteCategorySerializer,
     PickupRequestSerializer,
     ComplaintSerializer,
+    CitySerializer,
+    HubSerializer,
+    VehicleSerializer,
+    RouteSerializer,
+    RoutePickupSerializer,
 )
+from trashport.core.waste_management.services.route_service import RouteService
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 # ---------------------------------------------------------------------------
 # Re-exports for urls.py — views not defined as dispatchers in this file.
@@ -125,6 +139,82 @@ class ComplaintViewSet(viewsets.ModelViewSet):
     queryset = Complaint.objects.all().order_by("-created_at")
     serializer_class = ComplaintSerializer
     permission_classes = [drf_permissions.AllowAny]
+
+
+class CityViewSet(viewsets.ModelViewSet):
+    """REST API for operational cities and collector coverage status."""
+    queryset = City.objects.all().order_by("name")
+    serializer_class = CitySerializer
+    permission_classes = [drf_permissions.AllowAny]
+
+    @action(detail=True, methods=["get"], url_path="service-status")
+    def service_status(self, request, pk=None):
+        city = self.get_object()
+        active_hub = city.active_hub
+        return Response({
+            "city_id": city.id,
+            "city_name": city.name,
+            "is_active": city.is_active,
+            "has_active_hub": bool(active_hub),
+            "active_hub": HubSerializer(active_hub).data if active_hub else None,
+            "has_active_collectors": city.has_active_collectors,
+        })
+
+
+class HubViewSet(viewsets.ModelViewSet):
+    """REST API for central dispatch hubs and 20 km radial coverage boundaries."""
+    queryset = Hub.objects.all().order_by("city__name", "name")
+    serializer_class = HubSerializer
+    permission_classes = [drf_permissions.AllowAny]
+
+
+class VehicleViewSet(viewsets.ModelViewSet):
+    """REST API for fleet collection vehicles and 5-pickup trip capacity."""
+    queryset = Vehicle.objects.all().order_by("hub__name", "vehicle_number")
+    serializer_class = VehicleSerializer
+    permission_classes = [drf_permissions.AllowAny]
+
+
+class RouteViewSet(viewsets.ModelViewSet):
+    """REST API for collection routes with hub origin/terminus waypoints."""
+    queryset = Route.objects.all().order_by("-created_at")
+    serializer_class = RouteSerializer
+    permission_classes = [drf_permissions.AllowAny]
+
+    @action(detail=True, methods=["post"], url_path="assign-pickup")
+    def assign_pickup(self, request, pk=None):
+        route = self.get_object()
+        pickup_id = request.data.get("pickup_id")
+        if not pickup_id:
+            return Response(
+                {"error": "pickup_id is required."},
+                status=drf_status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            rp = RouteService.assign_pickup_to_route(route.id, int(pickup_id))
+            return Response(
+                RouteSerializer(route).data,
+                status=drf_status.HTTP_200_OK
+            )
+        except DjangoValidationError as exc:
+            return Response(
+                {"error": exc.message if hasattr(exc, "message") else str(exc)},
+                status=drf_status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as exc:
+            return Response(
+                {"error": str(exc)},
+                status=drf_status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=["get"], url_path="waypoints")
+    def waypoints(self, request, pk=None):
+        route = self.get_object()
+        return Response({
+            "route_id": route.id,
+            "waypoints": route.get_waypoints(),
+            "total_distance_km": float(route.total_distance_km),
+        })
 
 
 # ==============================================================================

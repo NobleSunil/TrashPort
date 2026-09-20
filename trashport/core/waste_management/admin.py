@@ -78,3 +78,48 @@ class AnonymousFeedbackAdmin(admin.ModelAdmin):
     list_editable = ["is_reviewed"]
 
 
+from .models import City, Hub, Vehicle, Route, RoutePickup
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "state", "is_active", "created_at"]
+    list_filter = ["is_active", "state"]
+    search_fields = ["name", "state"]
+    list_editable = ["is_active"]
+
+
+@admin.register(Hub)
+class HubAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "city", "latitude", "longitude", "is_active", "created_at"]
+    list_filter = ["is_active", "city"]
+    search_fields = ["name", "city__name", "address"]
+    list_editable = ["is_active"]
+
+
+@admin.register(Vehicle)
+class VehicleAdmin(admin.ModelAdmin):
+    list_display = ["id", "vehicle_number", "hub", "driver", "max_capacity", "status", "created_at"]
+    list_filter = ["status", "hub"]
+    search_fields = ["vehicle_number", "driver__email"]
+
+
+class RoutePickupInline(admin.TabularInline):
+    model = RoutePickup
+    extra = 0
+    raw_id_fields = ["pickup_request"]
+
+
+@admin.register(Route)
+class RouteAdmin(admin.ModelAdmin):
+    list_display = ["id", "vehicle", "hub", "status", "total_distance_km", "start_time", "end_time"]
+    list_filter = ["status", "hub"]
+    inlines = [RoutePickupInline]
+
+
+@admin.register(RoutePickup)
+class RoutePickupAdmin(admin.ModelAdmin):
+    list_display = ["id", "route", "pickup_request", "sequence", "status", "added_at"]
+    list_filter = ["status", "route"]
+
+
+

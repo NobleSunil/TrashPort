@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet Management | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">Collection Fleet Management</h1>
+      <p class="text-muted">Manage fleet vehicles, assigned driver collectors, and strict 5-pickup capacity allocation.</p>
+    </div>
+    <a href="{% url 'waste_management:vehicle_create' %}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-truck me-1"></i> Register New Vehicle
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Vehicle Number</th>
+            <th>Base Hub & City</th>
+            <th>Designated Collector / Driver</th>
+            <th>Trip Capacity Limit</th>
+            <th>Current Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vehicle in vehicles %}
+            <tr>
+              <td>
+                <div class="fw-bold font-monospace fs-6">{{ vehicle.vehicle_number }}</div>
+                <small class="text-muted">ID: #{{ vehicle.id }}</small>
+              </td>
+              <td>
+                <div class="fw-medium">{{ vehicle.hub.name }}</div>
+                <small class="text-muted">{{ vehicle.hub.city.name }}</small>
+              </td>
+              <td>
+                {% if vehicle.driver %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                      {{ vehicle.driver.name|default:vehicle.driver.email }}
+                    </span>
+                  </div>
+                {% else %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                    Unassigned Driver
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-dark-subtle text-dark border px-2 py-1">
+                  Max {{ vehicle.max_capacity }} Pickups / Trip
+                </span>
+              </td>
+              <td>
+                {% if vehicle.status == 'AVAILABLE' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Available</span>
+                {% elif vehicle.status == 'DISPATCHED' %}
+                  <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Dispatched</span>
+                {% elif vehicle.status == 'MAINTENANCE' %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Maintenance</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'waste_management:vehicle_update' vehicle.id %}" class="btn btn-outline-primary">
+                    Edit
+                  </a>
+                  <!-- Quick status dropdown toggle -->
+                  <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Status</span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><h6 class="dropdown-header">Change Status</h6></li>
+                    <li>
+                      <form method="post" action="{% url 'waste_management:vehicle_status_update' vehicle.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="AVAILABLE">
+                        <button type="submit" class="dropdown-item {% if vehicle.status == 'AVAILABLE' %}active{% endif %}">Available</button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="post" action="{% url 'waste_management:vehicle_status_update' vehicle.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="DISPATCHED">
+                        <button type="submit" class="dropdown-item {% if vehicle.status == 'DISPATCHED' %}active{% endif %}">Dispatched</button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="post" action="{% url 'waste_management:vehicle_status_update' vehicle.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="MAINTENANCE">
+                        <button type="submit" class="dropdown-item {% if vehicle.status == 'MAINTENANCE' %}active{% endif %}">Maintenance</button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="post" action="{% url 'waste_management:vehicle_status_update' vehicle.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="INACTIVE">
+                        <button type="submit" class="dropdown-item {% if vehicle.status == 'INACTIVE' %}active{% endif %}">Inactive</button>
+                      </form>
+                    </li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-5 text-muted">
+                <p class="mb-2 fs-5">No fleet vehicles registered yet.</p>
+                <a href="{% url 'waste_management:vehicle_create' %}" class="btn btn-sm btn-primary">Register First Vehicle</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

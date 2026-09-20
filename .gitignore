@@ -294,5 +294,8 @@ keys/*.json
 venv/
 ENV/
 
+# IDE and agent files
+.agents/
+
 
 

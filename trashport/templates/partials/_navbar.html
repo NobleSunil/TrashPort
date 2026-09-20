@@ -18,7 +18,10 @@
             {% elif user.role == 'ADMIN' or user.is_superuser %}
               <a href="{% url 'waste_management:user_list' %}" class="hover:text-brand-600 transition">Users</a>
               <a href="{% url 'waste_management:category_list' %}" class="hover:text-brand-600 transition">Categories</a>
-              <a href="{% url 'waste_management:tier_list' %}" class="hover:text-brand-600 transition">Tiers</a>
+              <a href="{% url 'waste_management:city_list' %}" class="hover:text-brand-600 transition">Cities</a>
+              <a href="{% url 'waste_management:hub_list' %}" class="hover:text-brand-600 transition">Hubs</a>
+              <a href="{% url 'waste_management:vehicle_list' %}" class="hover:text-brand-600 transition">Fleet</a>
+              <a href="{% url 'waste_management:route_list' %}" class="hover:text-brand-600 transition">Routes</a>
             {% endif %}
           </div>
         {% endif %}

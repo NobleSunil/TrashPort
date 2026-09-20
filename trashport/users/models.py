@@ -229,6 +229,25 @@ class User(AbstractUser):
         profile.license_number = value
         profile.save()
 
+    @property
+    def hub(self):
+        """Get collection hub from CollectorProfile."""
+        if hasattr(self, "_pending_hub"):
+            return self._pending_hub
+        if hasattr(self, "collector_profile"):
+            return self.collector_profile.hub
+        return None
+
+    @hub.setter
+    def hub(self, value):
+        """Set collection hub in CollectorProfile."""
+        if not self.pk:
+            self._pending_hub = value
+            return
+        profile = self._get_collector_profile()
+        profile.hub = value
+        profile.save()
+
     def save(self, *args, **kwargs):
         """
         Custom save method:
@@ -276,6 +295,10 @@ class User(AbstractUser):
             if hasattr(self, "_pending_license_number"):
                 collector_profile.license_number = self._pending_license_number
                 delattr(self, "_pending_license_number")
+                dirty = True
+            if hasattr(self, "_pending_hub"):
+                collector_profile.hub = self._pending_hub
+                delattr(self, "_pending_hub")
                 dirty = True
             if dirty:
                 collector_profile.save()
@@ -352,6 +375,15 @@ class CollectorProfile(models.Model):
         max_length=50,
         blank=True,
         null=True,
+    )
+    # Hub assignment for local operation
+    hub = models.ForeignKey(
+        "waste_management.Hub",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collectors",
+        help_text=_("Collection hub to which this collector is registered"),
     )
 
     def __str__(self):

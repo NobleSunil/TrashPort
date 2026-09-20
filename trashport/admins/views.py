@@ -33,7 +33,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
@@ -46,12 +46,21 @@ from trashport.core.waste_management.models import (
     Complaint,
     PickupRequest,
     WasteCategory,
+    City,
+    Hub,
+    Vehicle,
+    Route,
+    RoutePickup,
 )
 from .forms import (
     CollectorCreationForm,
     CollectorPayoutSettingForm,
     WalletPointAdjustmentForm,
     WasteCategoryForm,
+    CityForm,
+    HubForm,
+    VehicleForm,
+    RouteForm,
 )
 
 
@@ -984,5 +993,204 @@ class AdminExportRevenueCSVView(LoginRequiredMixin, View):
 
             writer.writerow([c.name, total_count, completed_count, weight, revenue, payout, margin, points])
         return response
+
+
+# ==============================================================================
+# Admin Fleet, Hub, City & Route Operations Views
+# ==============================================================================
+
+class CityListView(LoginRequiredMixin, ListView):
+    model = City
+    template_name = "admin/city_list.html"
+    context_object_name = "cities"
+    ordering = ["name"]
+
+
+class CityCreateView(LoginRequiredMixin, CreateView):
+    model = City
+    form_class = CityForm
+    template_name = "admin/city_form.html"
+    success_url = reverse_lazy("waste_management:city_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"City '{form.instance.name}' created successfully.")
+        return super().form_valid(form)
+
+
+class CityUpdateView(LoginRequiredMixin, UpdateView):
+    model = City
+    form_class = CityForm
+    template_name = "admin/city_form.html"
+    success_url = reverse_lazy("waste_management:city_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"City '{form.instance.name}' updated successfully.")
+        return super().form_valid(form)
+
+
+class CityToggleActiveView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        city = get_object_or_404(City, pk=pk)
+        city.is_active = not city.is_active
+        city.save(update_fields=["is_active"])
+        messages.success(request, f"City '{city.name}' status set to {'Active' if city.is_active else 'Inactive'}.")
+        return redirect("waste_management:city_list")
+
+
+class HubListView(LoginRequiredMixin, ListView):
+    model = Hub
+    template_name = "admin/hub_list.html"
+    context_object_name = "hubs"
+    queryset = Hub.objects.select_related("city").order_by("city__name", "name")
+
+
+class HubCreateView(LoginRequiredMixin, CreateView):
+    model = Hub
+    form_class = HubForm
+    template_name = "admin/hub_form.html"
+    success_url = reverse_lazy("waste_management:hub_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Hub '{form.instance.name}' registered successfully.")
+        return super().form_valid(form)
+
+
+class HubUpdateView(LoginRequiredMixin, UpdateView):
+    model = Hub
+    form_class = HubForm
+    template_name = "admin/hub_form.html"
+    success_url = reverse_lazy("waste_management:hub_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Hub '{form.instance.name}' updated successfully.")
+        return super().form_valid(form)
+
+
+class HubToggleActiveView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        hub = get_object_or_404(Hub, pk=pk)
+        hub.is_active = not hub.is_active
+        hub.save(update_fields=["is_active"])
+        messages.success(request, f"Hub '{hub.name}' status set to {'Active' if hub.is_active else 'Inactive'}.")
+        return redirect("waste_management:hub_list")
+
+
+class VehicleListView(LoginRequiredMixin, ListView):
+    model = Vehicle
+    template_name = "admin/vehicle_list.html"
+    context_object_name = "vehicles"
+    queryset = Vehicle.objects.select_related("hub", "driver", "hub__city").order_by("hub__name", "vehicle_number")
+
+
+class VehicleCreateView(LoginRequiredMixin, CreateView):
+    model = Vehicle
+    form_class = VehicleForm
+    template_name = "admin/vehicle_form.html"
+    success_url = reverse_lazy("waste_management:vehicle_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Vehicle '{form.instance.vehicle_number}' registered successfully.")
+        return super().form_valid(form)
+
+
+class VehicleUpdateView(LoginRequiredMixin, UpdateView):
+    model = Vehicle
+    form_class = VehicleForm
+    template_name = "admin/vehicle_form.html"
+    success_url = reverse_lazy("waste_management:vehicle_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Vehicle '{form.instance.vehicle_number}' updated successfully.")
+        return super().form_valid(form)
+
+
+class VehicleStatusUpdateView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        vehicle = get_object_or_404(Vehicle, pk=pk)
+        new_status = request.POST.get("status")
+        if new_status in Vehicle.StatusChoices.values:
+            vehicle.status = new_status
+            vehicle.save(update_fields=["status"])
+            messages.success(request, f"Vehicle '{vehicle.vehicle_number}' status updated to {new_status}.")
+        return redirect("waste_management:vehicle_list")
+
+
+class RouteListView(LoginRequiredMixin, ListView):
+    model = Route
+    template_name = "admin/route_list.html"
+    context_object_name = "routes"
+    queryset = Route.objects.select_related("vehicle", "hub", "hub__city", "vehicle__driver").prefetch_related("route_pickups").order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["available_vehicles"] = Vehicle.objects.filter(status=Vehicle.StatusChoices.AVAILABLE)
+        context["pending_pickups"] = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.PENDING).select_related("address", "city", "category")[:20]
+        context["held_pickups"] = PickupRequest.objects.filter(status=PickupRequest.StatusChoices.HELD).select_related("address", "city", "category")
+        return context
+
+
+class RouteDetailView(LoginRequiredMixin, DetailView):
+    model = Route
+    template_name = "admin/route_detail.html"
+    context_object_name = "route"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        route = self.object
+        context["stops"] = route.get_ordered_stops()
+        context["waypoints"] = route.get_waypoints()
+        eligible_pickups = []
+        from trashport.core.waste_management.services.route_service import RouteService
+        if route.route_pickups.count() < route.vehicle.max_capacity:
+            for p in PickupRequest.objects.filter(status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.HELD]).select_related("address", "citizen", "category"):
+                eval_res = RouteService.evaluate_route_suitability(route, p)
+                if eval_res["suitable"]:
+                    eligible_pickups.append({
+                        "pickup": p,
+                        "detour_km": eval_res["detour_km"],
+                        "best_sequence": eval_res["best_sequence"],
+                    })
+        context["eligible_pickups"] = eligible_pickups
+        return context
+
+
+class RouteCreateView(LoginRequiredMixin, CreateView):
+    model = Route
+    form_class = RouteForm
+    template_name = "admin/route_form.html"
+    success_url = reverse_lazy("waste_management:route_list")
+
+    def form_valid(self, form):
+        form.instance.hub = form.instance.vehicle.hub
+        messages.success(self.request, f"Route for vehicle '{form.instance.vehicle.vehicle_number}' created starting at {form.instance.hub.name}.")
+        return super().form_valid(form)
+
+
+class RouteAssignPickupView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        route = get_object_or_404(Route, pk=pk)
+        pickup_id = request.POST.get("pickup_id")
+        from trashport.core.waste_management.services.route_service import RouteService
+        from django.core.exceptions import ValidationError
+        try:
+            RouteService.assign_pickup_to_route(route.id, int(pickup_id))
+            messages.success(request, f"Pickup #{pickup_id} successfully assigned to Route #{route.id}.")
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, 'message') else str(e))
+        except Exception as exc:
+            messages.error(request, str(exc))
+        return redirect("waste_management:route_detail", pk=pk)
+
+
+class RouteHoldPickupView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        pickup = get_object_or_404(PickupRequest, pk=pk)
+        reason = request.POST.get("reason", "Held by administrator")
+        from trashport.core.waste_management.services.route_service import RouteService
+        RouteService.hold_pickup_request(pickup.id, reason)
+        messages.warning(request, f"Pickup #{pickup.display_id} placed on HELD.")
+        next_url = request.POST.get("next") or reverse("waste_management:route_list")
+        return redirect(next_url)
+
 
 

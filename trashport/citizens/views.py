@@ -272,6 +272,26 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
                 "max_weight_kg": float(cat.max_weight_kg if cat.max_weight_kg is not None else 100.00),
             }
         context["categories_json"] = json.dumps(categories_data)
+
+        # Cities & Hubs data for frontend dynamic validation & 20 km Leaflet circle
+        from trashport.core.waste_management.models import City
+        cities_data = {}
+        active_cities = City.objects.filter(is_active=True).prefetch_related("hubs")
+        for city_obj in active_cities:
+            active_hub = city_obj.active_hub
+            has_collectors = city_obj.has_active_collectors() if callable(getattr(city_obj, "has_active_collectors", None)) else city_obj.has_active_collectors
+            cities_data[str(city_obj.id)] = {
+                "id": city_obj.id,
+                "name": city_obj.name,
+                "has_active_hub": bool(active_hub),
+                "has_active_collectors": has_collectors,
+                "hub_name": active_hub.name if active_hub else "",
+                "hub_lat": float(active_hub.latitude) if active_hub else None,
+                "hub_lng": float(active_hub.longitude) if active_hub else None,
+                "hub_address": active_hub.address if active_hub else "",
+            }
+        context["cities_json"] = json.dumps(cities_data)
+        context["cities"] = active_cities.order_by("name")
         return context
 
     def form_valid(self, form):
@@ -279,12 +299,22 @@ class CitizenPickupRequestCreateView(LoginRequiredMixin, CreateView):
         submitted_lat = form.cleaned_data.get("latitude")
         submitted_lng = form.cleaned_data.get("longitude")
 
+        # Attach validated city and hub from form clean
+        if "validated_city" in form.cleaned_data:
+            form.instance.city = form.cleaned_data["validated_city"]
+        if "validated_hub" in form.cleaned_data:
+            form.instance.hub = form.cleaned_data["validated_hub"]
+        if "validated_distance_km" in form.cleaned_data:
+            form.instance.distance_km = Decimal(str(form.cleaned_data["validated_distance_km"]))
+
         # If no saved address was selected, create a new Address from inline inputs
         if not form.cleaned_data.get("address"):
+            target_city_name = form.instance.city.name if form.instance.city else (form.cleaned_data.get("new_city") or "Kochi")
             addr = Address.objects.create(
                 user=self.request.user,
                 address_line1=form.cleaned_data.get("new_address_line1") or "Specified Map Location",
-                city=form.cleaned_data.get("new_city") or "Kochi",
+                city=target_city_name,
+                city_ref=form.instance.city,
                 state="Kerala",
                 postal_code=form.cleaned_data.get("new_postal_code") or "682001",
                 latitude=submitted_lat,

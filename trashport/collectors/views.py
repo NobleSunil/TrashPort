@@ -154,48 +154,42 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         )
 
         # --- Aadhaar verification status ---
-        # Syncs user.is_verified with the Aadhaar profile if out of sync
-        self._sync_aadhaar_status(user, context)
-
-        # --- Payout formula settings (for display in dashboard sidebar) ---
+        # Syncs user.is_verified with the Aadhaar pro        # --- Payout formula settings (for display in dashboard sidebar) ---
         context["payout_settings"] = CollectorPayoutSetting.get_settings()
+
+        # --- Hub registration context ---
+        from trashport.core.waste_management.models import Hub
+        context["collector_hub"] = user.hub
+        context["available_hubs"] = Hub.objects.filter(is_active=True).select_related("city").order_by("city__name", "name")
         return context
+
+    def post(self, request, *args, **kwargs):
+        """Allows collectors to register or switch their assigned Hub."""
+        hub_id = request.POST.get("hub_id")
+        if hub_id:
+            from trashport.core.waste_management.models import Hub
+            hub = get_object_or_404(Hub, pk=hub_id, is_active=True)
+            request.user.hub = hub
+            messages.success(request, f"Successfully registered to {hub.name} ({hub.city.name}).")
+        return redirect("waste_management:dashboard")
 
     def _get_unassigned_pickup_data(self, user):
         """
         Fetches all unassigned PENDING pickups, calculates distance from the
-        collector's current GPS position, and returns data formatted for both
+        collector's hub or GPS position, and returns data formatted for both
         HTML rendering and Leaflet.js JSON map pins.
-
-        Returns:
-            unassigned_list      : List[PickupRequest] — sorted nearest-first, max 50 items.
-                                   Each item has .calculated_distance_km and .calculated_earnings
-                                   injected as instance attributes.
-            col_lat, col_lng     : float — collector's GPS position (or Kerala default).
-            pickups_json_string  : str — JSON-serialized list of pickup pin data for Leaflet.
-
-        CONNECTION:
-          - trashport/maps/models.py    → CollectorLocation (collector's live GPS position)
-          - trashport/maps/services.py  → GeoService.haversine_distance() (straight-line km)
-          - waste_management/models.py  → PickupRequest.effective_latitude/longitude (best GPS)
-                                          PickupRequest.calculate_collector_earnings() (payout preview)
-
-        IMPACT:
-          - If CollectorLocation has no row for this collector, Kerala default coordinates
-            are used (9.9312°N, 76.2673°E / Kochi area).
-          - Capped at 50 jobs to keep API response and map performance fast.
-          - The haversine calculation is straight-line (not road distance). Actual
-            travel distance will differ due to road routing.
+        Filters strictly within the 20 km hub service radius when a hub is assigned.
         """
-        # --- Get collector's current GPS position ---
-        col_location = CollectorLocation.objects.filter(collector=user).first()
-        # Default: Central Kerala (Kochi/Ernakulam area) if no live location recorded
-        col_lat = float(col_location.latitude) if col_location else 9.9312
-        col_lng = float(col_location.longitude) if col_location else 76.2673
+        # --- Get reference position (Collector Hub anchor if set, else live location or Kerala default) ---
+        if user.hub:
+            col_lat = float(user.hub.latitude)
+            col_lng = float(user.hub.longitude)
+        else:
+            col_location = CollectorLocation.objects.filter(collector=user).first()
+            col_lat = float(col_location.latitude) if col_location else 9.9312
+            col_lng = float(col_location.longitude) if col_location else 76.2673
 
         # --- Fetch all unassigned pickups (PENDING or AWAITING_PAYMENT without a collector) ---
-        # AWAITING_PAYMENT pickups are shown so collectors can see future demand,
-        # but cannot be claimed until citizen completes payment.
         unassigned_qs = PickupRequest.objects.filter(
             status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.AWAITING_PAYMENT],
             collector__isnull=True
@@ -206,10 +200,13 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         for p in unassigned_list:
             plat = float(p.effective_latitude)
             plng = float(p.effective_longitude)
-            # Straight-line (haversine) distance from collector to pickup location
+            # Straight-line (haversine) distance from reference anchor to pickup location
             p.calculated_distance_km = GeoService.haversine_distance(col_lat, col_lng, plat, plng)
-            # Estimated earnings if this job is completed (using current payout settings)
             p.calculated_earnings = p.calculate_collector_earnings()
+
+        # If collector has an assigned hub, filter strictly to 20 km service radius
+        if user.hub:
+            unassigned_list = [p for p in unassigned_list if p.calculated_distance_km <= 20.0]
 
         # --- Sort nearest first, cap at 50 ---
         unassigned_list.sort(key=lambda item: item.calculated_distance_km)

@@ -43,6 +43,10 @@ from trashport.core.waste_management.views import (
     WasteCategoryViewSet,
     PickupRequestViewSet,
     ComplaintViewSet,
+    CityViewSet,
+    HubViewSet,
+    VehicleViewSet,
+    RouteViewSet,
 )
 
 # Use DefaultRouter in DEBUG mode to provide a browsable API root; SimpleRouter otherwise
@@ -54,6 +58,10 @@ router.register("addresses", AddressViewSet, basename="address")
 router.register("waste-categories", WasteCategoryViewSet, basename="wastecategory")
 router.register("pickup-requests", PickupRequestViewSet, basename="pickuprequest")
 router.register("complaints", ComplaintViewSet, basename="complaint")
+router.register("cities", CityViewSet, basename="city")
+router.register("hubs", HubViewSet, basename="hub")
+router.register("vehicles", VehicleViewSet, basename="vehicle")
+router.register("routes", RouteViewSet, basename="route")
 
 app_name = "api"
 urlpatterns = router.urls

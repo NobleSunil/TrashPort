@@ -14,6 +14,34 @@
         <form method="post">
           {% csrf_token %}
 
+          <!-- City Selection & Service Verification -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark mb-1"><i class="fas fa-city me-2 text-success"></i>Select City / Region:*</label>
+                {{ form.city }}
+                <div class="form-text small text-muted">Choose your city to verify hub and active collector availability.</div>
+              </div>
+              <div class="col-md-6 mt-2 mt-md-0">
+                <div id="cityStatusBadge" class="p-2 rounded border bg-white small d-flex align-items-center">
+                  <i class="fas fa-info-circle text-primary me-2"></i>
+                  <span id="cityStatusText">Please select a city to verify service coverage.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Live Service Alert Banner -->
+          <div id="serviceAlertContainer" class="d-none mb-3">
+            <div id="serviceAlertBox" class="alert shadow-sm d-flex align-items-center mb-0">
+              <i id="serviceAlertIcon" class="fas fa-exclamation-triangle fa-2x me-3"></i>
+              <div>
+                <h6 id="serviceAlertTitle" class="fw-bold mb-1">Service Notice</h6>
+                <p id="serviceAlertMessage" class="mb-0 small"></p>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-4">
             <h5 class="fw-bold text-dark mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>1. Set Exact Pickup Location on Map</h5>
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -111,7 +139,7 @@
           </div>
 
           <div class="mt-4 d-flex gap-2 border-top pt-3">
-            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
+            <button type="submit" id="id_submit_btn" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
               <i class="fas fa-check-circle me-1"></i> Confirm Booking
             </button>
             <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
@@ -244,6 +272,139 @@
         if (fetchAddress) {
           reverseGeocode(lat, lng, forceOverwrite);
         }
+        updateServiceAvailability();
+      }
+
+      // City & Hub 20 km Radius Service Availability
+      const citiesData = {{ cities_json|safe|default:"{}" }};
+      const citySelect = document.getElementById("id_city_select");
+      const submitBtn = document.getElementById("id_submit_btn");
+      const serviceAlertContainer = document.getElementById("serviceAlertContainer");
+      const serviceAlertBox = document.getElementById("serviceAlertBox");
+      const serviceAlertIcon = document.getElementById("serviceAlertIcon");
+      const serviceAlertTitle = document.getElementById("serviceAlertTitle");
+      const serviceAlertMessage = document.getElementById("serviceAlertMessage");
+      const cityStatusText = document.getElementById("cityStatusText");
+      let hubCircle = null;
+      let hubMarker = null;
+
+      function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371.0;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c * 100) / 100;
+      }
+
+      function updateServiceAvailability() {
+        if (!citySelect) return;
+        const cityId = citySelect.value;
+        const currentLat = parseFloat(latInput?.value) || defaultLat;
+        const currentLng = parseFloat(lngInput?.value) || defaultLng;
+
+        if (!cityId || !citiesData[cityId]) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.add("d-none");
+          if (cityStatusText) cityStatusText.textContent = "Please select a city to verify service coverage.";
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+
+        const city = citiesData[cityId];
+
+        // 1. City without active hub
+        if (!city.has_active_hub) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-danger shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-times-circle fa-2x me-3 text-danger";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Service Unavailable";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = "Pickup service is currently unavailable in this city because no active hub is registered.";
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-danger">No Active Hub Registered</strong>`;
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        // 2. City with hub, but no registered/active collectors
+        if (!city.has_active_collectors) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-warning shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-clock fa-2x me-3 text-warning";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Coming Soon";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = "Pickup service is currently unavailable in your city. It will be available soon as collectors are registered in this area.";
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-warning">Collectors Not Yet Registered</strong> (Available Soon)`;
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        // 3. City has active hub and registered collectors -> Show 20 km radius circle & check distance
+        const hubLat = city.hub_lat;
+        const hubLng = city.hub_lng;
+
+        if (hubCircle) {
+          hubCircle.setLatLng([hubLat, hubLng]);
+        } else {
+          hubCircle = L.circle([hubLat, hubLng], {
+            radius: 20000,
+            color: '#198754',
+            fillColor: '#d1e7dd',
+            fillOpacity: 0.18,
+            weight: 2,
+            dashArray: '5, 5'
+          }).addTo(map);
+        }
+
+        if (hubMarker) {
+          hubMarker.setLatLng([hubLat, hubLng]);
+        } else {
+          const hubIcon = L.divIcon({
+            html: '<div style="background:#0d6efd;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,0.4);border:2px solid #fff;"><i class="fas fa-warehouse text-xs"></i></div>',
+            className: 'custom-hub-icon',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+          hubMarker = L.marker([hubLat, hubLng], { icon: hubIcon }).addTo(map)
+            .bindPopup(`<strong>${city.hub_name}</strong><br>${city.hub_address}<br><em>20 km Service Radius Anchor</em>`);
+        }
+
+        const dist = haversineDistance(hubLat, hubLng, currentLat, currentLng);
+
+        if (dist <= 20.0) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-success shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-check-circle fa-2x me-3 text-success";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Service Available";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = `✓ Pickup location is within service area (${dist.toFixed(1)} km from ${city.hub_name}).`;
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-success"><i class="fas fa-check me-1"></i>Eligible</strong> (${dist.toFixed(1)} km from ${city.hub_name})`;
+          if (submitBtn) submitBtn.disabled = false;
+        } else {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-danger shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-exclamation-circle fa-2x me-3 text-danger";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Outside Service Area";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = `Pickup service is unavailable at this location. The pickup address is outside the 20 km service area of the nearest active hub (${dist.toFixed(1)} km away).`;
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-danger"><i class="fas fa-times me-1"></i>Outside 20 km Radius</strong> (${dist.toFixed(1)} km from ${city.hub_name})`;
+          if (submitBtn) submitBtn.disabled = true;
+        }
+      }
+
+      if (citySelect) {
+        citySelect.addEventListener("change", function () {
+          const cityId = citySelect.value;
+          if (cityId && citiesData[cityId] && citiesData[cityId].has_active_hub) {
+            const hLat = citiesData[cityId].hub_lat;
+            const hLng = citiesData[cityId].hub_lng;
+            map.setView([hLat, hLng], 12);
+          }
+          updateServiceAvailability();
+        });
       }
 
       function syncMapWithSelectedAddress() {
@@ -256,6 +417,16 @@
           map.setView([lat, lng], 17);
           marker.setLatLng([lat, lng]);
           updateCoords(lat, lng, false);
+
+          // Auto-match city in citySelect if possible
+          if (citySelect && addrObj.city) {
+            for (let i = 0; i < citySelect.options.length; i++) {
+              if (citySelect.options[i].text.toLowerCase().includes(addrObj.city.toLowerCase())) {
+                citySelect.selectedIndex = i;
+                break;
+              }
+            }
+          }
 
           // Pre-fill the new address inputs and make them read-only
           if (addressLineInput) {
@@ -270,6 +441,7 @@
             postalInput.value = addrObj.postal_code || "";
             postalInput.readOnly = true;
           }
+          updateServiceAvailability();
         } else {
           // Re-enable and clear if selection reset
           if (addressLineInput) {
@@ -284,6 +456,7 @@
             postalInput.readOnly = false;
             postalInput.value = "";
           }
+          updateServiceAvailability();
         }
       }
 
@@ -297,11 +470,13 @@
       marker.on('dragend', function (e) {
         let position = marker.getLatLng();
         updateCoords(position.lat, position.lng, true, true);
+        updateServiceAvailability();
       });
 
       map.on('click', function (e) {
         marker.setLatLng(e.latlng);
         updateCoords(e.latlng.lat, e.latlng.lng, true, true);
+        updateServiceAvailability();
       });
 
       // Geolocation button function with high accuracy GPS

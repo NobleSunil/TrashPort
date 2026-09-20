@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Hub Operations | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">Hub & Terminal Management</h1>
+      <p class="text-muted">Central dispatch terminals serving a 20 km radial coverage perimeter.</p>
+    </div>
+    <a href="{% url 'waste_management:hub_create' %}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-building-add me-1"></i> Add New Hub
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Hub Name</th>
+            <th>City</th>
+            <th>Terminal Coordinates</th>
+            <th>Service Radius</th>
+            <th>Assigned Vehicles</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hub in hubs %}
+            <tr>
+              <td>
+                <div class="fw-bold fs-6">{{ hub.name }}</div>
+                <small class="text-muted">{{ hub.address|default:"No physical address" }}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">
+                  {{ hub.city.name }} ({{ hub.city.state }})
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary font-monospace">
+                  {{ hub.latitude }}, {{ hub.longitude }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                  20 km max
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  {{ hub.vehicles.count }} vehicles
+                </span>
+              </td>
+              <td>
+                {% if hub.is_active %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'waste_management:hub_update' hub.id %}" class="btn btn-outline-primary">
+                    Edit
+                  </a>
+                  <form method="post" action="{% url 'waste_management:hub_toggle_active' hub.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary">
+                      {% if hub.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <p class="mb-2 fs-5">No active hubs registered.</p>
+                <a href="{% url 'waste_management:hub_create' %}" class="btn btn-sm btn-primary">Create Your First Hub</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

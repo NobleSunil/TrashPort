@@ -96,3 +96,63 @@ class CollectorPayoutSettingForm(forms.ModelForm):
         }
 
 
+from trashport.core.waste_management.models import City, Hub, Vehicle, Route, RoutePickup, PickupRequest
+
+
+class CityForm(forms.ModelForm):
+    class Meta:
+        model = City
+        fields = ["name", "state", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kochi"}),
+            "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kerala"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+class HubForm(forms.ModelForm):
+    class Meta:
+        model = Hub
+        fields = ["name", "city", "latitude", "longitude", "address", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kochi Central Hub"}),
+            "city": forms.Select(attrs={"class": "form-select"}),
+            "latitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "9.931200"}),
+            "longitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "76.267300"}),
+            "address": forms.TextInput(attrs={"class": "form-control", "placeholder": "Street Address / Landmark"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+class VehicleForm(forms.ModelForm):
+    class Meta:
+        model = Vehicle
+        fields = ["vehicle_number", "hub", "driver", "max_capacity", "status"]
+        widgets = {
+            "vehicle_number": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. KL-07-TP-1001"}),
+            "hub": forms.Select(attrs={"class": "form-select"}),
+            "driver": forms.Select(attrs={"class": "form-select"}),
+            "max_capacity": forms.NumberInput(attrs={"class": "form-control", "min": "1", "max": "50", "placeholder": "5"}),
+            "status": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Limit drivers to active collectors
+        self.fields["driver"].queryset = User.objects.filter(role=User.Roles.COLLECTOR, is_active=True)
+        self.fields["driver"].required = False
+
+
+class RouteForm(forms.ModelForm):
+    class Meta:
+        model = Route
+        fields = ["vehicle", "hub", "start_time", "status"]
+        widgets = {
+            "vehicle": forms.Select(attrs={"class": "form-select"}),
+            "hub": forms.Select(attrs={"class": "form-select"}),
+            "start_time": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
+            "status": forms.Select(attrs={"class": "form-select"}),
+        }
+
+
+

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}City Operations | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">City Operations & Coverage</h1>
+      <p class="text-muted">Manage operational cities, designated hubs, and active collector coverage.</p>
+    </div>
+    <a href="{% url 'waste_management:city_create' %}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-plus-circle me-1"></i> Add New City
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>City</th>
+            <th>State</th>
+            <th>Status</th>
+            <th>Primary Active Hub</th>
+            <th>Collector Availability</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for city in cities %}
+            <tr>
+              <td>
+                <div class="fw-bold fs-6">{{ city.name }}</div>
+                <small class="text-muted">ID: #{{ city.id }}</small>
+              </td>
+              <td>{{ city.state }}</td>
+              <td>
+                {% if city.is_active %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if city.active_hub %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">
+                      {{ city.active_hub.name }}
+                    </span>
+                    <small class="text-muted">({{ city.active_hub.latitude }}, {{ city.active_hub.longitude }})</small>
+                  </div>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">No Active Hub</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if city.has_active_collectors %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-check-circle me-1"></i> Collectors Available
+                  </span>
+                {% elif city.active_hub %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                    <i class="bi bi-clock me-1"></i> Coming Soon (No Collectors)
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                    Unavailable
+                  </span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'waste_management:city_update' city.id %}" class="btn btn-outline-primary">
+                    Edit
+                  </a>
+                  <form method="post" action="{% url 'waste_management:city_toggle_active' city.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary">
+                      {% if city.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-5 text-muted">
+                <p class="mb-2 fs-5">No operational cities registered yet.</p>
+                <a href="{% url 'waste_management:city_create' %}" class="btn btn-sm btn-primary">Add Your First City</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

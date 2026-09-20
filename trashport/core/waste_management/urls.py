@@ -40,7 +40,13 @@ IMPACT:
 """
 
 from django.urls import path
-from trashport.admins.views import AdminLiveMapView
+from trashport.admins.views import (
+    AdminLiveMapView,
+    CityListView, CityCreateView, CityUpdateView, CityToggleActiveView,
+    HubListView, HubCreateView, HubUpdateView, HubToggleActiveView,
+    VehicleListView, VehicleCreateView, VehicleUpdateView, VehicleStatusUpdateView,
+    RouteListView, RouteDetailView, RouteCreateView, RouteAssignPickupView, RouteHoldPickupView,
+)
 from .views import (
     # === Core Navigation ===
     DashboardView,
@@ -167,4 +173,29 @@ urlpatterns = [
     path("manage/export/pickups/", ExportPickupsCSVView.as_view(), name="export_pickups_csv"),
     # CSV download: revenue summary by waste category
     path("manage/export/revenue/", ExportRevenueCSVView.as_view(), name="export_revenue_csv"),
+
+    # ===========================================================================
+    # Admin: City & Hub Infrastructure Management
+    # ===========================================================================
+    path("manage/cities/", CityListView.as_view(), name="city_list"),
+    path("manage/cities/new/", CityCreateView.as_view(), name="city_create"),
+    path("manage/cities/<int:pk>/edit/", CityUpdateView.as_view(), name="city_update"),
+    path("manage/cities/<int:pk>/toggle/", CityToggleActiveView.as_view(), name="city_toggle_active"),
+    path("manage/hubs/", HubListView.as_view(), name="hub_list"),
+    path("manage/hubs/new/", HubCreateView.as_view(), name="hub_create"),
+    path("manage/hubs/<int:pk>/edit/", HubUpdateView.as_view(), name="hub_update"),
+    path("manage/hubs/<int:pk>/toggle/", HubToggleActiveView.as_view(), name="hub_toggle_active"),
+
+    # ===========================================================================
+    # Admin: Fleet & Route Operations Management
+    # ===========================================================================
+    path("manage/vehicles/", VehicleListView.as_view(), name="vehicle_list"),
+    path("manage/vehicles/new/", VehicleCreateView.as_view(), name="vehicle_create"),
+    path("manage/vehicles/<int:pk>/edit/", VehicleUpdateView.as_view(), name="vehicle_update"),
+    path("manage/vehicles/<int:pk>/status/", VehicleStatusUpdateView.as_view(), name="vehicle_status_update"),
+    path("manage/routes/", RouteListView.as_view(), name="route_list"),
+    path("manage/routes/new/", RouteCreateView.as_view(), name="route_create"),
+    path("manage/routes/<int:pk>/", RouteDetailView.as_view(), name="route_detail"),
+    path("manage/routes/<int:pk>/assign/", RouteAssignPickupView.as_view(), name="route_assign_pickup"),
+    path("manage/routes/pickups/<int:pk>/hold/", RouteHoldPickupView.as_view(), name="route_hold_pickup"),
 ]

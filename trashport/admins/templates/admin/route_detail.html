@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Route #{{ route.id }} Details | TrashPort{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  #route-map {
+    height: 420px;
+    width: 100%;
+    border-radius: 1rem;
+    z-index: 10;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <!-- Breadcrumb & Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <a href="{% url 'waste_management:route_list' %}" class="text-decoration-none text-muted small mb-1 d-inline-block">
+        <i class="bi bi-arrow-left me-1"></i> Back to Routes
+      </a>
+      <h1 class="h3 mb-0">Route #{{ route.id }} Dispatch Control</h1>
+      <p class="text-muted mb-0">Base Terminal: <strong>{{ route.hub.name }}</strong> ({{ route.hub.city.name }})</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge {% if route.status == 'COMPLETED' %}bg-success{% elif route.status == 'IN_PROGRESS' %}bg-primary{% else %}bg-secondary{% endif %} fs-6 px-3 py-2">
+        {{ route.status }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Route KPI overview -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase fw-semibold">Assigned Fleet Vehicle</div>
+          <div class="fs-5 fw-bold font-monospace mt-1">{{ route.vehicle.vehicle_number }}</div>
+          <small class="text-muted">{{ route.vehicle.driver.name|default:route.vehicle.driver.email|default:"Unassigned Driver" }}</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase fw-semibold">Capacity Utilization</div>
+          <div class="fs-5 fw-bold mt-1">
+            {{ stops|length }} / {{ route.vehicle.max_capacity }} Pickups
+          </div>
+          <div class="progress mt-2" style="height: 6px;">
+            <div class="progress-bar {% if stops|length >= route.vehicle.max_capacity %}bg-danger{% else %}bg-primary{% endif %}" style="width: {% widthratio stops|length route.vehicle.max_capacity 100 %}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase fw-semibold">Total Round-Trip Distance</div>
+          <div class="fs-5 fw-bold mt-1 text-primary">{{ route.total_distance_km }} km</div>
+          <small class="text-muted">Origin & Destination: {{ route.hub.name }}</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase fw-semibold">Radial Hub Boundary</div>
+          <div class="fs-5 fw-bold mt-1 text-success">20.0 km Max</div>
+          <small class="text-muted">Strict geo-perimeter verified</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Map -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Route Trajectory & Hub Perimeter</h5>
+      <span class="badge bg-light text-muted border">Start: Hub &bull; Stops &bull; End: Hub</span>
+    </div>
+    <div class="card-body p-2">
+      <div id="route-map"></div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Ordered Stops Table -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Ordered Route Waypoints</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Seq</th>
+                <th>Stop / Address</th>
+                <th>Citizen</th>
+                <th>Details</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Starting Terminal -->
+              <tr class="table-light">
+                <td><span class="badge bg-dark">Start</span></td>
+                <td>
+                  <div class="fw-bold">{{ route.hub.name }} Terminal</div>
+                  <small class="text-muted font-monospace">{{ route.hub.latitude }}, {{ route.hub.longitude }}</small>
+                </td>
+                <td class="text-muted">Base Hub</td>
+                <td class="text-muted">Departure</td>
+                <td><span class="badge bg-success-subtle text-success">Origin</span></td>
+              </tr>
+
+              <!-- Pickup Stops -->
+              {% for rp in stops %}
+                <tr>
+                  <td><span class="badge bg-primary rounded-circle px-2 py-1">{{ rp.sequence }}</span></td>
+                  <td>
+                    <div class="fw-semibold">Pickup #{{ rp.pickup_request.display_id }}</div>
+                    <small class="text-muted">{{ rp.pickup_request.address.address_line1 }}, {{ rp.pickup_request.address.city }}</small>
+                  </td>
+                  <td>
+                    <div>{{ rp.pickup_request.citizen.name|default:rp.pickup_request.citizen.email }}</div>
+                    <small class="text-muted">{{ rp.pickup_request.address.contact_phone|default:"" }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ rp.pickup_request.category.name }}</span>
+                    <small class="d-block text-muted">{{ rp.pickup_request.weight_kg }} kg</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">{{ rp.status }}</span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">
+                    No pickup stops added to this route yet.
+                  </td>
+                </tr>
+              {% endfor %}
+
+              <!-- Ending Terminal -->
+              <tr class="table-light">
+                <td><span class="badge bg-dark">End</span></td>
+                <td>
+                  <div class="fw-bold">{{ route.hub.name }} Terminal</div>
+                  <small class="text-muted font-monospace">{{ route.hub.latitude }}, {{ route.hub.longitude }}</small>
+                </td>
+                <td class="text-muted">Base Hub</td>
+                <td class="text-muted">Return Trip</td>
+                <td><span class="badge bg-success-subtle text-success">Destination</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Eligible Pickups & Capacity Manager -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Assign Pickups (Within 20 km)</h5>
+        </div>
+        <div class="card-body">
+          {% if stops|length >= route.vehicle.max_capacity %}
+            <div class="alert alert-danger d-flex align-items-center mb-3">
+              <i class="bi bi-exclamation-triangle-fill fs-4 me-2"></i>
+              <div>
+                <strong>Capacity Limit Reached!</strong><br>
+                This vehicle has reached its maximum capacity of 5 pickups. No additional stops can be added to this trip.
+              </div>
+            </div>
+            <p class="text-muted small">Excess requests in this area should be placed on HELD or assigned to another vehicle.</p>
+          {% else %}
+            <div class="alert alert-info py-2 px-3 small mb-3">
+              <i class="bi bi-info-circle me-1"></i> Available slots: <strong>{{ route.vehicle.max_capacity|add:"-1" }}</strong> more pickup(s) permitted.
+            </div>
+
+            {% if eligible_pickups %}
+              <div class="list-group list-group-flush">
+                {% for item in eligible_pickups %}
+                  <div class="list-group-item px-0 py-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <span class="badge bg-light text-dark border">#{{ item.pickup.display_id }}</span>
+                        <span class="fw-semibold ms-1">{{ item.pickup.citizen.name|default:item.pickup.citizen.email }}</span>
+                      </div>
+                      <span class="badge bg-success-subtle text-success">+{{ item.detour_km }} km detour</span>
+                    </div>
+                    <p class="text-muted small mb-2">
+                      <i class="bi bi-geo-alt me-1"></i>{{ item.pickup.address.address_line1 }}, {{ item.pickup.address.city }}
+                      ({{ item.pickup.weight_kg }} kg &bull; {{ item.pickup.category.name }})
+                    </p>
+                    <div class="d-flex gap-2">
+                      <form method="post" action="{% url 'waste_management:route_assign_pickup' route.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="pickup_id" value="{{ item.pickup.id }}">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                          <i class="bi bi-plus-lg me-1"></i> Add to Route
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'waste_management:route_hold_pickup' item.pickup.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="reason" value="Capacity deferred by dispatcher">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                          Hold
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-5 text-muted">
+                <i class="bi bi-check2-circle fs-1 text-success d-block mb-2"></i>
+                No pending pickups found within the 20 km zone of {{ route.hub.name }}.
+              </div>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const hubLat = {{ route.hub.latitude }};
+    const hubLng = {{ route.hub.longitude }};
+    const waypoints = {{ waypoints|safe }};
+
+    const map = L.map('route-map').setView([hubLat, hubLng], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 20 km service perimeter circle
+    L.circle([hubLat, hubLng], {
+      radius: 20000, // 20 km in meters
+      color: '#0ea5e9',
+      fillColor: '#38bdf8',
+      fillOpacity: 0.1,
+      weight: 2,
+      dashArray: '6, 6'
+    }).addTo(map).bindPopup("<strong>{{ route.hub.name }}</strong><br>20 km Service Perimeter");
+
+    // Terminal Hub Marker
+    const hubIcon = L.divIcon({
+      className: 'hub-marker',
+      html: '<div style="background-color: #0f172a; color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">H</div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+    L.marker([hubLat, hubLng], { icon: hubIcon }).addTo(map)
+      .bindPopup("<strong>Base Hub: {{ route.hub.name }}</strong><br>Origin & Final Destination");
+
+    // Add Stop Markers & connect with Polyline
+    const polylineCoords = [[hubLat, hubLng]];
+
+    {% for rp in stops %}
+      {% if rp.pickup_request.address.latitude and rp.pickup_request.address.longitude %}
+        const stopLat{{ forloop.counter }} = {{ rp.pickup_request.address.latitude }};
+        const stopLng{{ forloop.counter }} = {{ rp.pickup_request.address.longitude }};
+        polylineCoords.push([stopLat{{ forloop.counter }}, stopLng{{ forloop.counter }}]);
+
+        const stopIcon{{ forloop.counter }} = L.divIcon({
+          className: 'stop-marker',
+          html: '<div style="background-color: #10b981; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ rp.sequence }}</div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        L.marker([stopLat{{ forloop.counter }}, stopLng{{ forloop.counter }}], { icon: stopIcon{{ forloop.counter }} }).addTo(map)
+          .bindPopup("<strong>Stop #{{ rp.sequence }} (Pickup #{{ rp.pickup_request.display_id }})</strong><br>{{ rp.pickup_request.address.address_line1 }}<br>Citizen: {{ rp.pickup_request.citizen.name|default:rp.pickup_request.citizen.email }}");
+      {% endif %}
+    {% endfor %}
+
+    // Complete circuit back to Hub
+    polylineCoords.push([hubLat, hubLng]);
+
+    if (polylineCoords.length > 2) {
+      const polyline = L.polyline(polylineCoords, {
+        color: '#10b981',
+        weight: 4,
+        opacity: 0.85,
+        smoothFactor: 1
+      }).addTo(map);
+
+      map.fitBounds(polyline.getBounds().pad(0.15));
+    }
+  });
+</script>
+{% endblock %}

@@ -37,10 +37,18 @@ class PickupRequestForm(forms.ModelForm):
         widget=forms.TextInput(attrs={"class": "form-control", "id": "id_new_postal_code", "placeholder": "560038 / 682001"})
     )
 
+    city = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        empty_label="Select City...",
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_city_select"})
+    )
+
     class Meta:
         model = PickupRequest
-        fields = ["address", "category", "weight_kg", "quantity_estimate", "schedule_date", "latitude", "longitude"]
+        fields = ["city", "address", "category", "weight_kg", "quantity_estimate", "schedule_date", "latitude", "longitude"]
         widgets = {
+            "city": forms.Select(attrs={"class": "form-select", "id": "id_city_select"}),
             "address": forms.Select(attrs={"class": "form-select", "id": "id_address"}),
             "category": forms.Select(attrs={"class": "form-select", "id": "id_category"}),
             "weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01", "max": "100.00", "placeholder": "Estimated weight in kg (Max 100 kg)"}),
@@ -54,6 +62,10 @@ class PickupRequestForm(forms.ModelForm):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["address"].required = False
+        from trashport.core.waste_management.models import City
+        self.fields["city"].queryset = City.objects.filter(is_active=True).order_by("name")
+        self.fields["city"].required = False
+
         if user:
             # Only display addresses belonging to the logged-in citizen
             self.fields["address"].queryset = Address.objects.filter(user=user, is_hidden=False)
@@ -101,8 +113,12 @@ class PickupRequestForm(forms.ModelForm):
         cleaned_data = super().clean()
         address = cleaned_data.get("address")
         new_address_line1 = cleaned_data.get("new_address_line1")
+        new_city_name = cleaned_data.get("new_city")
+        selected_city = cleaned_data.get("city")
         category = cleaned_data.get("category")
         weight_kg = cleaned_data.get("weight_kg")
+        lat = cleaned_data.get("latitude")
+        lng = cleaned_data.get("longitude")
 
         if not address and not new_address_line1:
             raise forms.ValidationError("Please select a saved address or enter a pickup street address.")
@@ -114,6 +130,39 @@ class PickupRequestForm(forms.ModelForm):
                     "weight_kg",
                     f"Maximum weight limit for {category.name} is {allowed_max} kg. You entered {weight_kg} kg."
                 )
+
+        # Resolve City entity
+        from trashport.core.waste_management.models import City
+        target_city = selected_city
+        if not target_city and address:
+            if address.city_ref:
+                target_city = address.city_ref
+            elif address.city:
+                target_city = City.objects.filter(name__iexact=address.city.strip()).first()
+        if not target_city and new_city_name:
+            target_city = City.objects.filter(name__iexact=new_city_name.strip()).first()
+
+        # Fallback to first active city (e.g. Kochi) if not explicitly matched
+        if not target_city:
+            target_city = City.objects.filter(is_active=True).first()
+
+        # Determine effective coordinates for distance check
+        effective_lat = float(lat) if lat is not None else (float(address.latitude) if address and address.latitude is not None else 9.9312)
+        effective_lng = float(lng) if lng is not None else (float(address.longitude) if address and address.longitude is not None else 76.2673)
+
+        # Validate city, active hub, registered collectors, and 20 km radius via RouteService
+        if target_city:
+            from trashport.core.waste_management.services.route_service import RouteService
+            try:
+                _, hub, dist = RouteService.validate_pickup_eligibility(target_city, effective_lat, effective_lng)
+                cleaned_data["validated_city"] = target_city
+                cleaned_data["validated_hub"] = hub
+                cleaned_data["validated_distance_km"] = dist
+            except forms.ValidationError as e:
+                raise e
+            except Exception as exc:
+                raise forms.ValidationError(str(exc))
+
         return cleaned_data
 
     def clean_schedule_date(self):
