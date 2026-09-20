@@ -29,8 +29,10 @@ jobs:
             # Ensure safe git directory
             git config --global --add safe.directory /home/ubuntu/TrashPort
 
-            # Pull latest changes from git
-            git pull origin main
+            # Fetch and reset cleanly to origin/main to reconcile any divergent branch state
+            git config pull.rebase false
+            git fetch origin main
+            git reset --hard origin/main
 
             # Rebuild and restart Docker containers in background
             docker compose up -d --build
@@ -38,6 +40,9 @@ jobs:
             # Run database migrations and collect static files inside the container
             docker compose exec -T django python manage.py migrate --noinput
             docker compose exec -T django python manage.py collectstatic --noinput
+
+            # Seed cities, hubs, and vehicles
+            docker compose exec -T django python manage.py seed_cities_and_hubs || true
 
             # Clean up dangling unused images to save disk space on EC2
             docker image prune -f
