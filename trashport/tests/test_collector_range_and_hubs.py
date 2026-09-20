@@ -13,6 +13,8 @@ from trashport.core.waste_management.models import (
     PickupRequest,
     Address,
     WasteCategory,
+    Vehicle,
+    Route,
 )
 from trashport.core.maps.models import CollectorLocation
 from trashport.collectors.views import (
@@ -113,14 +115,25 @@ class TestCollectorHubSignupRequirement:
     def test_citizen_signup_does_not_require_hub(self, base_hub_setup):
         """Citizens do not need to specify an operating hub."""
         form_data = {
-            "name": "Citizen Without Hub",
-            "email": "citizen_nohub@example.com",
+            "name": "Valid Citizen",
+            "email": "valid_citizen@example.com",
             "role": User.Roles.CITIZEN,
             "hub": "",
         }
         form = UserSignupForm(data=form_data)
         form.is_valid()
         assert "hub" not in form.errors
+
+    def test_signup_page_renders_hub_selector(self, base_hub_setup):
+        """Signup page renders the searchable hub combobox and hub items."""
+        client = Client()
+        url = reverse("account_signup")
+        response = client.get(url)
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "hub-combobox-wrapper" in content
+        assert "hub-search-box" in content
+        assert "Kochi Central Hub" in content
 
 
 @pytest.mark.django_db
@@ -378,3 +391,117 @@ class TestSeedCitiesAndHubsCommand:
         kumarakom_hub = Hub.objects.get(name="Kumarakom Backwater Hub")
         assert kumarakom_hub.city.name == "Kumarakom Grama Panchayat"
         assert kumarakom_hub.vehicles.count() >= 1
+
+
+@pytest.mark.django_db
+class TestAdminHubManagementAndSearch:
+    """Tests for Admin Hub Management (add/delete) and search/filtering capabilities."""
+
+    @pytest.fixture
+    def admin_user(self):
+        return User.objects.create_superuser(
+            email="admin_hub_test@trashport.in",
+            name="Hub Admin",
+            password="AdminPassword@123",
+        )
+
+    def test_admin_hub_list_search_by_name(self, base_hub_setup, admin_user):
+        """Admin hub list filters by hub name query."""
+        client = Client()
+        client.force_login(admin_user)
+
+        url = reverse("waste_management:hub_list")
+        response = client.get(f"{url}?q=Kochi")
+
+        assert response.status_code == 200
+        hubs = list(response.context["hubs"])
+        assert any(h.name == "Kochi Central Hub" for h in hubs)
+        assert not any(h.name == "Kumarakom Backwater Hub" for h in hubs)
+
+    def test_admin_hub_list_search_by_city(self, base_hub_setup, admin_user):
+        """Admin hub list filters by city / panchayath name query."""
+        client = Client()
+        client.force_login(admin_user)
+
+        url = reverse("waste_management:hub_list")
+        response = client.get(f"{url}?q=Kumarakom")
+
+        assert response.status_code == 200
+        hubs = list(response.context["hubs"])
+        assert any(h.name == "Kumarakom Backwater Hub" for h in hubs)
+        assert not any(h.name == "Kochi Central Hub" for h in hubs)
+
+    def test_admin_hub_list_status_filter(self, base_hub_setup, admin_user):
+        """Admin hub list filters by operational status."""
+        kumarakom_hub = base_hub_setup["kumarakom_hub"]
+        kumarakom_hub.is_active = False
+        kumarakom_hub.save(update_fields=["is_active"])
+
+        client = Client()
+        client.force_login(admin_user)
+        url = reverse("waste_management:hub_list")
+
+        # Active only
+        active_resp = client.get(f"{url}?status=active")
+        active_hubs = list(active_resp.context["hubs"])
+        assert any(h.name == "Kochi Central Hub" for h in active_hubs)
+        assert not any(h.name == "Kumarakom Backwater Hub" for h in active_hubs)
+
+        # Inactive only
+        inactive_resp = client.get(f"{url}?status=inactive")
+        inactive_hubs = list(inactive_resp.context["hubs"])
+        assert any(h.name == "Kumarakom Backwater Hub" for h in inactive_hubs)
+        assert not any(h.name == "Kochi Central Hub" for h in inactive_hubs)
+
+    def test_admin_hub_delete_success(self, base_hub_setup, admin_user):
+        """Admin can successfully delete an unused hub."""
+        hub = base_hub_setup["kumarakom_hub"]
+        hub_id = hub.id
+
+        client = Client()
+        client.force_login(admin_user)
+        delete_url = reverse("waste_management:hub_delete", args=[hub_id])
+
+        response = client.post(delete_url)
+        assert response.status_code == 302
+        assert not Hub.objects.filter(id=hub_id).exists()
+
+    def test_admin_hub_delete_blocked_when_active_route_exists(self, base_hub_setup, admin_user):
+        """Hub deletion is rejected if there is an in-progress active route."""
+        hub = base_hub_setup["kochi_hub"]
+        collector = base_hub_setup["collector"]
+
+        vehicle = Vehicle.objects.create(
+            vehicle_number="KL-07-TEST-100",
+            hub=hub,
+            driver=collector,
+            max_capacity=5,
+        )
+        route = Route.objects.create(
+            vehicle=vehicle,
+            hub=hub,
+            status=Route.StatusChoices.ACTIVE,
+        )
+
+        client = Client()
+        client.force_login(admin_user)
+        delete_url = reverse("waste_management:hub_delete", args=[hub.id])
+
+        response = client.post(delete_url)
+        assert response.status_code == 302
+        # Hub must still exist
+        assert Hub.objects.filter(id=hub.id).exists()
+
+    def test_non_admin_cannot_delete_hub(self, base_hub_setup):
+        """Non-admin user (Citizen/Collector) is blocked from deleting a hub."""
+        hub = base_hub_setup["kumarakom_hub"]
+        citizen = base_hub_setup["citizen"]
+
+        client = Client()
+        client.force_login(citizen)
+        delete_url = reverse("waste_management:hub_delete", args=[hub.id])
+
+        response = client.post(delete_url)
+        assert response.status_code == 302
+        # Hub must not be deleted
+        assert Hub.objects.filter(id=hub.id).exists()

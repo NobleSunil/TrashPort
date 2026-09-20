@@ -99,22 +99,102 @@
                     <span>Operating Hub / Panchayath</span>
                     <span class="text-emerald-600 font-semibold lowercase text-[11px]">(Required for Collectors)</span>
                 </label>
-                <div class="relative">
-                    <select name="hub" id="id_hub"
-                        class="w-full px-3.5 py-2.5 bg-slate-50 border {% if form.hub.errors %}border-rose-300{% else %}border-slate-200{% endif %} rounded-xl text-slate-800 font-medium appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer pr-10 text-sm transition-all">
-                        <option value="">Select your Operating Hub / Panchayath</option>
-                        {% for hub in form.fields.hub.queryset %}
-                            <option value="{{ hub.id }}" {% if form.hub.value|stringformat:"s" == hub.id|stringformat:"s" %}selected{% endif %}>
-                                {{ hub.city.name }} — {{ hub.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
+                
+                <!-- Native Hidden Select for Standard Form Submission -->
+                <select name="hub" id="id_hub" class="sr-only" tabindex="-1">
+                    <option value="">Select your Operating Hub / Panchayath</option>
+                    {% for hub in form.fields.hub.queryset %}
+                        <option value="{{ hub.id }}" {% if form.hub.value|stringformat:"s" == hub.id|stringformat:"s" %}selected{% endif %}
+                                data-city="{{ hub.city.name }}" data-name="{{ hub.name }}" data-address="{{ hub.address|default:'' }}">
+                            {{ hub.city.name }} — {{ hub.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Searchable & Scrollable Custom Selector -->
+                <div class="relative" id="hub-combobox-wrapper">
+                    <!-- Dropdown Trigger Field -->
+                    <button type="button" id="hub-combobox-trigger"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border {% if form.hub.errors %}border-rose-300{% else %}border-slate-200{% endif %} rounded-xl text-left font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all flex items-center justify-between shadow-sm">
+                        <span id="hub-selected-label" class="text-slate-500 truncate">
+                            Search or select your Operating Hub / Panchayath...
+                        </span>
+                        <div class="flex items-center gap-1.5 flex-shrink-0 text-slate-400">
+                            <span id="hub-clear-btn" class="hidden hover:text-slate-600 p-0.5 cursor-pointer" title="Clear selection">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </span>
+                            <svg id="hub-chevron-icon" class="h-4 w-4 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </button>
+
+                    <!-- Scrollable Search Dropdown Menu -->
+                    <div id="hub-dropdown-menu"
+                        class="hidden absolute z-50 mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                        <!-- Sticky Search Header -->
+                        <div class="p-2 border-b border-slate-100 bg-slate-50/80">
+                            <div class="relative">
+                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                </div>
+                                <input type="text" id="hub-search-box" autocomplete="off"
+                                    placeholder="Type to filter Panchayath, City, or Hub..."
+                                    class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Hub List -->
+                        <div id="hub-options-list" class="max-h-56 overflow-y-auto p-1.5 space-y-1" style="scrollbar-width: thin;">
+                            {% for hub in form.fields.hub.queryset %}
+                                <div class="hub-option-item px-3 py-2 rounded-lg cursor-pointer transition-all hover:bg-emerald-50/80 border border-transparent hover:border-emerald-200 flex items-start justify-between gap-2"
+                                     data-hub-id="{{ hub.id }}"
+                                     data-hub-name="{{ hub.name }}"
+                                     data-city-name="{{ hub.city.name }}"
+                                     data-address="{{ hub.address|default:'' }}"
+                                     data-search-term="{{ hub.city.name|lower }} {{ hub.name|lower }} {{ hub.address|default:''|lower }}">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                                                {{ hub.city.name }}
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-800 truncate">
+                                                {{ hub.name }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500 truncate mt-0.5">
+                                            {{ hub.address|default:"Central Operations Terminal" }}
+                                        </p>
+                                    </div>
+                                    <div class="hub-check-icon hidden text-emerald-600 flex-shrink-0 mt-1">
+                                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="p-4 text-center text-slate-400 text-xs">
+                                    No active hubs available at this time.
+                                </div>
+                            {% endfor %}
+                            <div id="hub-no-results" class="hidden p-4 text-center text-slate-400 text-xs">
+                                <p class="font-medium text-slate-600">No matching hubs found</p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Try a different panchayath, city or landmark</p>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Footer -->
+                        <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+                            <span><span id="hub-visible-count">{{ form.fields.hub.queryset|length }}</span> of {{ form.fields.hub.queryset|length }} hubs</span>
+                            <span>Scroll to explore</span>
+                        </div>
                     </div>
                 </div>
+
                 {% if form.hub.errors %}
                     <p class="text-xs text-rose-600 mt-1">{{ form.hub.errors.0 }}</p>
                 {% endif %}
@@ -247,6 +327,171 @@
         const roleSelect = document.getElementById("id_role");
         const hubContainer = document.getElementById("hub-container");
         const hubSelect = document.getElementById("id_hub");
+        const hubTrigger = document.getElementById("hub-combobox-trigger");
+        const hubDropdown = document.getElementById("hub-dropdown-menu");
+        const hubSearchBox = document.getElementById("hub-search-box");
+        const hubSelectedLabel = document.getElementById("hub-selected-label");
+        const hubClearBtn = document.getElementById("hub-clear-btn");
+        const hubChevron = document.getElementById("hub-chevron-icon");
+        const hubOptions = Array.from(document.querySelectorAll(".hub-option-item"));
+        const hubNoResults = document.getElementById("hub-no-results");
+        const hubVisibleCount = document.getElementById("hub-visible-count");
+
+        function openHubDropdown() {
+            if (!hubDropdown) return;
+            hubDropdown.classList.remove("hidden");
+            if (hubChevron) hubChevron.classList.add("rotate-180");
+            if (hubSearchBox) {
+                hubSearchBox.value = "";
+                filterHubOptions("");
+                setTimeout(() => hubSearchBox.focus(), 50);
+            }
+        }
+
+        function closeHubDropdown() {
+            if (!hubDropdown) return;
+            hubDropdown.classList.add("hidden");
+            if (hubChevron) hubChevron.classList.remove("rotate-180");
+        }
+
+        function toggleHubDropdown() {
+            if (!hubDropdown) return;
+            if (hubDropdown.classList.contains("hidden")) {
+                openHubDropdown();
+            } else {
+                closeHubDropdown();
+            }
+        }
+
+        function selectHub(hubId, cityName, hubName) {
+            if (hubSelect) {
+                hubSelect.value = hubId;
+                // Dispatch change event for form validity
+                hubSelect.dispatchEvent(new Event("change"));
+            }
+
+            if (hubSelectedLabel) {
+                hubSelectedLabel.innerHTML = `<span class="font-bold text-emerald-800">${cityName}</span> <span class="text-slate-400 font-normal">—</span> <span class="text-slate-800">${hubName}</span>`;
+            }
+
+            if (hubClearBtn) {
+                hubClearBtn.classList.remove("hidden");
+            }
+
+            // Update check icons and active states
+            hubOptions.forEach(opt => {
+                const check = opt.querySelector(".hub-check-icon");
+                if (opt.dataset.hubId === String(hubId)) {
+                    opt.classList.add("bg-emerald-50", "border-emerald-300");
+                    if (check) check.classList.remove("hidden");
+                } else {
+                    opt.classList.remove("bg-emerald-50", "border-emerald-300");
+                    if (check) check.classList.add("hidden");
+                }
+            });
+
+            closeHubDropdown();
+        }
+
+        function clearHubSelection() {
+            if (hubSelect) {
+                hubSelect.value = "";
+                hubSelect.dispatchEvent(new Event("change"));
+            }
+            if (hubSelectedLabel) {
+                hubSelectedLabel.textContent = "Search or select your Operating Hub / Panchayath...";
+            }
+            if (hubClearBtn) {
+                hubClearBtn.classList.add("hidden");
+            }
+            hubOptions.forEach(opt => {
+                opt.classList.remove("bg-emerald-50", "border-emerald-300");
+                const check = opt.querySelector(".hub-check-icon");
+                if (check) check.classList.add("hidden");
+            });
+        }
+
+        function filterHubOptions(query) {
+            const cleanQuery = (query || "").trim().toLowerCase();
+            let count = 0;
+
+            hubOptions.forEach(opt => {
+                const term = opt.dataset.searchTerm || "";
+                if (!cleanQuery || term.includes(cleanQuery)) {
+                    opt.classList.remove("hidden");
+                    count++;
+                } else {
+                    opt.classList.add("hidden");
+                }
+            });
+
+            if (hubVisibleCount) hubVisibleCount.textContent = count;
+            if (hubNoResults) {
+                if (count === 0 && hubOptions.length > 0) {
+                    hubNoResults.classList.remove("hidden");
+                } else {
+                    hubNoResults.classList.add("hidden");
+                }
+            }
+        }
+
+        // Attach Combobox Event Listeners
+        if (hubTrigger) {
+            hubTrigger.addEventListener("click", function(e) {
+                if (e.target.closest("#hub-clear-btn")) {
+                    clearHubSelection();
+                    return;
+                }
+                toggleHubDropdown();
+            });
+        }
+
+        if (hubClearBtn) {
+            hubClearBtn.addEventListener("click", function(e) {
+                e.stopPropagation();
+                clearHubSelection();
+            });
+        }
+
+        if (hubSearchBox) {
+            hubSearchBox.addEventListener("input", function() {
+                filterHubOptions(this.value);
+            });
+            hubSearchBox.addEventListener("keydown", function(e) {
+                if (e.key === "Escape") {
+                    closeHubDropdown();
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    // Select first visible option
+                    const firstVisible = hubOptions.find(opt => !opt.classList.contains("hidden"));
+                    if (firstVisible) {
+                        selectHub(firstVisible.dataset.hubId, firstVisible.dataset.cityName, firstVisible.dataset.hubName);
+                    }
+                }
+            });
+        }
+
+        hubOptions.forEach(opt => {
+            opt.addEventListener("click", function() {
+                selectHub(this.dataset.hubId, this.dataset.cityName, this.dataset.hubName);
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", function(e) {
+            const wrapper = document.getElementById("hub-combobox-wrapper");
+            if (wrapper && !wrapper.contains(e.target)) {
+                closeHubDropdown();
+            }
+        });
+
+        // Initialize pre-selected Hub (e.g. from validation retry)
+        if (hubSelect && hubSelect.value) {
+            const preselectedOption = hubOptions.find(opt => opt.dataset.hubId === String(hubSelect.value));
+            if (preselectedOption) {
+                selectHub(preselectedOption.dataset.hubId, preselectedOption.dataset.cityName, preselectedOption.dataset.hubName);
+            }
+        }
 
         function updateHubVisibility() {
             if (roleSelect && hubContainer) {
@@ -257,7 +502,7 @@
                     hubContainer.classList.add("hidden");
                     if (hubSelect) {
                         hubSelect.required = false;
-                        hubSelect.value = "";
+                        clearHubSelection();
                     }
                 }
             }

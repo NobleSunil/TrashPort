@@ -43,7 +43,7 @@ from django.urls import path
 from trashport.admins.views import (
     AdminLiveMapView,
     CityListView, CityCreateView, CityUpdateView, CityToggleActiveView,
-    HubListView, HubCreateView, HubUpdateView, HubToggleActiveView,
+    HubListView, HubCreateView, HubUpdateView, HubToggleActiveView, HubDeleteView,
     VehicleListView, VehicleCreateView, VehicleUpdateView, VehicleStatusUpdateView,
     RouteListView, RouteDetailView, RouteCreateView, RouteAssignPickupView, RouteHoldPickupView,
 )
@@ -185,6 +185,7 @@ urlpatterns = [
     path("manage/hubs/new/", HubCreateView.as_view(), name="hub_create"),
     path("manage/hubs/<int:pk>/edit/", HubUpdateView.as_view(), name="hub_update"),
     path("manage/hubs/<int:pk>/toggle/", HubToggleActiveView.as_view(), name="hub_toggle_active"),
+    path("manage/hubs/<int:pk>/delete/", HubDeleteView.as_view(), name="hub_delete"),
 
     # ===========================================================================
     # Admin: Fleet & Route Operations Management

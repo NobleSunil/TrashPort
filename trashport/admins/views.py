@@ -1038,10 +1038,39 @@ class CityToggleActiveView(LoginRequiredMixin, View):
 
 
 class HubListView(LoginRequiredMixin, ListView):
+    """
+    Administrator Hub and Terminal management view.
+    Supports server-side text search (name, city, address) and operational status filtering.
+    """
     model = Hub
     template_name = "admin/hub_list.html"
     context_object_name = "hubs"
-    queryset = Hub.objects.select_related("city").order_by("city__name", "name")
+
+    def get_queryset(self):
+        qs = Hub.objects.select_related("city").order_by("city__name", "name")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q)
+                | Q(city__name__icontains=q)
+                | Q(city__state__icontains=q)
+                | Q(address__icontains=q)
+            )
+        status_filter = self.request.GET.get("status", "").strip().lower()
+        if status_filter == "active":
+            qs = qs.filter(is_active=True)
+        elif status_filter == "inactive":
+            qs = qs.filter(is_active=False)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q"] = self.request.GET.get("q", "").strip()
+        context["status_filter"] = self.request.GET.get("status", "").strip().lower()
+        context["total_hubs_count"] = Hub.objects.count()
+        context["active_hubs_count"] = Hub.objects.filter(is_active=True).count()
+        context["inactive_hubs_count"] = Hub.objects.filter(is_active=False).count()
+        return context
 
 
 class HubCreateView(LoginRequiredMixin, CreateView):
@@ -1072,6 +1101,36 @@ class HubToggleActiveView(LoginRequiredMixin, View):
         hub.is_active = not hub.is_active
         hub.save(update_fields=["is_active"])
         messages.success(request, f"Hub '{hub.name}' status set to {'Active' if hub.is_active else 'Inactive'}.")
+        return redirect("waste_management:hub_list")
+
+
+class HubDeleteView(LoginRequiredMixin, View):
+    """
+    Administrator-only view to delete an operational Hub.
+    Prevents deletion if there are active in-progress trip routes originating from this hub.
+    """
+    def post(self, request, pk):
+        # Enforce administrator privileges
+        if not (request.user.role == User.Roles.ADMIN or request.user.is_staff):
+            messages.error(request, "Permission denied. Administrator access required.")
+            return redirect("waste_management:hub_list")
+
+        hub = get_object_or_404(Hub, pk=pk)
+        hub_name = hub.name
+
+        # Check for active non-completed trip routes
+        active_routes_count = hub.routes.filter(
+            status__in=[Route.StatusChoices.PLANNED, Route.StatusChoices.ACTIVE]
+        ).count()
+        if active_routes_count > 0:
+            messages.error(
+                request,
+                f"Cannot delete Hub '{hub_name}' because it currently has {active_routes_count} active in-progress trip route(s). Please complete or cancel those routes first."
+            )
+            return redirect("waste_management:hub_list")
+
+        hub.delete()
+        messages.success(request, f"Hub '{hub_name}' and its facility configuration have been deleted.")
         return redirect("waste_management:hub_list")
 
 
