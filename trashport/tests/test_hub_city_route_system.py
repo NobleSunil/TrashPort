@@ -16,7 +16,7 @@ from trashport.core.waste_management.models import (
     Address,
     WasteCategory,
 )
-from trashport.core.waste_management.services.route_service import RouteService
+from trashport.core.waste_management.services import RouteService
 
 
 @pytest.fixture

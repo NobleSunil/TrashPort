@@ -71,7 +71,7 @@ from .serializers import (
     RouteSerializer,
     RoutePickupSerializer,
 )
-from trashport.core.waste_management.services.route_service import RouteService
+from trashport.core.waste_management.services import RouteService
 from django.core.exceptions import ValidationError as DjangoValidationError
 
 # ---------------------------------------------------------------------------

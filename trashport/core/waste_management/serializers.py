@@ -37,7 +37,7 @@ from .models import (
     Address, WasteCategory, PickupRequest, Complaint,
     City, Hub, Vehicle, Route, RoutePickup
 )
-from trashport.core.waste_management.services.route_service import RouteService
+from trashport.core.waste_management.services import RouteService
 User = get_user_model()
 
 class UserShortSerializer(serializers.ModelSerializer):

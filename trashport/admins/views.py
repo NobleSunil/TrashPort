@@ -1199,7 +1199,7 @@ class RouteDetailView(LoginRequiredMixin, DetailView):
         context["stops"] = route.get_ordered_stops()
         context["waypoints"] = route.get_waypoints()
         eligible_pickups = []
-        from trashport.core.waste_management.services.route_service import RouteService
+        from trashport.core.waste_management.services import RouteService
         if route.route_pickups.count() < route.vehicle.max_capacity:
             for p in PickupRequest.objects.filter(status__in=[PickupRequest.StatusChoices.PENDING, PickupRequest.StatusChoices.HELD]).select_related("address", "citizen", "category"):
                 eval_res = RouteService.evaluate_route_suitability(route, p)
@@ -1229,7 +1229,7 @@ class RouteAssignPickupView(LoginRequiredMixin, View):
     def post(self, request, pk):
         route = get_object_or_404(Route, pk=pk)
         pickup_id = request.POST.get("pickup_id")
-        from trashport.core.waste_management.services.route_service import RouteService
+        from trashport.core.waste_management.services import RouteService
         from django.core.exceptions import ValidationError
         try:
             RouteService.assign_pickup_to_route(route.id, int(pickup_id))
@@ -1245,7 +1245,7 @@ class RouteHoldPickupView(LoginRequiredMixin, View):
     def post(self, request, pk):
         pickup = get_object_or_404(PickupRequest, pk=pk)
         reason = request.POST.get("reason", "Held by administrator")
-        from trashport.core.waste_management.services.route_service import RouteService
+        from trashport.core.waste_management.services import RouteService
         RouteService.hold_pickup_request(pickup.id, reason)
         messages.warning(request, f"Pickup #{pickup.display_id} placed on HELD.")
         next_url = request.POST.get("next") or reverse("waste_management:route_list")

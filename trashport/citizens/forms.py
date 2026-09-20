@@ -152,7 +152,7 @@ class PickupRequestForm(forms.ModelForm):
 
         # Validate city, active hub, registered collectors, and 20 km radius via RouteService
         if target_city:
-            from trashport.core.waste_management.services.route_service import RouteService
+            from trashport.core.waste_management.services import RouteService
             try:
                 _, hub, dist = RouteService.validate_pickup_eligibility(target_city, effective_lat, effective_lng)
                 cleaned_data["validated_city"] = target_city

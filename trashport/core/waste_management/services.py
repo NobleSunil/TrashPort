@@ -1,10 +1,23 @@
 """
-trashport/core/waste_management/services/route_service.py
-=========================================================
+trashport/core/waste_management/services.py
+============================================
 
 PURPOSE:
-  Core business service layer for city-aware, hub-based, capacity-limited,
-  and route-aware pickup operations.
+  Core business domain service layer for waste management operations, including
+  city-aware eligibility checks, hub-based 20 km coverage boundary validation,
+  fleet vehicle capacity capping (max 5 pickups per trip), and atomic route assignments.
+
+MODULE ARCHITECTURE & CONNECTIONS:
+  - Models used:
+      * City, Hub, Vehicle, Route, RoutePickup, PickupRequest (from .models)
+  - Map / Geodesic service:
+      * GeoService (from trashport.core.maps.services) for haversine distance calculations
+  - Consumers of this service:
+      * trashport/citizens/forms.py (citizen pickup booking eligibility validation)
+      * trashport/core/waste_management/serializers.py (REST API pickup request creation validation)
+      * trashport/admins/views.py (admin route creation, vehicle assignment, pickup hold)
+      * trashport/core/waste_management/views.py (role dispatch views)
+      * trashport/tests/ (automated route & hub validation test suites)
 
 BUSINESS RULES ENFORCED:
   1. City without active Hub:
@@ -15,12 +28,14 @@ BUSINESS RULES ENFORCED:
      "Pickup service is unavailable at this location. The pickup address is outside the 20 km service area of the nearest active hub."
   4. Vehicle Maximum 5 Pickups Per Trip:
      "This vehicle has reached its maximum capacity of 5 pickups."
-  5. Route starts at Hub and ends at Hub.
-  6. Atomic concurrency locking with select_for_update().
+  5. Route starts at Hub and terminates at Hub.
+  6. Atomic concurrency locking with select_for_update() during route assignment.
 """
 
+import sys
 from decimal import Decimal
-from typing import Tuple, Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional, Tuple
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -29,10 +44,10 @@ from trashport.core.maps.services import GeoService
 from trashport.core.waste_management.models import (
     City,
     Hub,
-    Vehicle,
+    PickupRequest,
     Route,
     RoutePickup,
-    PickupRequest,
+    Vehicle,
 )
 
 
@@ -47,16 +62,16 @@ class RouteService:
         cls,
         city: City,
         latitude: float,
-        longitude: float
+        longitude: float,
     ) -> Tuple[bool, Hub, float]:
         """
-        Validates whether a pickup request is eligible for service.
+        Validates whether a pickup request is eligible for service based on geographic and facility constraints.
 
-        Execution order:
-          1. City active?
-          2. Active hub registered?
-          3. Registered/active collectors in city?
-          4. Coordinates within 20 km of hub?
+        Execution validation order:
+          1. City active check.
+          2. Active hub registered in city check.
+          3. Active collectors registered in city check.
+          4. Coordinates within 20 km radial distance of active Hub.
 
         Returns:
           (is_eligible: bool, hub: Hub, distance_km: float)
@@ -74,7 +89,11 @@ class RouteService:
             )
 
         # Check 2: Registered/active collectors in city
-        has_collectors = city.has_active_collectors() if callable(getattr(city, "has_active_collectors", None)) else city.has_active_collectors
+        has_collectors = (
+            city.has_active_collectors()
+            if callable(getattr(city, "has_active_collectors", None))
+            else city.has_active_collectors
+        )
         if not has_collectors:
             raise ValidationError(
                 "Pickup service is currently unavailable in your city. "
@@ -86,7 +105,7 @@ class RouteService:
             float(active_hub.latitude),
             float(active_hub.longitude),
             float(latitude),
-            float(longitude)
+            float(longitude),
         )
         if dist > cls.HUB_SERVICE_RADIUS_KM:
             raise ValidationError(
@@ -98,14 +117,23 @@ class RouteService:
 
     @classmethod
     def create_route(cls, vehicle_id: int, start_time: Optional[timezone.datetime] = None) -> Route:
-        """Creates a planned route starting at the vehicle's hub."""
+        """
+        Creates a new planned trip route starting and ending at the vehicle's designated hub.
+
+        Args:
+          vehicle_id: Primary key of the fleet vehicle.
+          start_time: Scheduled trip commencement time (defaults to now).
+
+        Returns:
+          Newly initialized Route record in PLANNED status.
+        """
         vehicle = Vehicle.objects.select_related("hub").get(pk=vehicle_id)
         route = Route.objects.create(
             vehicle=vehicle,
             hub=vehicle.hub,
             start_time=start_time or timezone.now(),
             status=Route.StatusChoices.PLANNED,
-            total_distance_km=Decimal("0.00")
+            total_distance_km=Decimal("0.00"),
         )
         return route
 
@@ -114,10 +142,10 @@ class RouteService:
         cls,
         route_id: int,
         pickup_id: int,
-        preferred_sequence: Optional[int] = None
+        preferred_sequence: Optional[int] = None,
     ) -> RoutePickup:
         """
-        Atomically assigns a pickup to a vehicle route with strict capacity enforcement.
+        Atomically assigns a pickup to a vehicle route with strict capacity and boundary enforcement.
 
         Concurrency & business safety:
           - Uses select_for_update() on Route, Vehicle, and PickupRequest.
@@ -158,7 +186,7 @@ class RouteService:
                 float(route.hub.latitude),
                 float(route.hub.longitude),
                 float(pickup.effective_latitude),
-                float(pickup.effective_longitude)
+                float(pickup.effective_longitude),
             )
             if dist_from_hub > cls.HUB_SERVICE_RADIUS_KM:
                 raise ValidationError("This pickup location is more than 20 km from the service hub.")
@@ -177,7 +205,7 @@ class RouteService:
                 defaults={
                     "sequence": next_seq,
                     "status": RoutePickup.StatusChoices.PENDING,
-                }
+                },
             )
             if not created:
                 route_pickup.sequence = next_seq
@@ -232,7 +260,7 @@ class RouteService:
             float(route.hub.latitude),
             float(route.hub.longitude),
             float(pickup.effective_latitude),
-            float(pickup.effective_longitude)
+            float(pickup.effective_longitude),
         )
         if dist_from_hub > cls.HUB_SERVICE_RADIUS_KM:
             return {
@@ -295,3 +323,8 @@ class RouteService:
             pickup.cancellation_reason = f"Held: {reason}"
         pickup.save()
         return pickup
+
+
+# Backward-compatibility alias for legacy imports:
+# from trashport.core.waste_management.services.route_service import RouteService
+sys.modules["trashport.core.waste_management.services.route_service"] = sys.modules[__name__]
