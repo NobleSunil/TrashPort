@@ -52,7 +52,7 @@ class PickupRequestForm(forms.ModelForm):
             "address": forms.Select(attrs={"class": "form-select", "id": "id_address"}),
             "category": forms.Select(attrs={"class": "form-select", "id": "id_category"}),
             "weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01", "max": "100.00", "placeholder": "Estimated weight in kg (Max 100 kg)"}),
-            "quantity_estimate": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 2 bags, 3 boxes (optional)"}),
+            "quantity_estimate": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 2 boxes, 3 packages (optional)"}),
             "schedule_date": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
             "latitude": forms.HiddenInput(attrs={"id": "id_latitude"}),
             "longitude": forms.HiddenInput(attrs={"id": "id_longitude"}),
@@ -61,6 +61,8 @@ class PickupRequestForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+        if "quantity_estimate" in self.fields:
+            self.fields["quantity_estimate"].label = "Number of Package Boxes"
         self.fields["address"].required = False
         from trashport.core.waste_management.models import City
         self.fields["city"].queryset = City.objects.filter(is_active=True).order_by("name")

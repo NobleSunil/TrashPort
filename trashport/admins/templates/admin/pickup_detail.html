@@ -49,7 +49,7 @@
               </div>
             {% endif %}
 
-            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
+            <p class="mb-2"><strong>Number of Package Boxes:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
             <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
             <p class="mb-2">
               <strong>Total Customer Fee:</strong>

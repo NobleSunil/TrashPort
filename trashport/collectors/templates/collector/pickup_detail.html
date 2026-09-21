@@ -100,7 +100,7 @@
               </div>
             {% endif %}
 
-            <p class="mb-2"><strong>Quantity Estimate:</strong> {{ pickup.quantity_estimate|default:"Standard" }}</p>
+            <p class="mb-2"><strong>Number of Package Boxes:</strong> {{ pickup.quantity_estimate|default:"Standard" }}</p>
             <p class="mb-2"><strong>Scheduled Slot:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
             <hr>
             <p class="mb-2"><strong>Total Customer Fee:</strong> <span class="fs-5 fw-bold text-dark">Rs. {{ pickup.fee }}</span></p>
