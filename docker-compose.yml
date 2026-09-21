@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: trashport_django
+    restart: unless-stopped
     volumes:
       - .:/app
     ports:
@@ -22,6 +23,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: trashport_postgres
+    restart: unless-stopped
     profiles: ["local-db"]
     environment:
       POSTGRES_DB: trashport
@@ -40,6 +42,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: trashport_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
 
