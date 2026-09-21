@@ -258,7 +258,7 @@
       <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('active-pickups-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <span class="text-uppercase text-muted fw-bold small">Active Pickups</span>
+            <span class="text-uppercase text-muted fw-bold small">Pickup Status</span>
             <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ active_count }}</h2>
           </div>
           <div class="stat-icon icon-amber">
@@ -301,7 +301,7 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link active" id="active-pickups-tab" data-bs-toggle="tab"
             data-bs-target="#active-pickups-panel" type="button" role="tab">
-            <i class="bi bi-clock-history me-2"></i>Active Pickups
+            <i class="bi bi-clock-history me-2"></i>Pickup Status
             {% if active_count > 0 %}
             <span class="badge bg-primary rounded-pill ms-2">{{ active_count }}</span>
             {% endif %}
