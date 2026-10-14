@@ -34,8 +34,24 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            # Update email SMTP credentials in EC2 production .env
+            if [ -f .env ]; then
+              if grep -q "^DJANGO_EMAIL_HOST_PASSWORD=" .env; then
+                sed -i 's/^DJANGO_EMAIL_HOST_PASSWORD=.*/DJANGO_EMAIL_HOST_PASSWORD=jteustnqureuvptq/' .env
+              else
+                echo "DJANGO_EMAIL_HOST_PASSWORD=jteustnqureuvptq" >> .env
+              fi
+              if grep -q "^DJANGO_EMAIL_HOST_USER=" .env; then
+                sed -i 's/^DJANGO_EMAIL_HOST_USER=.*/DJANGO_EMAIL_HOST_USER=albertcyriac443@gmail.com/' .env
+              else
+                echo "DJANGO_EMAIL_HOST_USER=albertcyriac443@gmail.com" >> .env
+              fi
+              echo "✅ Successfully updated production .env email credentials."
+            fi
+
             # Rebuild and restart Docker containers in background
             docker compose up -d --build
+            docker compose restart django
 
             # Run database migrations and collect static files inside the container
             docker compose exec -T django python manage.py migrate --noinput
