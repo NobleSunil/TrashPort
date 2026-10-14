@@ -555,7 +555,51 @@
         referenceId = data.reference_id;
         document.getElementById('otp-masked-display').textContent = data.masked_aadhaar;
         document.getElementById('success-masked').textContent = data.masked_aadhaar;
-        document.getElementById('otp-sent-email').textContent = data.linked_email || linkedEmail;
+
+        const infoBox = document.getElementById('otp-info-box');
+        if (infoBox) {
+          if (data.email_sent === false) {
+            infoBox.style.background = '#fffbeb';
+            infoBox.style.borderColor = '#fde68a';
+            infoBox.style.color = '#92400e';
+            infoBox.innerHTML = `
+              <div style="font-size:0.875rem; font-weight:700; margin-bottom:0.25rem;">
+                ⚠️ Email Delivery Notice
+              </div>
+              <div style="font-size:0.8rem; color:#b45309; margin-bottom: 0.5rem;">
+                Could not deliver email to <strong>${escapeHtml(data.linked_email || linkedEmail)}</strong>: ${escapeHtml(data.email_error || 'SMTP Connection Error')}.
+              </div>
+              ${data.demo_otp ? `
+                <div style="background:#ffffff; border:1.5px dashed #d97706; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; margin-top:6px;">
+                  <div>
+                    <span style="font-size:0.75rem; color:#78350f; text-transform:uppercase; font-weight:700; display:block;">Demo Testing OTP</span>
+                    <strong style="font-family:monospace; font-size:1.35rem; letter-spacing:4px; color:#b45309;">${data.demo_otp}</strong>
+                  </div>
+                  <button type="button" class="aadh-btn aadh-btn-primary" style="padding:6px 14px; font-size:0.8rem; width:auto; margin:0;" onclick="autoFillOtp('${data.demo_otp}')">
+                    Auto-Fill OTP
+                  </button>
+                </div>
+              ` : ''}
+              <div style="font-size:0.75rem; color:#92400e; margin-top:8px;">
+                💡 <em>To send live emails to your inbox, set a valid 16-character Google App Password in <code>.env</code> (DJANGO_EMAIL_HOST_PASSWORD).</em>
+              </div>
+            `;
+          } else {
+            infoBox.style.background = '#f0fdf4';
+            infoBox.style.borderColor = '#86efac';
+            infoBox.style.color = '#166534';
+            infoBox.innerHTML = `
+              <div style="font-size:0.85rem; font-weight:600; margin-bottom:0.25rem;">
+                📍 OTP Sent Successfully
+              </div>
+              <div style="font-size:0.8rem; color:#15803d;">
+                A 6-digit verification code has been sent to
+                <strong style="font-family:monospace;">${escapeHtml(data.linked_email || linkedEmail)}</strong>.
+                Please check your inbox or spam folder.
+              </div>
+            `;
+          }
+        }
 
         // Reset OTP input
         document.getElementById('otp-input').value = '';
@@ -646,6 +690,24 @@
   function getCsrf() {
     const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
     return cookie ? cookie.split('=')[1] : '';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/'/g, '&#39;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function autoFillOtp(code) {
+    const input = document.getElementById('otp-input');
+    if (input) {
+      input.value = code;
+      onOtpInput(input);
+    }
   }
 
   function showAlert(el, msg, type) {

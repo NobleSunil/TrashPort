@@ -226,7 +226,7 @@ class AadhaarInitiateView(View):
 
         # --- Generate OTP & Send Email via SMTP ---------------------------
         otp = generate_demo_otp()
-        send_aadhaar_otp_email(to_email=linked_email, otp=otp, masked_aadhaar=aadhaar_masked)
+        email_sent, email_err = send_aadhaar_otp_email(to_email=linked_email, otp=otp, masked_aadhaar=aadhaar_masked)
         otp_h = sha256_hash(otp)
         expiry = timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES)
 
@@ -243,22 +243,34 @@ class AadhaarInitiateView(View):
         ])
 
         logger.info(
-            "Aadhaar initiate: collector=%s, linked_email=%s, masked=%s, ref=%s [DEMO MODE]",
-            request.user.email, linked_email, aadhaar_masked, profile.reference_id,
+            "Aadhaar initiate: collector=%s, linked_email=%s, masked=%s, ref=%s, email_sent=%s [DEMO MODE]",
+            request.user.email, linked_email, aadhaar_masked, profile.reference_id, email_sent,
         )
 
         # --- Return reference ID to front-end -----------------------------
-        return JsonResponse({
+        response_data = {
             "reference_id": str(profile.reference_id),
             "masked_aadhaar": aadhaar_masked,
             "linked_email": linked_email,
             "expires_in": OTP_EXPIRY_MINUTES * 60,  # seconds
             "demo_mode": True,
-            "message": (
+            "email_sent": email_sent,
+        }
+
+        if email_sent:
+            response_data["message"] = (
                 f"OTP has been sent to {linked_email}. "
-                f"Please check your inbox (or server console in demo mode)."
-            ),
-        })
+                f"Please check your inbox."
+            )
+        else:
+            response_data["message"] = (
+                f"Could not deliver email to {linked_email}. "
+                f"Demo OTP provided below."
+            )
+            response_data["demo_otp"] = otp
+            response_data["email_error"] = str(email_err)
+
+        return JsonResponse(response_data)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

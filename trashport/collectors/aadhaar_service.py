@@ -134,8 +134,9 @@ def verhoeff_validate(number: str) -> bool:
 def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
     """
     Send the Aadhaar verification OTP to the target email via SMTP using Django's send_mail.
+    Supports primary dispatch with automated Port 465 SSL fallback if Port 587 TLS is blocked by ISP.
     """
-    from django.core.mail import send_mail
+    from django.core.mail import send_mail, get_connection, EmailMultiAlternatives
     from django.conf import settings
 
     subject = f"TrashPort - Your Aadhaar Verification OTP is {otp}"
@@ -165,6 +166,8 @@ def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
     </div>
     """
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@trashport.com")
+
+    # 1. Attempt primary send_mail via configured Django backend
     try:
         send_mail(
             subject=subject,
@@ -176,11 +179,51 @@ def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
         )
         logger.info("Aadhaar OTP email sent successfully to %s", to_email)
         return True, None
-    except Exception as e:
-        logger.error("Failed to send Aadhaar OTP email to %s: %s", to_email, e)
-        # Log to console as fallback for offline/demo development
-        logger.info("[FALLBACK OTP: %s] Target Email: %s", otp, to_email)
-        return False, str(e)
+    except Exception as primary_err:
+        logger.warning("Primary email dispatch to %s failed (%s). Attempting port 465 SSL fallback...", to_email, primary_err)
+
+        # 2. Attempt fallback via port 465 SSL if Gmail SMTP credentials exist
+        host_user = getattr(settings, "EMAIL_HOST_USER", "")
+        host_pass = getattr(settings, "EMAIL_HOST_PASSWORD", "")
+        host = getattr(settings, "EMAIL_HOST", "smtp.gmail.com")
+
+        if host_user and host_pass and "gmail" in host.lower():
+            try:
+                ssl_conn = get_connection(
+                    backend="django.core.mail.backends.smtp.EmailBackend",
+                    host=host,
+                    port=465,
+                    username=host_user,
+                    password=host_pass,
+                    use_ssl=True,
+                    use_tls=False,
+                    timeout=7,
+                )
+                email_obj = EmailMultiAlternatives(
+                    subject=subject,
+                    body=message,
+                    from_email=from_email,
+                    to=[to_email],
+                    connection=ssl_conn,
+                )
+                email_obj.attach_alternative(html_message, "text/html")
+                email_obj.send(fail_silently=False)
+                logger.info("Aadhaar OTP email sent successfully via Port 465 SSL to %s", to_email)
+                return True, None
+            except Exception as ssl_err:
+                logger.error("Port 465 SSL fallback also failed: %s", ssl_err)
+
+        # Format user-friendly error description
+        err_msg = str(primary_err)
+        if "535" in err_msg or "Username and Password not accepted" in err_msg:
+            clean_err = "Gmail SMTP authentication rejected the app password. Please generate a new 16-character Google App Password."
+        elif "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
+            clean_err = "Connection to SMTP server timed out (port 587/465 filtered by network)."
+        else:
+            clean_err = f"SMTP dispatch error: {err_msg}"
+
+        logger.info("[FALLBACK OTP: %s] Target Email: %s (Error: %s)", otp, to_email, clean_err)
+        return False, clean_err
 
 
 def generate_demo_otp() -> str:

@@ -1,3 +1,4 @@
+import json
 import pytest
 from decimal import Decimal
 from django.core.management import call_command
@@ -505,3 +506,68 @@ class TestAdminHubManagementAndSearch:
         assert response.status_code == 302
         # Hub must not be deleted
         assert Hub.objects.filter(id=hub.id).exists()
+
+
+@pytest.mark.django_db
+class TestCollectorAadhaarOtpFlow:
+    """Tests for Aadhaar OTP generation, email dispatch, and verification lifecycle."""
+
+    def test_aadhaar_otp_initiate_and_verification_flow(self, base_hub_setup):
+        """Verify collector can request OTP, receive reference ID, and verify with valid OTP."""
+        collector = base_hub_setup["collector"]
+        client = Client()
+        client.force_login(collector)
+
+        initiate_url = "/api/collectors/aadhaar/initiate/"
+        payload = {
+            "aadhaar_number": "304332181964",  # Valid Verhoeff demo number
+            "linked_email": "collector_tester@example.com",
+        }
+
+        # 1. Initiate OTP
+        response = client.post(
+            initiate_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "reference_id" in data
+        assert "masked_aadhaar" in data
+        assert data["masked_aadhaar"] == "XXXX XXXX 1964"
+        assert "email_sent" in data
+        reference_id = data["reference_id"]
+
+        # Retrieve profile to check generated OTP hash
+        from trashport.collectors.models import CollectorAadhaarProfile
+        profile = CollectorAadhaarProfile.objects.get(collector=collector)
+        assert profile.otp_hash is not None
+        assert profile.otp_expires_at is not None
+
+        # Verify with invalid OTP first
+        verify_url = "/api/collectors/aadhaar/verify/"
+        verify_res_bad = client.post(
+            verify_url,
+            data=json.dumps({"reference_id": reference_id, "otp": "000000"}),
+            content_type="application/json",
+        )
+        assert verify_res_bad.status_code == 400
+
+        # Verify with matching hash
+        from trashport.collectors.aadhaar_service import sha256_hash
+        known_otp = "842193"
+        profile.otp_hash = sha256_hash(known_otp)
+        profile.save()
+
+        verify_res_good = client.post(
+            verify_url,
+            data=json.dumps({"reference_id": reference_id, "otp": known_otp}),
+            content_type="application/json",
+        )
+        assert verify_res_good.status_code == 200
+        assert verify_res_good.json()["verified"] is True
+
+        profile.refresh_from_db()
+        assert profile.aadhaar_verified is True
+        assert profile.otp_hash is None  # cleared upon verification
+
