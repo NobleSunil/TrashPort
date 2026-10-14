@@ -65,7 +65,7 @@ from .views import (
 
     # === User Administration (Admins only) ===
     UserListView, CollectorCreateView, UserDetailView,
-    UserToggleActiveView, CollectorVerificationView,
+    UserToggleActiveView, UserDeleteAdminView, CollectorVerificationView,
     WalletAdjustView, CollectorRedeemUPIView,
 
     # === Operations & Dispatch (Admins only) ===
@@ -157,6 +157,7 @@ urlpatterns = [
     path("manage/users/collectors/new/", CollectorCreateView.as_view(), name="collector_create"),
     path("manage/users/<int:pk>/", UserDetailView.as_view(), name="user_detail"),
     path("manage/users/<int:pk>/toggle/", UserToggleActiveView.as_view(), name="user_toggle_active"),
+    path("manage/users/<int:pk>/delete/", UserDeleteAdminView.as_view(), name="user_delete"),
     path("manage/users/<int:pk>/verify/", CollectorVerificationView.as_view(), name="collector_verify"),
     path("manage/users/<int:pk>/wallet/", WalletAdjustView.as_view(), name="user_wallet_adjust"),
 

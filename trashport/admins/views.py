@@ -538,6 +538,85 @@ class AdminUserToggleActiveView(LoginRequiredMixin, View):
         return redirect("waste_management:user_detail", pk=pk)
 
 
+class AdminUserDeleteView(LoginRequiredMixin, View):
+    """
+    POST action for Admins to permanently delete a user account from the system.
+
+    Enforces enterprise security and operational safeguards:
+    1. Administrator authorization check (ADMIN role, staff, or superuser).
+    2. Prevention of self-deletion (an admin cannot delete their own active session).
+    3. Privilege escalation guard (non-superusers cannot delete superusers).
+    4. Active operations check:
+       - Collector: blocks deletion if collector has active pickups (ASSIGNED, ON_THE_WAY, ARRIVED).
+       - Citizen: blocks deletion if citizen has pickups actively in transit.
+    5. Clean fleet detachment: automatically unassigns collector from any Vehicles.
+    6. Cascade deletion of associated non-operational profiles and records.
+    """
+    def post(self, request, pk, *args, **kwargs):
+        # 1. Enforce administrator role check
+        if not (request.user.role == User.Roles.ADMIN or request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "Permission denied. Administrator access required.")
+            return redirect("waste_management:user_list")
+
+        target = get_object_or_404(User, pk=pk)
+
+        # 2. Cannot delete own account
+        if target == request.user:
+            messages.error(request, "Security violation: You cannot delete your own administrator account.")
+            return redirect("waste_management:user_detail", pk=pk)
+
+        # 3. Non-superusers cannot delete superusers
+        if target.is_superuser and not request.user.is_superuser:
+            messages.error(request, "Permission denied: Only superusers can delete other superuser accounts.")
+            return redirect("waste_management:user_detail", pk=pk)
+
+        user_identifier = target.name or target.email
+
+        # 4. Check for active in-progress pickups for collectors
+        if target.role == User.Roles.COLLECTOR:
+            active_collector_pickups = PickupRequest.objects.filter(
+                collector=target,
+                status__in=[
+                    PickupRequest.StatusChoices.ASSIGNED,
+                    PickupRequest.StatusChoices.IN_TRANSIT,
+                    PickupRequest.StatusChoices.ON_ROUTE,
+                    PickupRequest.StatusChoices.PICKED_UP,
+                ]
+            ).count()
+            if active_collector_pickups > 0:
+                messages.error(
+                    request,
+                    f"Cannot delete Collector '{user_identifier}' because they have {active_collector_pickups} active in-progress pickup(s). Please reassign or complete those pickups first."
+                )
+                return redirect("waste_management:user_detail", pk=pk)
+
+            # Safely release collector from any assigned fleet vehicles
+            Vehicle.objects.filter(driver=target).update(driver=None, status=Vehicle.StatusChoices.AVAILABLE)
+
+        elif target.role == User.Roles.CITIZEN:
+            active_citizen_pickups = PickupRequest.objects.filter(
+                citizen=target,
+                status__in=[
+                    PickupRequest.StatusChoices.ASSIGNED,
+                    PickupRequest.StatusChoices.IN_TRANSIT,
+                    PickupRequest.StatusChoices.ON_ROUTE,
+                    PickupRequest.StatusChoices.PICKED_UP,
+                ]
+            ).count()
+            if active_citizen_pickups > 0:
+                messages.error(
+                    request,
+                    f"Cannot delete Citizen '{user_identifier}' because they have {active_citizen_pickups} active pickup(s) currently being serviced. Please resolve or cancel those pickups first."
+                )
+                return redirect("waste_management:user_detail", pk=pk)
+
+        # 5. Execute permanent deletion
+        target.delete()
+        messages.success(request, f"User account '{user_identifier}' has been permanently deleted.")
+        return redirect("waste_management:user_list")
+
+
+
 class AdminCollectorVerificationView(LoginRequiredMixin, View):
     """
     POST action for Admins to Approve or Reject a Collector's account verification.
@@ -1070,14 +1149,84 @@ class HubListView(LoginRequiredMixin, ListView):
         context["total_hubs_count"] = Hub.objects.count()
         context["active_hubs_count"] = Hub.objects.filter(is_active=True).count()
         context["inactive_hubs_count"] = Hub.objects.filter(is_active=False).count()
+
+        # Serialize all hubs for interactive network map visualization and adding hubs directly from map
+        hubs_list_data = []
+        for h in Hub.objects.select_related("city").all():
+            hubs_list_data.append({
+                "id": h.id,
+                "name": h.name,
+                "city": h.city.name,
+                "city_id": h.city.id,
+                "state": h.city.state,
+                "lat": float(h.latitude),
+                "lng": float(h.longitude),
+                "address": h.address or "",
+                "is_active": h.is_active,
+                "vehicle_count": h.vehicles.count(),
+                "edit_url": reverse("waste_management:hub_update", kwargs={"pk": h.id}),
+            })
+        context["hubs_json"] = json.dumps(hubs_list_data)
         return context
 
 
 class HubCreateView(LoginRequiredMixin, CreateView):
+    """
+    Administrator-only view to create an operational collection hub.
+    Supports interactive map-based location selection, dynamic 20km service radius preview,
+    and automatic pre-population from URL query parameters (lat, lng, address, city).
+    """
     model = Hub
     form_class = HubForm
     template_name = "admin/hub_form.html"
     success_url = reverse_lazy("waste_management:hub_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.role == User.Roles.ADMIN or request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "Permission denied. Administrator access required.")
+            return redirect("waste_management:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        lat = self.request.GET.get("lat")
+        lng = self.request.GET.get("lng")
+        address = self.request.GET.get("address")
+        city_id = self.request.GET.get("city")
+        if lat:
+            try:
+                initial["latitude"] = Decimal(lat)
+            except Exception:
+                pass
+        if lng:
+            try:
+                initial["longitude"] = Decimal(lng)
+            except Exception:
+                pass
+        if address:
+            initial["address"] = address
+        if city_id:
+            try:
+                initial["city"] = int(city_id)
+            except Exception:
+                pass
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass existing hubs for visual context and coverage overlap analysis on the map
+        hubs_data = []
+        for h in Hub.objects.select_related("city").all():
+            hubs_data.append({
+                "id": h.id,
+                "name": h.name,
+                "city": h.city.name,
+                "lat": float(h.latitude),
+                "lng": float(h.longitude),
+                "is_active": h.is_active,
+            })
+        context["existing_hubs_json"] = json.dumps(hubs_data)
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, f"Hub '{form.instance.name}' registered successfully.")
@@ -1085,10 +1234,39 @@ class HubCreateView(LoginRequiredMixin, CreateView):
 
 
 class HubUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    Administrator-only view to edit an existing Hub facility.
+    Displays an interactive Leaflet map to adjust location coordinates and inspect the 20km radius.
+    """
     model = Hub
     form_class = HubForm
     template_name = "admin/hub_form.html"
     success_url = reverse_lazy("waste_management:hub_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.role == User.Roles.ADMIN or request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "Permission denied. Administrator access required.")
+            return redirect("waste_management:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass other existing hubs for visual context and coverage overlap analysis
+        hubs_data = []
+        current_hub_id = self.object.id if self.object else None
+        for h in Hub.objects.select_related("city").all():
+            if h.id == current_hub_id:
+                continue
+            hubs_data.append({
+                "id": h.id,
+                "name": h.name,
+                "city": h.city.name,
+                "lat": float(h.latitude),
+                "lng": float(h.longitude),
+                "is_active": h.is_active,
+            })
+        context["existing_hubs_json"] = json.dumps(hubs_data)
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, f"Hub '{form.instance.name}' updated successfully.")

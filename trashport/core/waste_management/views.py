@@ -431,6 +431,16 @@ class UserToggleActiveView(RoleDispatchView):
     }
 
 
+class UserDeleteAdminView(RoleDispatchView):
+    """
+    URL: /manage/users/<int:pk>/delete/  (POST only)
+    Admin-only: permanently deletes a user account after validating operations.
+    """
+    role_map = {
+        User.Roles.ADMIN: "trashport.admins.views.AdminUserDeleteView",
+    }
+
+
 class CollectorVerificationView(RoleDispatchView):
     """
     URL: /manage/users/<int:pk>/verify/  (POST only)

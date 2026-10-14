@@ -523,6 +523,25 @@
       document.getElementById('refreshMapBtn')?.addEventListener('click', loadLiveOverview);
       document.getElementById('resetMapBtn')?.addEventListener('click', resetSelection);
       document.getElementById('onMapResetBtn')?.addEventListener('click', resetSelection);
+
+      // Click anywhere on live map to add a hub facility at that position
+      map.on('click', function (e) {
+        if (e.originalEvent && e.originalEvent._stopped) return;
+        let lat = e.latlng.lat;
+        let lng = e.latlng.lng;
+        L.popup()
+          .setLatLng([lat, lng])
+          .setContent(`
+            <div class="p-2" style="min-width: 200px;">
+              <h6 class="fw-bold text-primary mb-1"><i class="fas fa-warehouse text-dark me-1"></i>Map Position</h6>
+              <div class="small font-monospace text-muted mb-2">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+              <a href="{% url 'waste_management:hub_create' %}?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}" class="btn btn-sm btn-primary w-100 shadow-sm fw-semibold">
+                <i class="fas fa-plus-circle me-1"></i> Register Hub Here
+              </a>
+            </div>
+          `)
+          .openOn(map);
+      });
     });
   </script>
 {% endblock inline_javascript %}
