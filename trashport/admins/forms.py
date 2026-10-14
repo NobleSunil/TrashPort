@@ -116,9 +116,33 @@ class CityForm(forms.ModelForm):
 
 
 class HubForm(forms.ModelForm):
+    """
+    Form for registering or updating Hub infrastructure facilities.
+    Supports dual entry modes for city assignment:
+      1. Dropdown Selection: Choose from pre-existing active City/Panchayath records.
+      2. Manual Entry: Directly type a new or unlisted City/Panchayath, which is
+         automatically resolved, created, and linked to the Hub.
+    """
+    city_entry_mode = forms.ChoiceField(
+        choices=[("select", "Choose from List"), ("manual", "Manual Entry")],
+        required=False,
+        initial="select",
+        widget=forms.HiddenInput(attrs={"id": "id_city_entry_mode"}),
+    )
+    manual_city = forms.CharField(
+        required=False,
+        label="Manual City / Panchayath Entry",
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "e.g. Adimali Grama Panchayat, Kerala",
+            "id": "id_manual_city",
+        }),
+        help_text="Type city/panchayath name manually if not in the dropdown list."
+    )
+
     class Meta:
         model = Hub
-        fields = ["name", "city", "latitude", "longitude", "address", "is_active"]
+        fields = ["name", "city", "city_entry_mode", "manual_city", "latitude", "longitude", "address", "is_active"]
         labels = {
             "name": "Hub / Facility Name",
             "city": "Assigned City / Panchayath",
@@ -129,12 +153,64 @@ class HubForm(forms.ModelForm):
         }
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kumarakom Panchayath Hub"}),
-            "city": forms.Select(attrs={"class": "form-select"}),
+            "city": forms.Select(attrs={"class": "form-select", "id": "id_city_select"}),
             "latitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "9.931200"}),
             "longitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "76.267300"}),
             "address": forms.TextInput(attrs={"class": "form-control", "placeholder": "Street Address / Landmark"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # City dropdown is optional at field-level so manual_city can satisfy the requirement
+        self.fields["city"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        mode = cleaned_data.get("city_entry_mode") or "select"
+        city = cleaned_data.get("city")
+        manual_city = (cleaned_data.get("manual_city") or "").strip()
+
+        # If manual mode is active or manual_city text was supplied
+        if mode == "manual" or (manual_city and not city):
+            if not manual_city:
+                self.add_error("manual_city", "Please enter the City or Panchayath name.")
+                return cleaned_data
+
+            # Parse out city name and optional state (e.g. "Adimali Grama Panchayat, Kerala")
+            parts = [p.strip() for p in manual_city.split(",") if p.strip()]
+            city_name = parts[0] if parts else manual_city
+            state_name = parts[1] if len(parts) > 1 else "Kerala"
+
+            # Case-insensitive lookup or auto-creation of City record
+            city_obj = City.objects.filter(name__iexact=city_name).first()
+            if not city_obj:
+                city_obj = City.objects.create(
+                    name=city_name,
+                    state=state_name,
+                    is_active=True,
+                )
+            cleaned_data["city"] = city_obj
+
+        else:
+            # Mode is "select": ensure city was chosen, or fall back to manual_city
+            if not city:
+                if manual_city:
+                    parts = [p.strip() for p in manual_city.split(",") if p.strip()]
+                    city_name = parts[0] if parts else manual_city
+                    state_name = parts[1] if len(parts) > 1 else "Kerala"
+                    city_obj = City.objects.filter(name__iexact=city_name).first()
+                    if not city_obj:
+                        city_obj = City.objects.create(
+                            name=city_name,
+                            state=state_name,
+                            is_active=True,
+                        )
+                    cleaned_data["city"] = city_obj
+                else:
+                    self.add_error("city", "This field is required. Please select or manually enter a City / Panchayath.")
+
+        return cleaned_data
 
 
 class VehicleForm(forms.ModelForm):

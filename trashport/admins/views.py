@@ -1192,7 +1192,7 @@ class HubCreateView(LoginRequiredMixin, CreateView):
         lat = self.request.GET.get("lat")
         lng = self.request.GET.get("lng")
         address = self.request.GET.get("address")
-        city_id = self.request.GET.get("city")
+        city_param = self.request.GET.get("city")
         if lat:
             try:
                 initial["latitude"] = Decimal(lat)
@@ -1205,11 +1205,19 @@ class HubCreateView(LoginRequiredMixin, CreateView):
                 pass
         if address:
             initial["address"] = address
-        if city_id:
+        if city_param:
             try:
-                initial["city"] = int(city_id)
-            except Exception:
-                pass
+                initial["city"] = int(city_param)
+                initial["city_entry_mode"] = "select"
+            except (ValueError, TypeError):
+                # City name passed as string (e.g. from reverse geocode or map click)
+                city_obj = City.objects.filter(name__iexact=city_param.strip()).first()
+                if city_obj:
+                    initial["city"] = city_obj.id
+                    initial["city_entry_mode"] = "select"
+                else:
+                    initial["manual_city"] = city_param.strip()
+                    initial["city_entry_mode"] = "manual"
         return initial
 
     def get_context_data(self, **kwargs):

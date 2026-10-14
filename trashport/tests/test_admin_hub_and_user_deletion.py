@@ -329,3 +329,78 @@ class TestAdminUserDeletion:
         response = client.post(url)
         assert response.status_code == 403
         assert User.objects.filter(id=test_setup["collector"].id).exists()
+
+    def test_admin_can_create_hub_with_manual_city_entry(self, test_setup):
+        """Verify admin can create a hub using manual city entry, auto-registering the City."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        url = reverse("waste_management:hub_create")
+        post_data = {
+            "name": "Adimali High Range Terminal",
+            "city_entry_mode": "manual",
+            "manual_city": "Adimali Grama Panchayat, Kerala",
+            "latitude": "10.041000",
+            "longitude": "76.953000",
+            "address": "NH-85 Munnar Road, Adimali",
+            "is_active": "on",
+        }
+        response = client.post(url, data=post_data)
+        assert response.status_code == 302
+
+        # Verify City was automatically created
+        new_city = City.objects.filter(name="Adimali Grama Panchayat").first()
+        assert new_city is not None
+        assert new_city.state == "Kerala"
+
+        # Verify Hub was created with the new city
+        hub = Hub.objects.filter(name="Adimali High Range Terminal").first()
+        assert hub is not None
+        assert hub.city == new_city
+        assert float(hub.latitude) == 10.041
+
+    def test_admin_can_create_hub_with_manual_city_linking_existing(self, test_setup):
+        """Verify entering an existing city name manually reuses the existing City record."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        initial_city_count = City.objects.count()
+        url = reverse("waste_management:hub_create")
+        post_data = {
+            "name": "Marine Drive Eco Terminal",
+            "city_entry_mode": "manual",
+            "manual_city": "Kochi",  # Already exists in test_setup
+            "latitude": "9.970000",
+            "longitude": "76.280000",
+            "address": "Marine Drive Jetty",
+            "is_active": "on",
+        }
+        response = client.post(url, data=post_data)
+        assert response.status_code == 302
+
+        # Verify no duplicate City was created
+        assert City.objects.count() == initial_city_count
+        hub = Hub.objects.filter(name="Marine Drive Eco Terminal").first()
+        assert hub is not None
+        assert hub.city.name == "Kochi"
+
+    def test_hub_creation_fails_when_both_city_and_manual_city_missing(self, test_setup):
+        """Verify validation error when neither dropdown city nor manual city is supplied."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        url = reverse("waste_management:hub_create")
+        post_data = {
+            "name": "Nameless Terminal",
+            "city_entry_mode": "select",
+            "city": "",
+            "manual_city": "",
+            "latitude": "9.970000",
+            "longitude": "76.280000",
+            "address": "Marine Drive Jetty",
+            "is_active": "on",
+        }
+        response = client.post(url, data=post_data)
+        assert response.status_code == 200
+        form = response.context["form"]
+        assert "city" in form.errors
