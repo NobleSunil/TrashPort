@@ -220,6 +220,31 @@ class AdminDashboardView(LoginRequiredMixin, TemplateView):
         context["unreviewed_feedback_count"] = AnonymousFeedback.objects.filter(is_reviewed=False).count()
         context["recent_anonymous_feedbacks"] = AnonymousFeedback.objects.all().order_by("-created_at")[:6]
 
+        # Hub Infrastructure for Dashboard Map & Interactive Operations
+        all_hubs_qs = Hub.objects.select_related("city").prefetch_related("vehicles").all().order_by("city__name", "name")
+        hubs_list_data = []
+        for h in all_hubs_qs:
+            hubs_list_data.append({
+                "id": h.id,
+                "name": h.name,
+                "city": h.city.name,
+                "city_id": h.city.id,
+                "state": h.city.state,
+                "lat": float(h.latitude),
+                "lng": float(h.longitude),
+                "address": h.address or "",
+                "is_active": h.is_active,
+                "vehicle_count": h.vehicles.count(),
+                "edit_url": reverse("waste_management:hub_update", kwargs={"pk": h.id}),
+                "toggle_url": reverse("waste_management:hub_toggle_active", kwargs={"pk": h.id}),
+                "delete_url": reverse("waste_management:hub_delete", kwargs={"pk": h.id}),
+            })
+        context["dashboard_hubs"] = all_hubs_qs
+        context["dashboard_hubs_json"] = json.dumps(hubs_list_data)
+        context["total_hubs_count"] = len(hubs_list_data)
+        context["active_hubs_count"] = sum(1 for h in hubs_list_data if h["is_active"])
+        context["suspended_hubs_count"] = sum(1 for h in hubs_list_data if not h["is_active"])
+
         return context
 
 
@@ -1234,7 +1259,14 @@ class HubCreateView(LoginRequiredMixin, CreateView):
                 "is_active": h.is_active,
             })
         context["existing_hubs_json"] = json.dumps(hubs_data)
+        context["next_url"] = self.request.GET.get("next") or self.request.POST.get("next") or ""
         return context
+
+    def get_success_url(self):
+        next_url = self.request.POST.get("next") or self.request.GET.get("next")
+        if next_url:
+            return next_url
+        return reverse_lazy("waste_management:hub_list")
 
     def form_valid(self, form):
         messages.success(self.request, f"Hub '{form.instance.name}' registered successfully.")
@@ -1274,7 +1306,14 @@ class HubUpdateView(LoginRequiredMixin, UpdateView):
                 "is_active": h.is_active,
             })
         context["existing_hubs_json"] = json.dumps(hubs_data)
+        context["next_url"] = self.request.GET.get("next") or self.request.POST.get("next")
         return context
+
+    def get_success_url(self):
+        next_url = self.request.POST.get("next") or self.request.GET.get("next")
+        if next_url:
+            return next_url
+        return reverse_lazy("waste_management:hub_list")
 
     def form_valid(self, form):
         messages.success(self.request, f"Hub '{form.instance.name}' updated successfully.")
@@ -1282,11 +1321,16 @@ class HubUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class HubToggleActiveView(LoginRequiredMixin, View):
+    """Toggle a Hub between Active (Operational) and Temporarily Suspended."""
     def post(self, request, pk):
         hub = get_object_or_404(Hub, pk=pk)
         hub.is_active = not hub.is_active
         hub.save(update_fields=["is_active"])
-        messages.success(request, f"Hub '{hub.name}' status set to {'Active' if hub.is_active else 'Inactive'}.")
+        status_label = "Active (Operational)" if hub.is_active else "Temporarily Suspended"
+        messages.success(request, f"Hub '{hub.name}' status set to {status_label}.")
+        next_url = request.POST.get("next") or request.GET.get("next") or request.META.get("HTTP_REFERER")
+        if next_url:
+            return redirect(next_url)
         return redirect("waste_management:hub_list")
 
 
@@ -1303,6 +1347,7 @@ class HubDeleteView(LoginRequiredMixin, View):
 
         hub = get_object_or_404(Hub, pk=pk)
         hub_name = hub.name
+        next_url = request.POST.get("next") or request.GET.get("next") or request.META.get("HTTP_REFERER")
 
         # Check for active non-completed trip routes
         active_routes_count = hub.routes.filter(
@@ -1311,12 +1356,16 @@ class HubDeleteView(LoginRequiredMixin, View):
         if active_routes_count > 0:
             messages.error(
                 request,
-                f"Cannot delete Hub '{hub_name}' because it currently has {active_routes_count} active in-progress trip route(s). Please complete or cancel those routes first."
+                f"Cannot delete Hub '{hub_name}' because it currently has {active_routes_count} active in-progress trip route(s). Please complete or cancel those routes first, or set the hub to Temporarily Suspended."
             )
+            if next_url:
+                return redirect(next_url)
             return redirect("waste_management:hub_list")
 
         hub.delete()
         messages.success(request, f"Hub '{hub_name}' and its facility configuration have been deleted.")
+        if next_url:
+            return redirect(next_url)
         return redirect("waste_management:hub_list")
 
 

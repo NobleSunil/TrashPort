@@ -28,6 +28,11 @@
 
   <form method="post" id="hubRegistrationForm" novalidate>
     {% csrf_token %}
+    {% if request.GET.next %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+    {% elif request.POST.next %}
+      <input type="hidden" name="next" value="{{ request.POST.next }}">
+    {% endif %}
 
     <div class="row g-4">
       <!-- Left Column: Facility Configuration Form -->
@@ -178,7 +183,7 @@
               <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
                 <i class="bi bi-check-circle me-1"></i> Save Hub Facility
               </button>
-              <a href="{% url 'waste_management:hub_list' %}" class="btn btn-outline-secondary">
+              <a href="{% if request.GET.next %}{{ request.GET.next }}{% elif request.POST.next %}{{ request.POST.next }}{% else %}{% url 'waste_management:hub_list' %}{% endif %}" class="btn btn-outline-secondary">
                 Cancel
               </a>
             </div>

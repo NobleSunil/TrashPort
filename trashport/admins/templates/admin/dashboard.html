@@ -97,6 +97,11 @@
         </ul>
       </div>
 
+      <!-- Add Hub on Map Button in Admin Header -->
+      <a href="{% url 'waste_management:hub_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-success text-white fw-bold shadow-sm" title="Add a new regional waste hub facility on map">
+        <i class="bi bi-geo-alt-fill me-1"></i> Add Hub
+      </a>
+
 
       {# ------------------------------------------------------------------------- #}
       {# 1. AUTO-ASSIGN DISPATCH TRIGGER                                          #}
@@ -328,6 +333,180 @@
             <canvas id="categoryChart"></canvas>
           </div>
         </div>
+      </div>
+    </div>
+  <!-- Regional Waste Hubs & Terminals Map Operations Center -->
+  <div class="card border-0 shadow-sm rounded-4 mb-5 bg-white overflow-hidden">
+    <div class="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2 py-1">
+            <i class="bi bi-geo-alt-fill me-1"></i> Regional Terminals
+          </span>
+          <span class="text-muted small">20 km Service Radius</span>
+        </div>
+        <h5 class="card-title mb-0 fw-bold text-dark">
+          <i class="bi bi-buildings-fill text-primary me-2"></i>Hub Operations &amp; Map Management
+        </h5>
+        <span class="text-muted small">Select any hub to move its location on the map, temporarily suspend operations, or delete. Click map to add a new hub.</span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="badge bg-light text-dark border py-2 px-3 small">
+          <strong>{{ total_hubs_count }}</strong> Hubs (<strong>{{ active_hubs_count }}</strong> Active, <strong>{{ suspended_hubs_count }}</strong> Suspended)
+        </span>
+        <a href="{% url 'waste_management:hub_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-success text-white fw-bold shadow-sm">
+          <i class="bi bi-geo-alt-fill me-1"></i> Add Hub on Map
+        </a>
+        <a href="{% url 'waste_management:hub_list' %}" class="btn btn-sm btn-outline-primary shadow-sm">
+          <i class="bi bi-list-columns me-1"></i> Hub Directory
+        </a>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="row g-0">
+        <!-- Interactive Leaflet Map for Hubs (col-lg-8) -->
+        <div class="col-lg-8 border-end" style="position: relative;">
+          <!-- Map Search Bar & Legend Overlays -->
+          <div style="position: absolute; top: 12px; left: 12px; z-index: 1000; width: calc(100% - 24px); max-width: 380px;">
+            <div class="input-group input-group-sm shadow-sm bg-white rounded-3">
+              <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+              <input type="text" id="dashHubMapSearchInput" class="form-control border-start-0" placeholder="Search city or panchayath on map...">
+              <button class="btn btn-primary" type="button" id="dashHubMapSearchBtn">Find</button>
+            </div>
+          </div>
+
+          <div id="dashboardHubMap" style="height: 480px; width: 100%;"></div>
+
+          <div class="d-flex flex-wrap align-items-center justify-content-between p-2 px-3 bg-light border-top small text-muted">
+            <div class="d-flex align-items-center gap-3">
+              <span><span class="d-inline-block rounded-circle bg-success me-1" style="width: 10px; height: 10px;"></span> Active Hub (20 km zone)</span>
+              <span><span class="d-inline-block rounded-circle bg-warning me-1" style="width: 10px; height: 10px;"></span> Temporarily Suspended</span>
+            </div>
+            <div>
+              <i class="bi bi-cursor-fill text-primary me-1"></i> Click anywhere on map to add a new hub at coordinates
+            </div>
+          </div>
+        </div>
+
+        <!-- Hubs List & Quick Management Drawer (col-lg-4) -->
+        <div class="col-lg-4 d-flex flex-column bg-light-subtle">
+          <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+            <span class="small fw-bold text-uppercase text-muted">Registered Terminals</span>
+            <input type="text" id="dashHubFilterInput" class="form-control form-control-sm w-50" placeholder="Filter list...">
+          </div>
+          <div class="overflow-auto flex-grow-1 p-2" style="max-height: 440px;" id="dashHubListContainer">
+            {% for hub in dashboard_hubs %}
+              <div class="card border p-2 mb-2 bg-white shadow-xs dash-hub-item"
+                   data-hub-id="{{ hub.id }}"
+                   data-hub-name="{{ hub.name|lower }}"
+                   data-hub-city="{{ hub.city.name|lower }}"
+                   data-lat="{{ hub.latitude }}"
+                   data-lng="{{ hub.longitude }}">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <div>
+                    <strong class="text-dark d-block text-truncate" style="max-width: 180px;">{{ hub.name }}</strong>
+                    <span class="badge bg-light text-dark border small">
+                      <i class="bi bi-geo-alt text-danger me-1"></i>{{ hub.city.name }}
+                    </span>
+                  </div>
+                  {% if hub.is_active %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                      <i class="bi bi-check-circle-fill me-1"></i>Active
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                      <i class="bi bi-pause-circle-fill me-1"></i>Suspended
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="text-muted small mb-2 text-truncate" style="max-width: 280px;">
+                  <i class="bi bi-pin-map text-muted me-1"></i>{{ hub.address|default:"No physical address" }}
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-1">
+                  <!-- Focus Map Button -->
+                  <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2 small" onclick="focusHubOnMap({{ hub.id }})" title="Focus & inspect on map">
+                    <i class="bi bi-crosshair me-1"></i>Focus
+                  </button>
+                  <div class="btn-group btn-group-sm">
+                    <!-- Move Location / Edit Button -->
+                    <a href="{% url 'waste_management:hub_update' hub.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-outline-secondary py-1 px-2" title="Move Hub location / Update coordinates">
+                      <i class="bi bi-arrows-move me-1"></i>Move
+                    </a>
+                    <!-- Temporarily Suspend / Resume Button -->
+                    <form method="post" action="{% url 'waste_management:hub_toggle_active' hub.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn btn-xs {% if hub.is_active %}btn-outline-warning text-dark{% else %}btn-outline-success{% endif %} py-1 px-2" title="{% if hub.is_active %}Temporarily suspend this hub{% else %}Resume hub operations{% endif %}">
+                        {% if hub.is_active %}
+                          <i class="bi bi-pause-fill"></i> Suspend
+                        {% else %}
+                          <i class="bi bi-play-fill"></i> Resume
+                        {% endif %}
+                      </button>
+                    </form>
+                    <!-- Delete Button -->
+                    <button type="button" class="btn btn-xs btn-outline-danger py-1 px-2"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteDashHubModal"
+                            data-hub-id="{{ hub.id }}"
+                            data-hub-name="{{ hub.name }}"
+                            data-hub-city="{{ hub.city.name }}"
+                            data-vehicle-count="{{ hub.vehicles.count }}"
+                            data-delete-url="{% url 'waste_management:hub_delete' hub.id %}"
+                            title="Delete this Hub">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% empty %}
+              <div class="text-center py-4 text-muted">
+                <i class="bi bi-buildings fs-3 d-block mb-1 text-secondary"></i>
+                No hubs registered yet.
+                <a href="{% url 'waste_management:hub_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-primary d-block mt-2">
+                  Add Your First Hub
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Hub Modal for Dashboard -->
+  <div class="modal fade" id="deleteDashHubModal" tabindex="-1" aria-labelledby="deleteDashHubModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <form id="deleteDashHubForm" method="post" action="">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold text-danger" id="deleteDashHubModalLabel">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Hub Facility
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body py-3">
+            <p class="mb-2">Are you sure you want to permanently delete this hub terminal?</p>
+            <div class="p-3 bg-light rounded-3 mb-3 border">
+              <div class="fw-bold text-dark fs-6" id="dashModalHubName">Hub Name</div>
+              <div class="text-muted small" id="dashModalCityName">City / Panchayath</div>
+              <div class="text-muted small mt-1" id="dashModalVehicleCount">Assigned Vehicles: 0</div>
+            </div>
+            <div class="alert alert-warning small mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-shield-exclamation fs-5 flex-shrink-0"></i>
+              <div><strong>Operational Safeguard:</strong> Hubs with active in-progress trip routes cannot be deleted. You can choose to <strong>Temporarily Suspend</strong> the hub instead.</div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-secondary shadow-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger shadow-sm fw-bold">
+              <i class="bi bi-trash-fill me-1"></i>Confirm Deletion
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -696,6 +875,360 @@
           closeTimeout = setTimeout(function () {
             bsDropdown.hide();
           }, 180);
+        }
+      });
+    }
+
+    // =========================================================================
+    // 4. Regional Waste Hubs & Terminals Map Operations Center
+    // =========================================================================
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    const dashboardHubs = {{ dashboard_hubs_json|default:"[]"|safe }};
+    const csrfToken = '{{ csrf_token }}';
+    const hubMapContainer = document.getElementById('dashboardHubMap');
+
+    if (hubMapContainer && typeof L !== 'undefined') {
+      // Default to central Kerala Kochi [9.9312, 76.2673] or center of first hub
+      let mapCenter = [9.9312, 76.2673];
+      if (dashboardHubs.length > 0) {
+        mapCenter = [dashboardHubs[0].lat, dashboardHubs[0].lng];
+      }
+
+      const map = L.map('dashboardHubMap', {
+        center: mapCenter,
+        zoom: 10,
+        scrollWheelZoom: true
+      });
+
+      // Street & Satellite layers
+      const streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS'
+      });
+
+      L.control.layers({
+        "📍 Street Map": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
+      }, null, { position: 'topright' }).addTo(map);
+
+      // Icons
+      const activeHubIcon = L.divIcon({
+        className: 'custom-hub-icon-active',
+        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white"
+                    style="width: 34px; height: 34px; font-size: 15px; background-color: #10b981; border: 2.5px solid white; cursor: pointer;">
+                 <i class="bi bi-building"></i>
+               </div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -18]
+      });
+
+      const suspendedHubIcon = L.divIcon({
+        className: 'custom-hub-icon-suspended',
+        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white"
+                    style="width: 34px; height: 34px; font-size: 15px; background-color: #f59e0b; border: 2.5px solid white; cursor: pointer;">
+                 <i class="bi bi-pause-fill"></i>
+               </div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -18]
+      });
+
+      // Markers & Circles Registry
+      const hubMarkers = {};
+      const bounds = [];
+
+      dashboardHubs.forEach(function (hub) {
+        bounds.push([hub.lat, hub.lng]);
+
+        // Coverage circle (20 km radius)
+        const circle = L.circle([hub.lat, hub.lng], {
+          radius: 20000,
+          color: hub.is_active ? '#10b981' : '#f59e0b',
+          weight: 2,
+          dashArray: hub.is_active ? null : '6, 6',
+          fillColor: hub.is_active ? '#10b981' : '#f59e0b',
+          fillOpacity: hub.is_active ? 0.08 : 0.04
+        }).addTo(map);
+
+        circle.bindTooltip(`${escapeHtml(hub.name)}: 20 km Coverage`, { permanent: false, direction: 'top' });
+
+        // Marker
+        const marker = L.marker([hub.lat, hub.lng], {
+          icon: hub.is_active ? activeHubIcon : suspendedHubIcon,
+          title: hub.name
+        }).addTo(map);
+
+        hubMarkers[hub.id] = marker;
+
+        const currentNextUrl = encodeURIComponent(window.location.pathname + window.location.search);
+
+        const popupHtml = `
+          <div style="min-width: 250px; font-family: inherit;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+              <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-building me-1 text-primary"></i> ${escapeHtml(hub.name)}</h6>
+              <span class="badge ${hub.is_active ? 'bg-success' : 'bg-warning text-dark'} small">
+                ${hub.is_active ? 'Active' : 'Suspended'}
+              </span>
+            </div>
+            <div class="small text-muted mb-1">
+              <i class="bi bi-geo-alt text-danger me-1"></i> <strong>${escapeHtml(hub.city)}</strong>${hub.state ? ', ' + escapeHtml(hub.state) : ''}
+            </div>
+            <div class="small text-muted mb-2 text-truncate" style="max-width: 260px;" title="${escapeHtml(hub.address || '')}">
+              <i class="bi bi-pin-map text-secondary me-1"></i> ${escapeHtml(hub.address || 'No physical address')}
+            </div>
+            <div class="d-flex justify-content-between small text-muted mb-2 bg-light p-1 rounded border">
+              <span><i class="bi bi-truck text-primary me-1"></i> Vehicles: <strong>${hub.vehicle_count}</strong></span>
+              <span><i class="bi bi-compass text-secondary me-1"></i> <code>${hub.lat.toFixed(4)}, ${hub.lng.toFixed(4)}</code></span>
+            </div>
+
+            <div class="d-flex flex-column gap-1 pt-1 border-top">
+              <!-- Move Location / Edit Action -->
+              <a href="${hub.edit_url}?next=${currentNextUrl}" class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-between py-1 text-decoration-none" title="Move hub location on map">
+                <span><i class="bi bi-arrows-move me-1"></i> Move Location</span>
+                <i class="bi bi-chevron-right small text-muted"></i>
+              </a>
+
+              <!-- Toggle Suspension Action -->
+              <form method="post" action="${hub.toggle_url}" class="m-0">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                <input type="hidden" name="next" value="${window.location.pathname + window.location.search}">
+                <button type="submit" class="btn btn-sm ${hub.is_active ? 'btn-outline-warning text-dark' : 'btn-outline-success'} w-100 d-flex align-items-center justify-content-between py-1" title="${hub.is_active ? 'Temporarily suspend hub' : 'Resume operations'}">
+                  <span>
+                    ${hub.is_active ? '<i class="bi bi-pause-circle me-1"></i> Temporarily Suspend' : '<i class="bi bi-play-circle me-1"></i> Resume Operations'}
+                  </span>
+                  <span class="badge ${hub.is_active ? 'bg-warning-subtle text-dark' : 'bg-success-subtle text-success'} small">
+                    ${hub.is_active ? 'Suspend' : 'Resume'}
+                  </span>
+                </button>
+              </form>
+
+              <!-- Delete Hub Action -->
+              <button type="button" class="btn btn-sm btn-outline-danger w-100 d-flex align-items-center justify-content-between py-1"
+                      onclick="openDashDeleteModal(${hub.id}, '${escapeHtml(hub.name)}', '${escapeHtml(hub.city)}', ${hub.vehicle_count}, '${hub.delete_url}')"
+                      title="Permanently remove hub">
+                <span><i class="bi bi-trash-fill me-1"></i> Delete Hub</span>
+                <i class="bi bi-exclamation-triangle small"></i>
+              </button>
+            </div>
+          </div>
+        `;
+
+        marker.bindPopup(popupHtml);
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+      }
+
+      // Map Click Handler: Click on map to add a new hub at clicked coordinates
+      let clickMarker = null;
+      map.on('click', function (e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        if (clickMarker) {
+          map.removeLayer(clickMarker);
+        }
+
+        const createUrl = `{% url 'waste_management:hub_create' %}?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+
+        clickMarker = L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: 'custom-click-pin',
+            html: `<div class="shadow-lg rounded-circle d-flex align-items-center justify-content-center text-white bg-success"
+                        style="width: 36px; height: 36px; font-size: 16px; border: 3px solid white; cursor: pointer;">
+                     <i class="bi bi-plus-lg"></i>
+                   </div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -20]
+          })
+        }).addTo(map);
+
+        const clickPopup = `
+          <div class="p-2" style="min-width: 230px; font-family: inherit;">
+            <div class="fw-bold text-success mb-1 d-flex align-items-center gap-1">
+              <i class="bi bi-geo-alt-fill"></i> Add Hub at this Location
+            </div>
+            <div class="small text-muted mb-2">
+              <div><strong>Latitude:</strong> ${lat.toFixed(6)}</div>
+              <div><strong>Longitude:</strong> ${lng.toFixed(6)}</div>
+            </div>
+            <a href="${createUrl}" class="btn btn-sm btn-success text-white fw-bold w-100 shadow-sm">
+              <i class="bi bi-plus-circle me-1"></i> Register Hub Here
+            </a>
+          </div>
+        `;
+
+        clickMarker.bindPopup(clickPopup).openPopup();
+      });
+
+      // Global function to focus and open popup for a selected hub from the side list
+      window.focusHubOnMap = function (hubId) {
+        const marker = hubMarkers[hubId];
+        if (marker) {
+          const latLng = marker.getLatLng();
+          map.setView(latLng, 13, { animate: true });
+          marker.openPopup();
+          const mapEl = document.getElementById('dashboardHubMap');
+          if (mapEl) {
+            mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      };
+
+      // Map Forward Geocoding Search (Find city/panchayath in Kerala)
+      const searchInput = document.getElementById('dashHubMapSearchInput');
+      const searchBtn = document.getElementById('dashHubMapSearchBtn');
+
+      function executeMapSearch() {
+        const query = searchInput ? searchInput.value.trim() : '';
+        if (!query) return;
+
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Kerala, India')}`)
+          .then(res => res.json())
+          .then(data => {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = 'Find';
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              map.setView([lat, lon], 12, { animate: true });
+
+              if (clickMarker) map.removeLayer(clickMarker);
+
+              const createUrl = `{% url 'waste_management:hub_create' %}?lat=${lat.toFixed(6)}&lng=${lon.toFixed(6)}&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+
+              clickMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                  className: 'custom-search-pin',
+                  html: `<div class="shadow-lg rounded-circle d-flex align-items-center justify-content-center text-white bg-primary"
+                              style="width: 36px; height: 36px; font-size: 16px; border: 3px solid white;">
+                           <i class="bi bi-search"></i>
+                         </div>`,
+                  iconSize: [36, 36],
+                  iconAnchor: [18, 18],
+                  popupAnchor: [0, -20]
+                })
+              }).addTo(map);
+
+              clickMarker.bindPopup(`
+                <div class="p-2" style="min-width: 230px;">
+                  <h6 class="fw-bold mb-1 text-dark">${escapeHtml(data[0].display_name.split(',')[0])}</h6>
+                  <div class="small text-muted mb-2">Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}</div>
+                  <a href="${createUrl}" class="btn btn-sm btn-success text-white fw-bold w-100 shadow-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Add Hub Here
+                  </a>
+                </div>
+              `).openPopup();
+            } else {
+              alert("Location not found. Try searching with city or panchayath name.");
+            }
+          })
+          .catch(err => {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = 'Find';
+            console.error("Geocoding search failed:", err);
+          });
+      }
+
+      if (searchBtn) searchBtn.addEventListener('click', executeMapSearch);
+      if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            executeMapSearch();
+          }
+        });
+      }
+
+      // Hub Filter in Side Drawer
+      const filterInput = document.getElementById('dashHubFilterInput');
+      if (filterInput) {
+        filterInput.addEventListener('input', function () {
+          const term = filterInput.value.toLowerCase().trim();
+          const items = document.querySelectorAll('.dash-hub-item');
+          items.forEach(function (item) {
+            const name = item.getAttribute('data-hub-name') || '';
+            const city = item.getAttribute('data-hub-city') || '';
+            if (!term || name.includes(term) || city.includes(term)) {
+              item.style.display = '';
+            } else {
+              item.style.display = 'none';
+            }
+          });
+        });
+      }
+
+      // Invalidate map size on window resize
+      window.addEventListener('resize', function () {
+        map.invalidateSize();
+      });
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+    }
+
+    // Global Delete Modal Opener (called from Leaflet popup or button)
+    window.openDashDeleteModal = function (hubId, hubName, hubCity, vehicleCount, deleteUrl) {
+      const form = document.getElementById('deleteDashHubForm');
+      if (form) {
+        form.action = deleteUrl || `/waste/manage/hubs/${hubId}/delete/`;
+      }
+      const nameEl = document.getElementById('dashModalHubName');
+      if (nameEl) nameEl.textContent = hubName;
+      const cityEl = document.getElementById('dashModalCityName');
+      if (cityEl) cityEl.textContent = hubCity;
+      const vehicleEl = document.getElementById('dashModalVehicleCount');
+      if (vehicleEl) vehicleEl.textContent = `Assigned Vehicles: ${vehicleCount}`;
+
+      const modalEl = document.getElementById('deleteDashHubModal');
+      if (modalEl) {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+      }
+    };
+
+    // Modal show listener for buttons in the side list using Bootstrap data attributes
+    const dashDeleteModalEl = document.getElementById('deleteDashHubModal');
+    if (dashDeleteModalEl) {
+      dashDeleteModalEl.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        if (button) {
+          const hubId = button.getAttribute('data-hub-id');
+          const hubName = button.getAttribute('data-hub-name');
+          const hubCity = button.getAttribute('data-hub-city');
+          const vehicleCount = button.getAttribute('data-vehicle-count') || '0';
+          const deleteUrl = button.getAttribute('data-delete-url') || `/waste/manage/hubs/${hubId}/delete/`;
+
+          const form = document.getElementById('deleteDashHubForm');
+          if (form) form.action = deleteUrl;
+
+          const nameEl = document.getElementById('dashModalHubName');
+          if (nameEl) nameEl.textContent = hubName;
+
+          const cityEl = document.getElementById('dashModalCityName');
+          if (cityEl) cityEl.textContent = hubCity;
+
+          const vehicleEl = document.getElementById('dashModalVehicleCount');
+          if (vehicleEl) vehicleEl.textContent = `Assigned Vehicles: ${vehicleCount}`;
         }
       });
     }

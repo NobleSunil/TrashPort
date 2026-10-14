@@ -404,3 +404,99 @@ class TestAdminUserDeletion:
         assert response.status_code == 200
         form = response.context["form"]
         assert "city" in form.errors
+
+    def test_admin_dashboard_renders_hub_map_and_hubs_context(self, test_setup):
+        """Verify Admin Dashboard renders the hub map container, controls, and hub counts."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        dashboard_url = reverse("waste_management:dashboard")
+        response = client.get(dashboard_url)
+        assert response.status_code == 200
+
+        # Verify context data injected
+        assert "dashboard_hubs" in response.context
+        assert "dashboard_hubs_json" in response.context
+        assert response.context["total_hubs_count"] == 1
+        assert response.context["active_hubs_count"] == 1
+        assert response.context["suspended_hubs_count"] == 0
+
+        # Verify HTML markup elements rendered
+        content = response.content.decode("utf-8")
+        assert "dashboardHubMap" in content
+        assert "Add Hub on Map" in content
+        assert "deleteDashHubModal" in content
+        assert "dashHubFilterInput" in content
+        assert "Kochi North Hub" in content
+
+    def test_dashboard_hub_toggle_active_with_next_redirect(self, test_setup):
+        """Verify toggling hub suspension from dashboard respects 'next' parameter redirect."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        hub = test_setup["hub"]
+        assert hub.is_active is True
+
+        toggle_url = reverse("waste_management:hub_toggle_active", args=[hub.id])
+        dashboard_url = reverse("waste_management:dashboard")
+
+        # Suspend hub
+        response = client.post(toggle_url, data={"next": dashboard_url})
+        assert response.status_code == 302
+        assert response.url == dashboard_url
+
+        hub.refresh_from_db()
+        assert hub.is_active is False
+
+        # Resume hub
+        response = client.post(toggle_url, data={"next": dashboard_url})
+        assert response.status_code == 302
+        assert response.url == dashboard_url
+
+        hub.refresh_from_db()
+        assert hub.is_active is True
+
+    def test_dashboard_hub_update_relocation_with_next_redirect(self, test_setup):
+        """Verify editing/moving hub coordinates returns to dashboard when next is specified."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        hub = test_setup["hub"]
+        update_url = reverse("waste_management:hub_update", args=[hub.id])
+        dashboard_url = reverse("waste_management:dashboard")
+
+        post_data = {
+            "name": "Kochi North Hub Relocated",
+            "city": hub.city.id,
+            "city_entry_mode": "select",
+            "latitude": "9.940000",
+            "longitude": "76.290000",
+            "address": "Edappally Toll, Kochi",
+            "is_active": "on",
+            "next": dashboard_url,
+        }
+
+        response = client.post(update_url, data=post_data)
+        assert response.status_code == 302
+        assert response.url == dashboard_url
+
+        hub.refresh_from_db()
+        assert hub.name == "Kochi North Hub Relocated"
+        assert float(hub.latitude) == 9.94
+        assert float(hub.longitude) == 76.29
+
+    def test_dashboard_hub_delete_with_next_redirect(self, test_setup):
+        """Verify deleting a hub from dashboard modal redirects back to dashboard."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        hub = test_setup["hub"]
+        delete_url = reverse("waste_management:hub_delete", args=[hub.id])
+        dashboard_url = reverse("waste_management:dashboard")
+
+        response = client.post(delete_url, data={"next": dashboard_url})
+        assert response.status_code == 302
+        assert response.url == dashboard_url
+
+        assert not Hub.objects.filter(id=hub.id).exists()
+
