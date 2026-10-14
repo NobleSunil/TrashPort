@@ -14,10 +14,8 @@ def allauth_settings(request):
 
     Keys:
     - ACCOUNT_ALLOW_REGISTRATION: Boolean controlling whether public signups are permitted.
-    - FIREBASE_WEB_API_KEY: Public Web API Key for initializing the browser Firebase SDK.
     """
     return {
         "ACCOUNT_ALLOW_REGISTRATION": settings.ACCOUNT_ALLOW_REGISTRATION,
-        "FIREBASE_WEB_API_KEY": getattr(settings, "FIREBASE_WEB_API_KEY", "YOUR_API_KEY"),
     }
 

@@ -48,13 +48,27 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
         self.rate_limiter = ChatbotRateLimiter()
 
     async def connect(self):
+        # 1. Prioritize secure HTTP session authentication (provided by Channels AuthMiddlewareStack)
+        # This eliminates the need to expose authentication tokens in client-side HTML/DOM scripts.
+        scope_user = self.scope.get("user")
+        if scope_user and scope_user.is_authenticated:
+            self.user = scope_user
+            await self.accept()
+            name = scope_user.name or scope_user.email
+            await self.send(json.dumps({
+                "type": "greeting",
+                "message": f"Hi {name}! How can I help you today?"
+            }))
+            return
+
+        # 2. Fall back to token-based verification for mobile / headless API clients
         query_string = self.scope.get("query_string", b"").decode("utf-8")
         params = parse_qs(query_string)
         token_list = params.get("token", [])
         token = token_list[0] if token_list else None
 
         if not token:
-            logger.warning("WebSocket connection rejected: token missing from query parameters.")
+            logger.warning("WebSocket connection rejected: user unauthenticated and token missing.")
             await self.close(code=4001)
             return
 

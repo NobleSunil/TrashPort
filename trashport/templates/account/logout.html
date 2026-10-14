@@ -39,11 +39,11 @@
             Signing out…
         </div>
 
-        <!-- POST form to Django — Firebase signOut() is called FIRST via JS below -->
+        <!-- Secure server-side session termination form with CSRF token -->
         <form id="logout-form" method="POST" action="{% url 'account_logout' %}">
             {% csrf_token %}
-            <button id="signout-btn" type="button" onclick="doSignOut()"
-                class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] mb-3">
+            <button id="signout-btn" type="submit"
+                class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] mb-3 cursor-pointer shadow-sm">
                 Yes, Sign Out
             </button>
         </form>
@@ -54,43 +54,5 @@
         </a>
 
     </div>
-
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getAuth, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-        const app = initializeApp({
-            apiKey:            "{{ FIREBASE_WEB_API_KEY|default:'AIzaSyYourFirebaseWebApiKeyHere' }}",
-            authDomain:        "trashport-project.firebaseapp.com",
-            projectId:         "trashport-project",
-            storageBucket:     "trashport-project.firebasestorage.app",
-            messagingSenderId: "123456789012",
-            appId:             "1:123456789012:web:abcdef1234567890",
-            measurementId:     "G-XXXXXXXXXX"
-        });
-
-        const auth = getAuth(app);
-
-        window.doSignOut = async () => {
-            const btn    = document.getElementById('signout-btn');
-            const status = document.getElementById('status');
-            btn.disabled = true;
-            btn.textContent = 'Signing out…';
-            status.classList.remove('hidden');
-
-            try {
-                // 1. Sign out of Firebase (clears client-side auth state)
-                //    Without this, onAuthStateChanged on the login page
-                //    would immediately re-authenticate the user.
-                await signOut(auth);
-            } catch (e) {
-                // Firebase sign-out failed (e.g. already signed out) — continue anyway
-                console.warn('Firebase signOut:', e.message);
-            }
-
-            // 2. Submit the form to sign out of Django session
-            document.getElementById('logout-form').submit();
-        };
-    </script>
 </body>
 </html>

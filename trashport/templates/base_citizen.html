@@ -437,9 +437,7 @@
     </div>
   </div>
 
-  <script>
-    const FIREBASE_TOKEN = "mock-token-{% if request.user.firebase_uid %}{{ request.user.firebase_uid }}{% else %}{{ request.user.email }}{% endif %}";
-  </script>
+  <!-- Chatbot scripts authenticate via HTTP session cookie (no client-side tokens exposed) -->
   <script src="{% static 'js/chatbot/bubble.js' %}"></script>
   <script src="{% static 'js/chatbot/widget.js' %}"></script>
   {% endif %}

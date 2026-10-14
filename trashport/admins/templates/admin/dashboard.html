@@ -183,6 +183,26 @@
         <!-- Plus icon for creating a new item -->
         <i class="bi bi-plus-circle me-1"></i> New Category
       </a>
+
+      {# ------------------------------------------------------------------------- #}
+      {# 8. HUBS DIRECTORY & NETWORK MAP                                            #}
+      {# Switchable directory and interactive map of city sorting hubs/terminals.   #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Link to hubs management directory -->
+      <a href="{% url 'waste_management:hub_list' %}" class="btn btn-outline-primary shadow-sm">
+        <!-- Buildings icon for regional hubs -->
+        <i class="bi bi-buildings me-1"></i> Hubs Directory
+      </a>
+
+      {# ------------------------------------------------------------------------- #}
+      {# 9. ADD HUB ON MAP                                                         #}
+      {# Interactive Leaflet map registration to plot hub coordinates and radius.  #}
+      {# ------------------------------------------------------------------------- #}
+      <!-- Direct action button to register a new hub with interactive Leaflet map -->
+      <a href="{% url 'waste_management:hub_create' %}" class="btn btn-success shadow-sm text-white fw-bold">
+        <!-- Map pin icon for geospatial hub plotting -->
+        <i class="bi bi-geo-alt-fill me-1"></i> Add Hub on Map
+      </a>
     </div>
   </div>
 

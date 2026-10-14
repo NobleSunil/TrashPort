@@ -17,7 +17,8 @@ const sessionKey = (window.crypto && typeof window.crypto.randomUUID === "functi
 
 // Determine secure WebSocket scheme based on current page protocol
 const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/?token=${encodeURIComponent(typeof FIREBASE_TOKEN !== "undefined" ? FIREBASE_TOKEN : "")}`;
+const tokenParam = (typeof FIREBASE_TOKEN !== "undefined" && FIREBASE_TOKEN) ? `?token=${encodeURIComponent(FIREBASE_TOKEN)}` : "";
+const wsUrl = `${wsScheme}://${window.location.host}/ws/chatbot/${tokenParam}`;
 
 let ws = null;
 let reconnectTimeout = null;
