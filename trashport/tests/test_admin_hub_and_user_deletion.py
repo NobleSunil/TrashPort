@@ -157,6 +157,32 @@ class TestAdminHubMapOperations:
         assert "hubs_json" in response.context
         assert "Kochi North Hub" in response.context["hubs_json"]
 
+    def test_operations_report_template_renders_curly_braces_cleanly(self, test_setup):
+        """Verify Operations Report renders date range and admin email without literal curly braces."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        url = reverse("waste_management:operations_report")
+        response = client.get(url)
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        # Must not contain un-evaluated literal template tags
+        assert "{{ date_range_display" not in content
+        assert "{{ request.user.email" not in content
+        assert "admin@trashport.org" in content
+
+    def test_admin_dashboard_renders_reports_dropdown_with_hover_wrapper(self, test_setup):
+        """Verify Admin Dashboard renders the Reports & Exports button with hover-responsive container."""
+        client = Client()
+        client.force_login(test_setup["admin"])
+
+        url = reverse("waste_management:dashboard")
+        response = client.get(url)
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "reports-dropdown-wrapper" in content
+        assert "Reports &amp; Exports" in content or "Reports & Exports" in content
+
 
 @pytest.mark.django_db
 class TestAdminUserDeletion:

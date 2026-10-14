@@ -14,6 +14,8 @@
     padding: 24px 28px;
     box-shadow: 0 10px 30px -10px rgba(5, 150, 105, 0.08);
     margin-bottom: 24px;
+    position: relative;
+    z-index: 1050; /* Stacks header and its menus in front of cards below */
   }
   .quick-ops-box {
     background: linear-gradient(135deg, rgba(236, 253, 245, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%) !important;
@@ -21,6 +23,37 @@
     border: 1px solid rgba(16, 185, 129, 0.25) !important;
     border-radius: 16px !important;
     box-shadow: 0 4px 20px rgba(5, 150, 105, 0.06) !important;
+  }
+  /* Reports & Exports Hover & Front-Popping Dropdown */
+  .reports-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  .reports-dropdown-menu {
+    z-index: 9999 !important;
+    min-width: 290px;
+    border-radius: 12px;
+    box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.22), 0 6px 14px -2px rgba(15, 23, 42, 0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    margin-top: 6px;
+    animation: dropdownPopFront 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @media (min-width: 768px) {
+    .reports-dropdown-wrapper:hover > .reports-dropdown-menu {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
+  @keyframes dropdownPopFront {
+    0% {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>
 {% endblock css %}
@@ -38,15 +71,15 @@
       <p class="text-muted mb-0">System performance, waste collection analytics, and dispatch management</p>
     </div>
     <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0 justify-content-md-end" style="max-width: 720px;">
-      <!-- Merged Generate & Export Reports Button -->
-      <div class="dropdown">
-        <button class="btn btn-outline-primary dropdown-toggle shadow-sm" type="button" id="adminReportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-file-earmark-bar-graph me-1"></i> Reports & Exports
+      <!-- Merged Generate & Export Reports Button with Hover & Front-Popping Menu -->
+      <div class="dropdown reports-dropdown-wrapper">
+        <button class="btn btn-primary dropdown-toggle shadow-sm text-white fw-semibold" type="button" id="adminReportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-file-earmark-bar-graph me-1"></i> Reports &amp; Exports
         </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" aria-labelledby="adminReportsDropdown">
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 py-2 reports-dropdown-menu" aria-labelledby="adminReportsDropdown">
           <li>
             <a class="dropdown-item py-2 fw-semibold" href="{% url 'waste_management:operations_report' %}">
-              <i class="bi bi-graph-up-arrow me-2 text-primary"></i> Operations & Analytics Report (with Graphs)
+              <i class="bi bi-graph-up-arrow me-2 text-primary"></i> Operations &amp; Analytics Report (with Graphs)
             </a>
           </li>
           <li><hr class="dropdown-divider"></li>
@@ -63,6 +96,7 @@
           </li>
         </ul>
       </div>
+
 
       {# ------------------------------------------------------------------------- #}
       {# 1. AUTO-ASSIGN DISPATCH TRIGGER                                          #}
@@ -622,6 +656,30 @@
         }
       }
     });
+
+    // 3. Smooth Hover & Focus Activation for Reports & Exports Dropdown
+    const reportsWrapper = document.querySelector('.reports-dropdown-wrapper');
+    if (reportsWrapper) {
+      const toggleBtn = reportsWrapper.querySelector('#adminReportsDropdown');
+      let bsDropdown = bootstrap.Dropdown.getOrCreateInstance(toggleBtn);
+      let closeTimeout = null;
+
+      reportsWrapper.addEventListener('mouseenter', function () {
+        if (window.innerWidth >= 768) {
+          if (closeTimeout) clearTimeout(closeTimeout);
+          bsDropdown.show();
+        }
+      });
+
+      reportsWrapper.addEventListener('mouseleave', function () {
+        if (window.innerWidth >= 768) {
+          closeTimeout = setTimeout(function () {
+            bsDropdown.hide();
+          }, 180);
+        }
+      });
+    }
   });
 </script>
+
 {% endblock %}
