@@ -125,6 +125,30 @@ class TestCollectorHubSignupRequirement:
         form.is_valid()
         assert "hub" not in form.errors
 
+    def test_citizen_signup_with_optional_hub(self, base_hub_setup, rf):
+        """Citizens can optionally select a hub and have it saved to their profile."""
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.sessions.middleware import SessionMiddleware
+        kochi_hub = base_hub_setup["kochi_hub"]
+        form_data = {
+            "name": "Citizen With Hub",
+            "email": "citizen_hub@example.com",
+            "role": User.Roles.CITIZEN,
+            "hub": kochi_hub.id,
+            "password1": "Password123!",
+            "password2": "Password123!",
+        }
+        form = UserSignupForm(data=form_data)
+        assert form.is_valid()
+        request = rf.post(reverse("account_signup"), data=form_data)
+        request.user = AnonymousUser()
+        middleware = SessionMiddleware(lambda r: None)
+        middleware.process_request(request)
+        request.session.save()
+        user = form.save(request)
+        assert user.hub == kochi_hub
+        assert user.citizen_profile.hub == kochi_hub
+
     def test_signup_page_renders_hub_selector(self, base_hub_setup):
         """Signup page renders the searchable hub combobox and hub items."""
         client = Client()
@@ -559,6 +583,12 @@ class TestCollectorAadhaarOtpFlow:
         profile.otp_hash = sha256_hash(known_otp)
         profile.save()
 
+        # Check dashboard before verification: pending banner must be visible
+        dashboard_pre = client.get("/dashboard/")
+        assert dashboard_pre.status_code == 200
+        assert dashboard_pre.context["aadhaar_verified"] is False
+        assert "Aadhaar Verification Pending" in dashboard_pre.content.decode("utf-8")
+
         verify_res_good = client.post(
             verify_url,
             data=json.dumps({"reference_id": reference_id, "otp": known_otp}),
@@ -570,4 +600,13 @@ class TestCollectorAadhaarOtpFlow:
         profile.refresh_from_db()
         assert profile.aadhaar_verified is True
         assert profile.otp_hash is None  # cleared upon verification
+
+        # Check collector dashboard context & template rendering after verification
+        dashboard_post = client.get("/dashboard/")
+        assert dashboard_post.status_code == 200
+        assert dashboard_post.context["aadhaar_verified"] is True
+        assert dashboard_post.context["is_verified"] is True
+        content_after = dashboard_post.content.decode("utf-8")
+        assert "Aadhaar Verified" in content_after
+        assert "Aadhaar Verification Pending" not in content_after
 

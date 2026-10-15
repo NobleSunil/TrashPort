@@ -65,6 +65,7 @@ from trashport.core.maps.models import CollectorLocation
 from trashport.core.maps.services import GeoService
 from trashport.services.payments.models import UPIPayoutRequest
 from trashport.users.models import User
+from trashport.collectors.models import CollectorAadhaarProfile
 from trashport.core.waste_management.models import CollectorPayoutSetting, PickupRequest
 
 
@@ -154,7 +155,9 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         )
 
         # --- Aadhaar verification status ---
-        # Syncs user.is_verified with the Aadhaar pro        # --- Payout formula settings (for display in dashboard sidebar) ---
+        self._sync_aadhaar_status(user, context)
+
+        # --- Payout formula settings (for display in dashboard sidebar) ---
         context["payout_settings"] = CollectorPayoutSetting.get_settings()
 
         # --- Hub registration context & Map Display ---
@@ -282,16 +285,16 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
         from trashport.collectors.models import CollectorAadhaarProfile
         try:
             aadhaar_profile = CollectorAadhaarProfile.objects.get(collector=user)
-            context["aadhaar_verified"] = aadhaar_profile.aadhaar_verified
+            context["aadhaar_verified"] = bool(aadhaar_profile.aadhaar_verified)
             context["aadhaar_masked"] = aadhaar_profile.aadhaar_masked or ""
             if aadhaar_profile.aadhaar_verified:
                 context["is_verified"] = True
                 context["verification_status"] = "APPROVED"
                 # Auto-correct: if Aadhaar is verified but User flags are stale, fix them
-                if not user.is_verified:
+                if not getattr(user, "is_verified", False):
                     user.is_verified = True
                     user.verification_status = "APPROVED"
-                    user.save(update_fields=["is_verified", "verification_status"])
+                    user.save(update_fields=["verification_status"])
         except CollectorAadhaarProfile.DoesNotExist:
             # Collector hasn't submitted Aadhaar yet
             context["aadhaar_verified"] = False

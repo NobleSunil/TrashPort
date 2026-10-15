@@ -165,7 +165,13 @@ def send_aadhaar_otp_email(to_email: str, otp: str, masked_aadhaar: str):
         <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">© TrashPort Smart Waste Logistics</p>
     </div>
     """
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@trashport.com")
+    host_user = getattr(settings, "EMAIL_HOST_USER", "")
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "")
+    if not from_email or "noreply@" in from_email or "support@trashport.local" in from_email:
+        if host_user:
+            from_email = f"TrashPort <{host_user}>"
+        else:
+            from_email = "TrashPort <noreply@trashport.com>"
 
     # 1. Attempt primary send_mail via configured Django backend
     try:

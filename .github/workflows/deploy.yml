@@ -34,19 +34,28 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            # Update email SMTP credentials in EC2 production .env
+            # Update email SMTP credentials and delivery settings in EC2 production .env
             if [ -f .env ]; then
-              if grep -q "^DJANGO_EMAIL_HOST_PASSWORD=" .env; then
-                sed -i 's/^DJANGO_EMAIL_HOST_PASSWORD=.*/DJANGO_EMAIL_HOST_PASSWORD=jteustnqureuvptq/' .env
-              else
-                echo "DJANGO_EMAIL_HOST_PASSWORD=jteustnqureuvptq" >> .env
-              fi
-              if grep -q "^DJANGO_EMAIL_HOST_USER=" .env; then
-                sed -i 's/^DJANGO_EMAIL_HOST_USER=.*/DJANGO_EMAIL_HOST_USER=albertcyriac443@gmail.com/' .env
-              else
-                echo "DJANGO_EMAIL_HOST_USER=albertcyriac443@gmail.com" >> .env
-              fi
-              echo "✅ Successfully updated production .env email credentials."
+              set_env_var() {
+                local key="$1"
+                local val="$2"
+                if grep -q "^${key}=" .env; then
+                  sed -i "s|^${key}=.*|${key}=${val}|" .env
+                else
+                  echo "${key}=${val}" >> .env
+                fi
+              }
+
+              set_env_var "DJANGO_EMAIL_BACKEND" "django.core.mail.backends.smtp.EmailBackend"
+              set_env_var "DJANGO_EMAIL_HOST" "smtp.gmail.com"
+              set_env_var "DJANGO_EMAIL_PORT" "465"
+              set_env_var "DJANGO_EMAIL_USE_SSL" "True"
+              set_env_var "DJANGO_EMAIL_USE_TLS" "False"
+              set_env_var "DJANGO_EMAIL_HOST_USER" "albertcyriac443@gmail.com"
+              set_env_var "DJANGO_EMAIL_HOST_PASSWORD" "jteustnqureuvptq"
+              set_env_var "DJANGO_DEFAULT_FROM_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
+              set_env_var "DJANGO_SERVER_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
+              echo "✅ Successfully updated production .env email credentials and Port 465 SSL configuration."
             fi
 
             # Rebuild and restart Docker containers in background

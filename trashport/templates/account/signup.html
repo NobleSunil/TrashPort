@@ -33,10 +33,10 @@
 </head>
 <body class="font-sans bg-slate-50 bg-grid-pattern flex items-center justify-center min-h-screen p-4 text-slate-900 selection:bg-emerald-500 selection:text-white">
 
-    <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 relative overflow-hidden my-8">
+    <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 relative my-8">
 
         <!-- Top accent line -->
-        <div class="h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-amber-400 absolute top-0 left-0 right-0"></div>
+        <div class="h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-amber-400 absolute top-0 left-0 right-0 rounded-t-2xl"></div>
 
         <!-- Logo / Title -->
         <div class="text-center mb-6">
@@ -93,11 +93,13 @@
                 {% endif %}
             </div>
 
-            <!-- Operating Hub / Panchayath (Required for Collectors) -->
-            <div id="hub-container" class="{% if form.role.value != 'COLLECTOR' %}hidden{% endif %} transition-all">
+            <!-- Operating Hub / Panchayath (Available for both, required for Collectors) -->
+            <div id="hub-container" class="transition-all">
                 <label for="id_hub" class="block text-xs font-mono font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                     <span>Operating Hub / Panchayath</span>
-                    <span class="text-emerald-600 font-semibold lowercase text-[11px]">(Required for Collectors)</span>
+                    <span id="hub-requirement-badge" class="{% if form.role.value == 'COLLECTOR' %}text-emerald-600 font-semibold{% else %}text-slate-400 font-normal{% endif %} lowercase text-[11px]">
+                        {% if form.role.value == 'COLLECTOR' %}(Required for Collectors){% else %}(Optional for Citizens){% endif %}
+                    </span>
                 </label>
                 
                 <!-- Native Hidden Select for Standard Form Submission -->
@@ -198,7 +200,7 @@
                 {% if form.hub.errors %}
                     <p class="text-xs text-rose-600 mt-1">{{ form.hub.errors.0 }}</p>
                 {% endif %}
-                <p class="text-[11px] text-slate-400 mt-1">Select your initial home base hub. Your operating zone dynamically updates to your live GPS position when viewing pickup requests.</p>
+                <p id="hub-helper-text" class="text-[11px] text-slate-400 mt-1">💡 Choose your local Panchayath or collection hub. Collectors operate within 25 km of this base; citizens use this to anchor their local service area.</p>
             </div>
 
             <!-- Full Name -->
@@ -444,6 +446,12 @@
                 }
                 toggleHubDropdown();
             });
+            hubTrigger.addEventListener("keydown", function(e) {
+                if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openHubDropdown();
+                }
+            });
         }
 
         if (hubClearBtn) {
@@ -495,14 +503,23 @@
 
         function updateHubVisibility() {
             if (roleSelect && hubContainer) {
+                const badge = document.getElementById("hub-requirement-badge");
                 if (roleSelect.value === "COLLECTOR") {
                     hubContainer.classList.remove("hidden");
+                    if (badge) {
+                        badge.textContent = "(Required for Collectors)";
+                        badge.className = "text-emerald-600 font-semibold lowercase text-[11px]";
+                    }
                     if (hubSelect) hubSelect.required = true;
                 } else {
-                    hubContainer.classList.add("hidden");
+                    // Available for Citizens as well (optional)
+                    hubContainer.classList.remove("hidden");
+                    if (badge) {
+                        badge.textContent = "(Optional for Citizens)";
+                        badge.className = "text-slate-400 font-normal lowercase text-[11px]";
+                    }
                     if (hubSelect) {
                         hubSelect.required = false;
-                        clearHubSelection();
                     }
                 }
             }

@@ -93,10 +93,16 @@ class NotificationService:
             html_message = f"<p>{subject}</p>"
             text_message = subject
 
-        # Retrieve sender email from Django configuration (defaults to support email)
-        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "support@trashport.local")
+        # Align sender email with authenticated SMTP user to prevent Gmail delivery rejections
+        host_user = getattr(settings, "EMAIL_HOST_USER", "")
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "")
+        if not from_email or "noreply@" in from_email or "support@trashport.local" in from_email:
+            if host_user:
+                from_email = f"TrashPort <{host_user}>"
+            else:
+                from_email = "TrashPort <noreply@trashport.com>"
 
-        # Dispatch email through configured Django email backend
+        # 1. Dispatch email through configured Django email backend
         try:
             send_mail(
                 subject=subject,
@@ -104,8 +110,48 @@ class NotificationService:
                 from_email=from_email,
                 recipient_list=[to_email],
                 html_message=html_message,
-                fail_silently=True,  # Prevent uncaught exceptions from breaking web requests
+                fail_silently=False,
             )
-            logger.info(f"Email sent to {to_email}: {subject}")
-        except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {e}")
+            logger.info("Email sent successfully to %s: %s", to_email, subject)
+            return True
+        except Exception as primary_err:
+            logger.warning(
+                "Primary email dispatch to %s failed (%s). Attempting Port 465 SSL fallback...",
+                to_email,
+                primary_err,
+            )
+
+            # 2. Automated fallback via Port 465 SSL if Gmail SMTP credentials are configured
+            host_pass = getattr(settings, "EMAIL_HOST_PASSWORD", "")
+            host = getattr(settings, "EMAIL_HOST", "smtp.gmail.com")
+
+            if host_user and host_pass and "gmail" in host.lower():
+                try:
+                    from django.core.mail import get_connection, EmailMultiAlternatives
+                    ssl_conn = get_connection(
+                        backend="django.core.mail.backends.smtp.EmailBackend",
+                        host=host,
+                        port=465,
+                        username=host_user,
+                        password=host_pass,
+                        use_ssl=True,
+                        use_tls=False,
+                        timeout=10,
+                    )
+                    email_obj = EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_message,
+                        from_email=from_email,
+                        to=[to_email],
+                        connection=ssl_conn,
+                    )
+                    if html_message:
+                        email_obj.attach_alternative(html_message, "text/html")
+                    email_obj.send(fail_silently=False)
+                    logger.info("Email sent successfully via Port 465 SSL fallback to %s: %s", to_email, subject)
+                    return True
+                except Exception as ssl_err:
+                    logger.error("Port 465 SSL fallback also failed for %s: %s", to_email, ssl_err)
+
+            logger.error("Failed to deliver email to %s: %s", to_email, primary_err)
+            return False

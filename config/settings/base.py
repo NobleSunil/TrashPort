@@ -272,9 +272,9 @@ EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="TrashPort <noreply@trashport.com>",
+    default=f"TrashPort <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "TrashPort <noreply@trashport.com>",
 )
-SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default="TrashPort <noreply@trashport.com>")
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 10
 

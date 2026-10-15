@@ -103,7 +103,7 @@ class UserSignupForm(SignupForm):
         # Assign custom registration fields before saving
         user.role = self.cleaned_data["role"]
         user.name = self.cleaned_data["name"]
-        if user.role == "COLLECTOR" and self.cleaned_data.get("hub"):
+        if self.cleaned_data.get("hub"):
             user.hub = self.cleaned_data["hub"]
         adapter.save_user(request, user, self)
         self.custom_signup(request, user)

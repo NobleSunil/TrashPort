@@ -231,23 +231,31 @@ class User(AbstractUser):
 
     @property
     def hub(self):
-        """Get collection hub from CollectorProfile."""
+        """Get collection hub from CollectorProfile or CitizenProfile."""
         if hasattr(self, "_pending_hub"):
             return self._pending_hub
-        if hasattr(self, "collector_profile"):
+        if self.role == self.Roles.COLLECTOR and hasattr(self, "collector_profile"):
             return self.collector_profile.hub
+        elif hasattr(self, "citizen_profile"):
+            return getattr(self.citizen_profile, "hub", None)
         return None
 
     @hub.setter
     def hub(self, value):
-        """Set collection hub in CollectorProfile."""
+        """Set collection hub in role-specific profile."""
         if not self.pk:
             self._pending_hub = value
             return
-        profile = self._get_collector_profile()
-        profile.hub = value
-        profile.save()
-        self.collector_profile = profile
+        if self.role == self.Roles.COLLECTOR:
+            profile = self._get_collector_profile()
+            profile.hub = value
+            profile.save()
+            self.collector_profile = profile
+        else:
+            profile = self._get_citizen_profile()
+            profile.hub = value
+            profile.save()
+            self.citizen_profile = profile
 
     def save(self, *args, **kwargs):
         """
@@ -305,12 +313,20 @@ class User(AbstractUser):
                 collector_profile.save()
                 self.collector_profile = collector_profile
         else:
-            # For CITIZEN and ADMIN, ensure CitizenProfile exists for points storage
+            # For CITIZEN and ADMIN, ensure CitizenProfile exists for points and hub storage
             citizen_profile, _ = CitizenProfile.objects.get_or_create(user=self)
+            dirty = False
             if hasattr(self, "_pending_wallet_points"):
                 citizen_profile.wallet_points = self._pending_wallet_points
                 delattr(self, "_pending_wallet_points")
+                dirty = True
+            if hasattr(self, "_pending_hub"):
+                citizen_profile.hub = self._pending_hub
+                delattr(self, "_pending_hub")
+                dirty = True
+            if dirty:
                 citizen_profile.save()
+                self.citizen_profile = citizen_profile
 
     def get_absolute_url(self) -> str:
         # Standard Django helper returning the canonical URL for this user
@@ -336,6 +352,15 @@ class CitizenProfile(models.Model):
         _("Wallet Points"),
         default=0,
         help_text=_("Recycling reward points for citizens."),
+    )
+    # Preferred local collection hub / panchayath for this citizen
+    hub = models.ForeignKey(
+        "waste_management.Hub",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="citizens",
+        help_text=_("Preferred collection hub / panchayath for this citizen"),
     )
 
     def __str__(self):
