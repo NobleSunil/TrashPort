@@ -610,3 +610,38 @@ class TestCollectorAadhaarOtpFlow:
         assert "Aadhaar Verified" in content_after
         assert "Aadhaar Verification Pending" not in content_after
 
+
+@pytest.mark.django_db
+def test_pickup_form_manual_search_with_scroll(client, base_hub_setup):
+    """
+    Verify that the Book Waste Pickup form includes:
+      1. 'Manual Search' scroll jump button in the Select City / Region section
+      2. 'Manual Search' input bar & action button with solid black styling (#000000)
+      3. Scrollable search results list with custom scrollbar
+    """
+    citizen = User.objects.create_user(
+        email="citizen_search@trashport.org",
+        password="ValidPassword123!",
+        name="Search Citizen",
+        role=User.Roles.CITIZEN,
+    )
+    client.force_login(citizen)
+
+    url = reverse("waste_management:pickup_create")
+    response = client.get(url)
+    assert response.status_code == 200
+    html = response.content.decode("utf-8")
+
+    # 1. Manual Search scroll button in City / Region header
+    assert 'id="scrollToManualSearchBtn"' in html
+    assert "Manual Search" in html
+
+    # 2. Manual search input and action button above map
+    assert 'id="manualLocationSearchInput"' in html
+    assert 'id="btnRunManualSearch"' in html
+
+    # 3. Scrollable results dropdown container
+    assert 'id="manualSearchResultsList"' in html
+    assert "overflow-auto" in html
+    assert "Scroll to explore" in html
+

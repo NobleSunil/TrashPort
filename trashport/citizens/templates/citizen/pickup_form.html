@@ -18,9 +18,14 @@
           <div class="p-3 bg-light rounded-3 border mb-4">
             <div class="row align-items-center">
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark mb-1"><i class="fas fa-city me-2 text-success"></i>Select City / Region:*</label>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label fw-bold text-dark mb-0"><i class="fas fa-city me-2 text-success"></i>Select City / Region:*</label>
+                  <button type="button" id="scrollToManualSearchBtn" class="btn btn-sm btn-dark py-0 px-2 fw-semibold" style="font-size: 0.78rem; background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;" title="Scroll down to search manual address / landmark">
+                    <i class="fas fa-search-location me-1"></i>Manual Search
+                  </button>
+                </div>
                 {{ form.city }}
-                <div class="form-text small text-muted">Choose your city to verify hub and active collector availability.</div>
+                <div class="form-text small text-muted">Choose your city or use manual search below to locate your exact address.</div>
               </div>
               <div class="col-md-6 mt-2 mt-md-0">
                 <div id="cityStatusBadge" class="p-2 rounded border bg-white small d-flex align-items-center">
@@ -42,13 +47,52 @@
             </div>
           </div>
 
-          <div class="mb-4">
+          <div class="mb-4" id="mapSection">
             <h5 class="fw-bold text-dark mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>1. Set Exact Pickup Location on Map</h5>
+
+            <!-- Manual Location Search Bar with Scrollable Results -->
+            <div class="mb-3 position-relative" id="manualSearchWrapper">
+              <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                <label for="manualLocationSearchInput" class="small fw-bold text-dark mb-0">
+                  <i class="fas fa-search-location text-success me-1"></i>Manual Address &amp; Location Search:
+                </label>
+                <div class="d-flex gap-2">
+                  <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-location-arrow me-1"></i> Use My Current Location
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                  <i class="fas fa-search text-success"></i>
+                </span>
+                <input type="text"
+                       id="manualLocationSearchInput"
+                       class="form-control border-start-0 border-end-0 ps-1"
+                       placeholder="Type area, landmark, street, or address (e.g. Indiranagar, Marine Drive, MG Road)..."
+                       autocomplete="off">
+                <button type="button" id="clearManualSearchBtn" class="btn btn-outline-secondary border-start-0 border-end-0 bg-white d-none text-muted" title="Clear">
+                  <i class="fas fa-times"></i>
+                </button>
+                <button type="button"
+                        id="btnRunManualSearch"
+                        class="btn btn-dark fw-bold px-3 d-flex align-items-center gap-1.5"
+                        style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+                  <i class="fas fa-search"></i>
+                  <span>Manual Search</span>
+                </button>
+              </div>
+
+              <!-- Scrollable Search Results Dropdown -->
+              <div id="manualSearchResultsList"
+                   class="list-group position-absolute w-100 shadow-lg border rounded-3 mt-1 d-none overflow-auto"
+                   style="max-height: 240px; z-index: 1050; background: #ffffff; scrollbar-width: thin;">
+              </div>
+            </div>
+
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="small text-muted">Click or drag the green pin marker. Street address will auto-fill below!</span>
-              <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-location-arrow me-1"></i> Use My Current Location
-              </button>
             </div>
             <!-- Explicit height so Leaflet container never collapses -->
             <div id="mapPicker" class="mb-2 shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;">
@@ -734,6 +778,280 @@
         weightInput.addEventListener("input", updateCategoryWeightLimit);
       }
       updateCategoryWeightLimit();
+
+      // ==============================================================================
+      // MANUAL LOCATION & ADDRESS SEARCH WITH SCROLLABLE RESULTS DROPDOWN
+      // ==============================================================================
+      /**
+       * Provides citizens with an interactive manual address search bar that queries
+       * local operational hubs and OpenStreetMap (Nominatim) for exact coordinates.
+       * Features:
+       *  - 'Manual Search' jump button with smooth scrolling from the City selector
+       *  - Dedicated 'Manual Search' action button with high-contrast dark styling
+       *  - Scrollable search results list with custom scrollbar
+       *  - Auto-centering map view, marker repositioning, and auto-filling address inputs
+       *  - Automatic 20 km service radius coverage validation upon selection
+       */
+      const manualSearchInput = document.getElementById("manualLocationSearchInput");
+      const btnRunManualSearch = document.getElementById("btnRunManualSearch");
+      const clearManualSearchBtn = document.getElementById("clearManualSearchBtn");
+      const manualSearchResultsList = document.getElementById("manualSearchResultsList");
+      const scrollToManualSearchBtn = document.getElementById("scrollToManualSearchBtn");
+
+      // 1. Smooth scroll to manual search bar when 'Manual Search' button in City card is clicked
+      if (scrollToManualSearchBtn) {
+        scrollToManualSearchBtn.addEventListener("click", function () {
+          const wrapper = document.getElementById("manualSearchWrapper");
+          if (wrapper) {
+            wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (manualSearchInput) {
+              setTimeout(() => {
+                manualSearchInput.focus();
+                manualSearchInput.classList.add("border-success");
+                setTimeout(() => manualSearchInput.classList.remove("border-success"), 1500);
+              }, 400);
+            }
+          }
+        });
+      }
+
+      let manualSearchDebounceTimer = null;
+
+      // 2. Render scrollable search results dropdown
+      function renderSearchResults(results) {
+        if (!manualSearchResultsList) return;
+        manualSearchResultsList.innerHTML = "";
+
+        if (!results || results.length === 0) {
+          manualSearchResultsList.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+              <i class="fas fa-map-pin me-1 text-secondary"></i>No matching places found. Try another landmark or street name.
+            </div>
+          `;
+          manualSearchResultsList.classList.remove("d-none");
+          return;
+        }
+
+        results.forEach(item => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "list-group-item list-group-item-action py-2.5 px-3 text-start border-bottom d-flex align-items-start gap-2.5";
+
+          const icon = item.isHub ? '<i class="fas fa-warehouse text-primary mt-1 flex-shrink-0"></i>' : '<i class="fas fa-map-marker-alt text-success mt-1 flex-shrink-0"></i>';
+          const badge = item.isHub ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-auto small">Operating Hub</span>' : '';
+
+          btn.innerHTML = `
+            ${icon}
+            <div class="flex-grow-1 min-w-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <strong class="text-dark text-truncate d-block" style="font-size: 0.88rem;">${item.title}</strong>
+                ${badge}
+              </div>
+              <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">${item.subtitle}</small>
+            </div>
+          `;
+
+          btn.addEventListener("click", function () {
+            selectSearchResult(item);
+          });
+
+          manualSearchResultsList.appendChild(btn);
+        });
+
+        // Sticky scroll navigation hint at bottom of dropdown
+        const footer = document.createElement("div");
+        footer.className = "py-1.5 px-3 bg-light border-top text-center text-muted small";
+        footer.style.fontSize = "0.72rem";
+        footer.innerHTML = '<i class="fas fa-arrows-alt-v me-1 text-success"></i>Scroll to explore all ' + results.length + ' matching locations &bull; Click to set pin';
+        manualSearchResultsList.appendChild(footer);
+
+        manualSearchResultsList.classList.remove("d-none");
+      }
+
+      // 3. Select search result: pan map, move marker, populate address, smooth scroll
+      function selectSearchResult(item) {
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lng);
+
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // Animate map view to selected coordinate
+        map.setView([lat, lng], 16);
+        marker.setLatLng([lat, lng]);
+
+        // Auto-fill address fields directly from result data
+        if (addressLineInput && item.street) {
+          addressLineInput.value = item.street;
+        }
+        if (cityInput && item.city) {
+          cityInput.value = item.city;
+        }
+        if (postalInput && item.postcode) {
+          postalInput.value = item.postcode;
+        }
+
+        // Update coordinates and trigger service availability radius calculation
+        updateCoords(lat, lng, true, true);
+
+        // Auto-match city in citySelect if possible
+        if (citySelect && item.city) {
+          const itemCityLower = item.city.toLowerCase();
+          for (let i = 0; i < citySelect.options.length; i++) {
+            if (citySelect.options[i].text.toLowerCase().includes(itemCityLower)) {
+              citySelect.selectedIndex = i;
+              citySelect.dispatchEvent(new Event("change"));
+              break;
+            }
+          }
+        }
+
+        // Hide results dropdown and update input display
+        if (manualSearchResultsList) {
+          manualSearchResultsList.classList.add("d-none");
+        }
+        if (manualSearchInput) {
+          manualSearchInput.value = item.title;
+        }
+        if (clearManualSearchBtn) {
+          clearManualSearchBtn.classList.remove("d-none");
+        }
+
+        // Smoothly scroll down to the Leaflet map container
+        const mapEl = document.getElementById("mapPicker");
+        if (mapEl) {
+          mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+
+      // 4. Execute manual search against operational hubs and OSM Nominatim API
+      function executeManualSearch() {
+        if (!manualSearchInput) return;
+        const query = manualSearchInput.value.trim();
+        if (query.length < 2) {
+          if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          return;
+        }
+
+        showMapLoading(true);
+
+        // Search local active cities and hubs first
+        const localMatches = [];
+        const qLower = query.toLowerCase();
+        for (const [cId, cData] of Object.entries(citiesData)) {
+          if (cData.name && cData.name.toLowerCase().includes(qLower)) {
+            localMatches.push({
+              title: cData.name,
+              subtitle: cData.hub_name ? `${cData.hub_name} &bull; ${cData.hub_address}` : "Supported City Region",
+              lat: cData.hub_lat,
+              lng: cData.hub_lng,
+              city: cData.name,
+              isHub: true
+            });
+          }
+          if (cData.hub_name && cData.hub_name.toLowerCase().includes(qLower)) {
+            localMatches.push({
+              title: cData.hub_name,
+              subtitle: `${cData.hub_address} &bull; ${cData.name}`,
+              lat: cData.hub_lat,
+              lng: cData.hub_lng,
+              city: cData.name,
+              isHub: true
+            });
+          }
+        }
+
+        // Search OpenStreetMap Nominatim for street addresses and landmarks
+        const searchUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
+
+        fetch(searchUrl)
+          .then(res => res.json())
+          .then(data => {
+            showMapLoading(false);
+            const externalMatches = [];
+            if (Array.isArray(data)) {
+              data.forEach(item => {
+                const addr = item.address || {};
+                const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.amenity || item.name || "";
+                const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.state_district || "";
+                const postcode = addr.postcode || "";
+
+                externalMatches.push({
+                  title: road || item.display_name.split(",")[0],
+                  subtitle: item.display_name,
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  street: road || item.display_name.split(",")[0],
+                  city: cityName,
+                  postcode: postcode,
+                  isHub: false
+                });
+              });
+            }
+
+            const combined = [...localMatches, ...externalMatches];
+            renderSearchResults(combined);
+          })
+          .catch(err => {
+            showMapLoading(false);
+            console.log("Manual search notice:", err);
+            if (localMatches.length > 0) {
+              renderSearchResults(localMatches);
+            }
+          });
+      }
+
+      // Event listener: Manual Search button click
+      if (btnRunManualSearch) {
+        btnRunManualSearch.addEventListener("click", executeManualSearch);
+      }
+
+      // Event listener: Input typing with debounce and keyboard shortcuts (Enter / Escape)
+      if (manualSearchInput) {
+        manualSearchInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            executeManualSearch();
+          } else if (e.key === "Escape") {
+            if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          }
+        });
+
+        manualSearchInput.addEventListener("input", function () {
+          const val = manualSearchInput.value.trim();
+          if (clearManualSearchBtn) {
+            clearManualSearchBtn.classList.toggle("d-none", val.length === 0);
+          }
+          clearTimeout(manualSearchDebounceTimer);
+          if (val.length >= 3) {
+            manualSearchDebounceTimer = setTimeout(executeManualSearch, 450);
+          } else if (val.length === 0) {
+            if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      // Event listener: Clear search input
+      if (clearManualSearchBtn) {
+        clearManualSearchBtn.addEventListener("click", function () {
+          if (manualSearchInput) {
+            manualSearchInput.value = "";
+            manualSearchInput.focus();
+          }
+          clearManualSearchBtn.classList.add("d-none");
+          if (manualSearchResultsList) {
+            manualSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      // Event listener: Close dropdown on click outside
+      document.addEventListener("click", function (e) {
+        if (!manualSearchResultsList || manualSearchResultsList.classList.contains("d-none")) return;
+        const wrapper = document.getElementById("manualSearchWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          manualSearchResultsList.classList.add("d-none");
+        }
+      });
     });
   </script>
 {% endblock inline_javascript %}

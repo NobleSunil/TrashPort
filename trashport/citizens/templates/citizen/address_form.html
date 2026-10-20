@@ -18,13 +18,43 @@
 
           <!-- 1. Interactive Map Section (Automatic Geocoding Enabled) -->
           <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
               <h5 class="fw-bold text-dark mb-0">
                 <i class="fas fa-map-marked-alt text-primary me-2"></i>1. Pick Location on Map
               </h5>
               <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-location-arrow me-1"></i> Use My Current Location
               </button>
+            </div>
+
+            <!-- Manual Search Bar with Scrollable Results -->
+            <div class="mb-3 position-relative" id="addressSearchWrapper">
+              <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                  <i class="fas fa-search-location text-success"></i>
+                </span>
+                <input type="text"
+                       id="manualAddressSearchInput"
+                       class="form-control border-start-0 border-end-0 ps-1"
+                       placeholder="Enter street, landmark, area, or city (e.g. MG Road, Indiranagar)..."
+                       autocomplete="off">
+                <button type="button" id="clearAddressSearchBtn" class="btn btn-outline-secondary border-start-0 border-end-0 bg-white d-none text-muted" title="Clear">
+                  <i class="fas fa-times"></i>
+                </button>
+                <button type="button"
+                        id="btnRunAddressSearch"
+                        class="btn btn-dark fw-bold px-3 d-flex align-items-center gap-1.5"
+                        style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+                  <i class="fas fa-search"></i>
+                  <span>Manual Search</span>
+                </button>
+              </div>
+
+              <!-- Scrollable Search Results Dropdown -->
+              <div id="addressSearchResultsList"
+                   class="list-group position-absolute w-100 shadow-lg border rounded-3 mt-1 d-none overflow-auto"
+                   style="max-height: 240px; z-index: 1050; background: #ffffff; scrollbar-width: thin;">
+              </div>
             </div>
 
             <!-- Leaflet map container -->
@@ -279,6 +309,156 @@
       }, 300);
 
       updateCoords(defaultLat, defaultLng, false);
+
+      // ==============================================================================
+      // MANUAL SEARCH WITH SCROLLABLE RESULTS FOR SAVED ADDRESS
+      // ==============================================================================
+      const manualAddressInput = document.getElementById("manualAddressSearchInput");
+      const btnRunAddressSearch = document.getElementById("btnRunAddressSearch");
+      const clearAddressSearchBtn = document.getElementById("clearAddressSearchBtn");
+      const addressSearchResultsList = document.getElementById("addressSearchResultsList");
+
+      let addressSearchDebounceTimer = null;
+
+      function renderAddressSearchResults(results) {
+        if (!addressSearchResultsList) return;
+        addressSearchResultsList.innerHTML = "";
+
+        if (!results || results.length === 0) {
+          addressSearchResultsList.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+              <i class="fas fa-map-pin me-1 text-secondary"></i>No matching places found. Try another landmark or street name.
+            </div>
+          `;
+          addressSearchResultsList.classList.remove("d-none");
+          return;
+        }
+
+        results.forEach(item => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "list-group-item list-group-item-action py-2.5 px-3 text-start border-bottom d-flex align-items-start gap-2.5";
+          btn.innerHTML = `
+            <i class="fas fa-map-marker-alt text-success mt-1 flex-shrink-0"></i>
+            <div class="flex-grow-1 min-w-0">
+              <strong class="text-dark text-truncate d-block" style="font-size: 0.88rem;">${item.title}</strong>
+              <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">${item.subtitle}</small>
+            </div>
+          `;
+
+          btn.addEventListener("click", function () {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            map.setView([lat, lng], 16);
+            marker.setLatLng([lat, lng]);
+
+            if (addressLineInput && item.street) addressLineInput.value = item.street;
+            if (cityInput && item.city) cityInput.value = item.city;
+            if (postalInput && item.postcode) postalInput.value = item.postcode;
+
+            updateCoords(lat, lng, true);
+
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+            if (manualAddressInput) manualAddressInput.value = item.title;
+            if (clearAddressSearchBtn) clearAddressSearchBtn.classList.remove("d-none");
+
+            const mapEl = document.getElementById("mapPicker");
+            if (mapEl) mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+
+          addressSearchResultsList.appendChild(btn);
+        });
+
+        const footer = document.createElement("div");
+        footer.className = "py-1.5 px-3 bg-light border-top text-center text-muted small";
+        footer.style.fontSize = "0.72rem";
+        footer.innerHTML = '<i class="fas fa-arrows-alt-v me-1 text-success"></i>Scroll to explore all ' + results.length + ' matching locations &bull; Click to set pin';
+        addressSearchResultsList.appendChild(footer);
+
+        addressSearchResultsList.classList.remove("d-none");
+      }
+
+      function executeAddressSearch() {
+        if (!manualAddressInput) return;
+        const query = manualAddressInput.value.trim();
+        if (query.length < 2) {
+          if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          return;
+        }
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`)
+          .then(res => res.json())
+          .then(data => {
+            const matches = [];
+            if (Array.isArray(data)) {
+              data.forEach(item => {
+                const addr = item.address || {};
+                const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.amenity || item.name || "";
+                const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.state_district || "";
+                const postcode = addr.postcode || "";
+
+                matches.push({
+                  title: road || item.display_name.split(",")[0],
+                  subtitle: item.display_name,
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  street: road || item.display_name.split(",")[0],
+                  city: cityName,
+                  postcode: postcode
+                });
+              });
+            }
+            renderAddressSearchResults(matches);
+          })
+          .catch(err => console.log("Address search notice:", err));
+      }
+
+      if (btnRunAddressSearch) {
+        btnRunAddressSearch.addEventListener("click", executeAddressSearch);
+      }
+
+      if (manualAddressInput) {
+        manualAddressInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            executeAddressSearch();
+          } else if (e.key === "Escape") {
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          }
+        });
+
+        manualAddressInput.addEventListener("input", function () {
+          const val = manualAddressInput.value.trim();
+          if (clearAddressSearchBtn) clearAddressSearchBtn.classList.toggle("d-none", val.length === 0);
+          clearTimeout(addressSearchDebounceTimer);
+          if (val.length >= 3) {
+            addressSearchDebounceTimer = setTimeout(executeAddressSearch, 450);
+          } else if (val.length === 0) {
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      if (clearAddressSearchBtn) {
+        clearAddressSearchBtn.addEventListener("click", function () {
+          if (manualAddressInput) {
+            manualAddressInput.value = "";
+            manualAddressInput.focus();
+          }
+          clearAddressSearchBtn.classList.add("d-none");
+          if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        if (!addressSearchResultsList || addressSearchResultsList.classList.contains("d-none")) return;
+        const wrapper = document.getElementById("addressSearchWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          addressSearchResultsList.classList.add("d-none");
+        }
+      });
     });
   </script>
 {% endblock inline_javascript %}
