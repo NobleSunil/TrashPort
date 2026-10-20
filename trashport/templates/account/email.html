@@ -1,3 +1,6 @@
+{# TrashPort Email Verification Management Template #}
+{# Extends base.html (Bootstrap 5 + Lucent Design System) #}
+{# Modules used: django.utils.translation (i18n), allauth.account.templatetags.account #}
 {% extends "base.html" %}
 {% load i18n %}
 {% load account %}
@@ -5,58 +8,83 @@
 {% block title %}{% translate "Email Addresses" %} | TrashPort{% endblock title %}
 
 {% block content %}
-<div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-    <div class="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-2xl p-8 sm:p-10 relative overflow-hidden">
+<!-- Centered container for email management card -->
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+    <!-- Lucent glassmorphic card container with eco-friendly emerald accent bar -->
+    <div class="card lucent-card border-0 shadow-lg p-4 p-sm-5 position-relative overflow-hidden">
+      <!-- Top accent gradient bar matching TrashPort branding -->
+      <div class="position-absolute top-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, #10b981 0%, #059669 100%);"></div>
 
-        <!-- Top accent gradient bar -->
-        <div class="h-2 bg-gradient-to-r from-green-500 to-emerald-400 absolute top-0 left-0 right-0"></div>
-
-        <div class="text-center mb-8">
-            <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">{% translate "Email Addresses" %}</h1>
-            <p class="text-sm text-gray-500 mt-2">{% translate "Manage your account's email verification status" %}</p>
+      <!-- Card Header: Title and subtitle -->
+      <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light mb-3" style="width: 56px; height: 56px;">
+          <i class="bi bi-envelope-at text-dark fs-3"></i>
         </div>
+        <h2 class="fw-bold text-dark mb-1">{% translate "Email Addresses" %}</h2>
+        <p class="text-muted small mb-0">{% translate "Manage your account's email verification status" %}</p>
+      </div>
 
-        {% if user.emailaddress_set.all %}
-            <form action="{% url 'account_email' %}" class="space-y-4 mb-8" method="POST">
-                {% csrf_token %}
-                <div class="space-y-3">
-                    {% for emailaddress in user.emailaddress_set.all %}
-                        <div class="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-                            <label for="email_radio_{{ forloop.counter }}" class="flex items-center gap-3 cursor-pointer">
-                                <input type="radio" name="email" id="email_radio_{{ forloop.counter }}" value="{{ emailaddress.email }}"
-                                    {% if emailaddress.primary or user.emailaddress_set.count == 1 %}checked{% endif %}
-                                    class="h-4 w-4 text-green-600 focus:ring-green-500">
-                                <span class="text-sm font-medium text-gray-800">{{ emailaddress.email }}</span>
-                            </label>
-                            <div>
-                                {% if emailaddress.verified %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                        {% translate "Verified" %}
-                                    </span>
-                                {% else %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                        {% translate "Unverified" %}
-                                    </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
+      <!-- Form: User email address list & actions -->
+      {% if user.emailaddress_set.all %}
+        <form action="{% url 'account_email' %}" method="POST" class="mb-4">
+          {% csrf_token %}
+          <div class="d-flex flex-column gap-2 mb-4">
+            {% for emailaddress in user.emailaddress_set.all %}
+              <!-- Radio selector for user's registered email addresses -->
+              <label class="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white cursor-pointer shadow-sm" for="email_radio_{{ forloop.counter }}">
+                <div class="d-flex align-items-center gap-3">
+                  <input type="radio" name="email" id="email_radio_{{ forloop.counter }}" value="{{ emailaddress.email }}"
+                    {% if emailaddress.primary or user.emailaddress_set.count == 1 %}checked{% endif %}
+                    class="form-check-input mt-0">
+                  <span class="fw-medium text-dark small">{{ emailaddress.email }}</span>
                 </div>
-
-                <div class="pt-2 flex flex-col gap-2">
-                    <button type="submit" name="action_send"
-                        class="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl shadow-md transition-all text-sm">
-                        {% translate "Re-send Verification Email" %}
-                    </button>
+                <!-- Verification status badge -->
+                <div>
+                  {% if emailaddress.verified %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
+                      <i class="bi bi-patch-check-fill me-1"></i>{% translate "Verified" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1">
+                      <i class="bi bi-clock-history me-1"></i>{% translate "Unverified" %}
+                    </span>
+                  {% endif %}
                 </div>
-            </form>
-        {% endif %}
+              </label>
+            {% endfor %}
+          </div>
 
-        <div class="text-center">
-            <a href="{% url 'waste_management:dashboard' %}" class="text-sm font-semibold text-green-600 hover:underline">
-                {% translate "← Back to Dashboard" %}
-            </a>
-        </div>
+          <!-- Action buttons: Solid Black primary action button -->
+          <div class="d-grid gap-2">
+            <button type="submit" name="action_send"
+              class="btn btn-dark w-100 py-2.5 fw-bold rounded-3 shadow-sm"
+              style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+              <i class="bi bi-send-fill me-1"></i>{% translate "Re-send Verification Email" %}
+            </button>
+            {% if user.emailaddress_set.count > 1 %}
+              <div class="d-flex gap-2">
+                <button type="submit" name="action_primary"
+                  class="btn btn-outline-dark flex-grow-1 py-2 fw-semibold rounded-3 small">
+                  {% translate "Make Primary" %}
+                </button>
+                <button type="submit" name="action_remove"
+                  class="btn btn-outline-danger flex-grow-1 py-2 fw-semibold rounded-3 small">
+                  {% translate "Remove" %}
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </form>
+      {% endif %}
+
+      <!-- Back navigation link -->
+      <div class="text-center pt-2">
+        <a href="{% url 'waste_management:dashboard' %}" class="btn btn-link text-decoration-none text-muted small fw-semibold">
+          <i class="bi bi-arrow-left me-1"></i>{% translate "Back to Dashboard" %}
+        </a>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock content %}

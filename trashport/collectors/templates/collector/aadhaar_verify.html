@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Aadhaar Verification — TrashPort Collector{% endblock %}
+{% block title %}Aadhaar Verification - TrashPort Collector{% endblock %}
 
 {% block content %}
 <!--
@@ -224,12 +224,12 @@
 <div class="container py-5" style="max-width: 640px; margin: 0 auto;">
 
   <!-- ================================================================
-       DEMO MODE BANNER (always visible — required per project spec)
+       DEMO MODE BANNER (always visible &mdash; required per project spec)
        ================================================================ -->
   <div class="demo-banner" role="alert" id="demo-mode-banner">
     <span class="demo-icon">⚠️</span>
     <div>
-      <strong>SIMULATED AADHAAR FLOW — DEMO MODE</strong><br>
+      <strong>SIMULATED AADHAAR FLOW &mdash; DEMO MODE</strong><br>
       This is an academic/college project implementation. It is <em>not</em>
       connected to UIDAI or any live government authentication system.
       Real Aadhaar integration requires an AUA/KUA license under the
@@ -251,12 +251,12 @@
     </div>
 
     <!-- ============================================================
-         STEP 0 — Consent
+         STEP 0 &mdash; Consent
          ============================================================ -->
     <div id="step-consent" class="step active">
 
       <div class="consent-box">
-        <strong>📋 Consent Notice — Please Read</strong><br><br>
+        <strong>📋 Consent Notice &mdash; Please Read</strong><br><br>
         Before proceeding, please understand what data is collected and why:
         <ul>
           <li>Your <strong>12-digit Aadhaar number</strong> will be used to
@@ -277,13 +277,13 @@
       </div>
 
       <button class="aadh-btn aadh-btn-primary" id="consent-btn" disabled onclick="acceptConsent()">
-        I Consent — Proceed to Verification →
+        I Consent - Proceed to Verification &rarr;
       </button>
 
     </div>
 
     <!-- ============================================================
-         STEP 1 — Aadhaar Number Input
+         STEP 1 &mdash; Aadhaar Number Input
          ============================================================ -->
     <div id="step-aadhaar" class="step">
 
@@ -331,7 +331,7 @@
       <div class="demo-numbers">
         <h3>🧪 Test Aadhaar Numbers (Demo Only)</h3>
         <p style="color:#9ca3af; margin:0 0 0.5rem; font-size:0.78rem;">
-          Click any number to auto-fill. These are fictional — do not submit to any real system.
+          Click any number to auto-fill. These are fictional &mdash; do not submit to any real system.
         </p>
         <div class="demo-row">
           <span class="demo-num" onclick="fillDemo('304332181964')">3043 3218 1964</span>
@@ -358,7 +358,7 @@
     </div>
 
     <!-- ============================================================
-         STEP 2 — OTP Verification
+         STEP 2 &mdash; OTP Verification
          ============================================================ -->
     <div id="step-otp" class="step">
 
@@ -367,7 +367,7 @@
         <h2>Enter OTP</h2>
       </div>
 
-      <!-- Notification info box — tells user where OTP was sent without showing OTP value -->
+      <!-- Notification info box &mdash; tells user where OTP was sent without showing OTP value -->
       <div id="otp-info-box" style="
         background: #f0fdf4;
         border: 1.5px solid #86efac;
@@ -414,13 +414,13 @@
         style="background:none; border:none; color:var(--aadh-blue); font-size:0.85rem; cursor:pointer; margin-top:0.75rem; width:100%; text-align:center;"
         onclick="goBackToStep1()"
       >
-        ← Re-enter Aadhaar number
+        &larr; Re-enter Aadhaar number
       </button>
 
     </div>
 
     <!-- ============================================================
-         STEP 3 — Success
+         STEP 3 &mdash; Success
          ============================================================ -->
     <div id="step-success" class="step">
       <div class="success-state">
@@ -433,7 +433,7 @@
         </p>
         <div class="masked-display" id="success-masked"></div>
         <p style="font-size:0.8rem; color:#9ca3af; margin-top:0.5rem;">
-          [DEMO MODE — Simulated verification, not connected to UIDAI]
+          [DEMO MODE &mdash; Simulated verification, not connected to UIDAI]
         </p>
         <a
           href="/dashboard/"

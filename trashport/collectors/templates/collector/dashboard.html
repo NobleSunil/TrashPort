@@ -452,7 +452,7 @@
       {% endif %}
     {% endif %}
 
-    <!-- -------------------------------------------------------------------------------------------------------- Aadhaar Verification Notice (Collector-scoped — DEMO MODE) -------------------------------------------------------------------------------------------------------- -->
+    <!-- -------------------------------------------------------------------------------------------------------- Aadhaar Verification Notice (Collector-scoped &mdash; DEMO MODE) -------------------------------------------------------------------------------------------------------- -->
     {# This banner is shown only to collectors who haven't completed Aadhaar  #}
     {# verification. It reads from CollectorAadhaarProfile, not users.User.   #}
     {% if not aadhaar_verified %}
@@ -482,7 +482,7 @@
         </a>
       </div>
     {% else %}
-      <!-- Aadhaar verified badge — shown after successful verification -->
+      <!-- Aadhaar verified badge &mdash; shown after successful verification -->
       <div class="alert border-0 shadow-sm rounded-4 px-4 py-3 mb-4 d-flex align-items-center gap-3"
            style="background:#f0fdf4; border-left: 4px solid #16a34a !important;">
         <i class="fas fa-id-card-alt" style="color:#16a34a; font-size:1.5rem;"></i>

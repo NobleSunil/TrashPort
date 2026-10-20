@@ -19,7 +19,7 @@ IMPACT:
   - Adding a new admin feature: create the view class here, then add a dispatcher
     in waste_management/views.py and register the URL in waste_management/urls.py.
   - Modifying aggregation queries affects dashboard KPI cards and Chart.js graphs.
-  - CSV export views directly stream to browser — changes affect downloaded files.
+  - CSV export views directly stream to browser &mdash; changes affect downloaded files.
 """
 
 import csv

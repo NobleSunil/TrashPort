@@ -1,3 +1,6 @@
+{# TrashPort Verified Email Required Notice Template #}
+{# Extends base.html (Bootstrap 5 + Lucent Design System) #}
+{# Modules used: django.utils.translation (i18n), allauth.account.templatetags.account #}
 {% extends "base.html" %}
 {% load i18n %}
 {% load account %}
@@ -5,30 +8,28 @@
 {% block title %}{% translate "Verify Your Email" %} | TrashPort{% endblock title %}
 
 {% block content %}
-<div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-    <div class="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-2xl p-8 sm:p-10 text-center relative overflow-hidden">
+<!-- Centered container for email verification required notice -->
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+    <!-- Lucent card with emerald accent bar -->
+    <div class="card lucent-card border-0 shadow-lg p-4 p-sm-5 text-center position-relative overflow-hidden">
+      <!-- Top accent gradient bar -->
+      <div class="position-absolute top-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, #10b981 0%, #059669 100%);"></div>
 
-        <!-- Top accent gradient bar -->
-        <div class="h-2 bg-gradient-to-r from-green-500 to-emerald-400 absolute top-0 left-0 right-0"></div>
+      <div class="d-inline-flex align-items-center justify-center rounded-circle bg-warning-subtle text-warning-emphasis mb-3 mx-auto" style="width: 64px; height: 64px;">
+        <i class="bi bi-shield-exclamation fs-2"></i>
+      </div>
 
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-50 text-amber-600 rounded-full mb-6 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-        </div>
+      <h2 class="fw-bold text-dark mb-2">{% translate "Verify Your Email Address" %}</h2>
+      <p class="text-muted small mb-4">
+        {% blocktranslate %}This part of our site requires us to verify that you are the owner of your email address. We have sent you an email with a verification link.{% endblocktranslate %}
+      </p>
 
-        <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight mb-3">
-            {% translate "Verify Your Email Address" %}
-        </h1>
-
-        <p class="text-gray-600 text-sm leading-relaxed mb-6">
-            {% blocktranslate %}This part of our site requires us to verify that you are the owner of your email address. We have sent you an email with a verification link.{% endblocktranslate %}
-        </p>
-
-        <a href="{% url 'account_email' %}"
-            class="block w-full py-3.5 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-green-600/30 hover:shadow-xl transition-all">
-            {% translate "Manage Email Addresses / Resend" %}
-        </a>
+      <!-- Solid Black action button -->
+      <a href="{% url 'account_email' %}" class="btn btn-dark w-100 py-2.5 fw-bold rounded-3 shadow-sm" style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+        <i class="bi bi-envelope-check me-1"></i>{% translate "Manage Email Addresses / Resend" %}
+      </a>
     </div>
+  </div>
 </div>
 {% endblock content %}

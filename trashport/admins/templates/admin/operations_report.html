@@ -534,7 +534,7 @@
               {% if p.address %}
               {{ p.address.city|default:"Local Area" }}
               {% else %}
-              <span class="text-muted">—</span>
+              <span class="text-muted">&mdash;</span>
               {% endif %}
             </td>
             <td><span class="badge bg-light text-dark border">{{ p.category.name|default:"General" }}</span></td>

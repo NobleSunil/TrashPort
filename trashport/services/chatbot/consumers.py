@@ -148,7 +148,7 @@ class ChatbotConsumer(AsyncWebsocketConsumer):
             # Parse response intent
             parsed = parse_response(raw)
 
-            # Determine validity — fallback messages indicate a parse failure
+            # Determine validity &mdash; fallback messages indicate a parse failure
             was_valid = parsed.get("message") not in FALLBACK_MESSAGES
 
             # Execute action if matching action intent

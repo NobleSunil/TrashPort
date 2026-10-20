@@ -1,6 +1,6 @@
 {% extends "base_citizen.html" %}
 
-{% block title %}Secure Payment — Pickup #{{ pickup.id }} | TrashPort{% endblock %}
+{% block title %}Secure Payment - Pickup #{{ pickup.id }} | TrashPort{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -349,7 +349,7 @@
             <div class="d-flex align-items-center gap-2">
               <i class="bi bi-ticket-perforated-fill fs-5"></i>
               <div>
-                <strong>Coupon Applied!</strong> Code <code class="fw-bold">{{ coupon.code }}</code> —
+                <strong>Coupon Applied!</strong> Code <code class="fw-bold">{{ coupon.code }}</code> &mdash;
                 Rs. {{ coupon.discount }} discount applied to your total.
               </div>
             </div>
@@ -641,7 +641,7 @@
               <div class="mt-3 p-3 bg-light rounded-3 border">
                 <div class="d-flex align-items-center justify-content-between mb-1">
                   <div class="small fw-semibold text-dark">
-                    <i class="bi bi-gift-fill text-success me-1"></i>Have {{ wallet_points }} points?
+                    <i class="bi bi-gift-fill text-success me-1"></i>Available Points: {{ wallet_points }}
                   </div>
                   <span class="badge bg-success">Save Rs. 10</span>
                 </div>

@@ -7,7 +7,7 @@
   <div class="col-md-10 col-lg-9">
 
     <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
-      ← Back to Dashboard
+      <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
     </a>
 
     <!-- Navigation & GPS Broadcaster Card -->
@@ -505,7 +505,7 @@
         locateBtn.addEventListener('click', () => locateCollectorLive(true, false));
       }
 
-      // Auto-locate on page load — use live GPS as the default starting position
+      // Auto-locate on page load &mdash; use live GPS as the default starting position
       // Falls back to the offset position silently if GPS is unavailable
       if (navigator.geolocation) {
         locateCollectorLive(true, true);

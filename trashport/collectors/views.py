@@ -1,10 +1,10 @@
 """
-trashport/collectors/views.py — Collector Role View Layer
+trashport/collectors/views.py &mdash; Collector Role View Layer
 ===========================================================
 
 PURPOSE:
   This file contains all view classes exclusively used by collectors (waste
-  collection staff). These are never called directly from URLs — they are
+  collection staff). These are never called directly from URLs &mdash; they are
   dispatched to by the role-based system in waste_management/views.py.
 
 HOW THESE VIEWS ARE REACHED:
@@ -90,22 +90,22 @@ class CollectorDashboardView(LoginRequiredMixin, TemplateView):
 
     Context variables provided to the template:
       role                  : User.Roles.COLLECTOR (string)
-      is_verified           : bool — whether collector passed Aadhaar verification
+      is_verified           : bool &mdash; whether collector passed Aadhaar verification
       verification_status   : "PENDING" / "APPROVED" / "REJECTED" string for badge display
-      wallet_balance        : Decimal — current cash balance available for UPI withdrawal
+      wallet_balance        : Decimal &mdash; current cash balance available for UPI withdrawal
       assigned_pickups      : QuerySet of ASSIGNED and IN_TRANSIT pickups
       completed_pickups     : QuerySet of COMPLETED pickups (newest first)
-      completed_count       : int — count of all completed jobs (for stats display)
-      total_earned          : Decimal — sum of collector_earnings across all completed jobs
+      completed_count       : int &mdash; count of all completed jobs (for stats display)
+      total_earned          : Decimal &mdash; sum of collector_earnings across all completed jobs
       unassigned_pickups    : List of PENDING PickupRequest objects sorted nearest-first
                               (each enriched with .calculated_distance_km and .calculated_earnings)
-      collector_lat/lng     : float — collector's GPS position (from CollectorLocation or Kerala default)
+      collector_lat/lng     : float &mdash; collector's GPS position (from CollectorLocation or Kerala default)
       unassigned_pickups_json: JSON string for Leaflet map pin rendering
       upi_payouts           : Last 10 UPIPayoutRequest records for this collector
-      total_redeemed_upi    : Decimal — total UPI redemptions so far
-      aadhaar_verified      : bool — True if Aadhaar verification passed
-      aadhaar_masked        : str  — "XXXX-XXXX-1234" display string
-      payout_settings       : CollectorPayoutSetting — base/km/commission rates for display
+      total_redeemed_upi    : Decimal &mdash; total UPI redemptions so far
+      aadhaar_verified      : bool &mdash; True if Aadhaar verification passed
+      aadhaar_masked        : str  &mdash; "XXXX-XXXX-1234" display string
+      payout_settings       : CollectorPayoutSetting &mdash; base/km/commission rates for display
     """
     template_name = "collector/dashboard.html"
 
@@ -321,9 +321,9 @@ class CollectorPickupRequestDetailView(LoginRequiredMixin, DetailView):
     pickups they're considering claiming.
 
     Context additions:
-      is_verified     : bool — guard for claim/complete action buttons in template
-      preview_earnings: Decimal — estimated earnings based on current payout settings
-      payout_settings : CollectorPayoutSetting — rates displayed in earnings breakdown
+      is_verified     : bool &mdash; guard for claim/complete action buttons in template
+      preview_earnings: Decimal &mdash; estimated earnings based on current payout settings
+      payout_settings : CollectorPayoutSetting &mdash; rates displayed in earnings breakdown
     """
     model = PickupRequest
     template_name = "collector/pickup_detail.html"
@@ -510,7 +510,7 @@ class CollectorPickupStatusUpdateView(LoginRequiredMixin, View):
 
         # ---- ACTION: cancel / release ----
         elif action == "cancel" and pickup.collector == user:
-            # Collector changes their mind — release back to available pool
+            # Collector changes their mind &mdash; release back to available pool
             pickup.status = PickupRequest.StatusChoices.PENDING
             pickup.collector = None
             pickup.save()
