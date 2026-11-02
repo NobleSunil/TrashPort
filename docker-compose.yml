@@ -21,7 +21,7 @@ services:
     command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py runserver 0.0.0.0:8001"
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: trashport_postgres
     restart: unless-stopped
     profiles: ["local-db"]
