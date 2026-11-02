@@ -24,7 +24,7 @@ CSRF_TRUSTED_ORIGINS = list(
             "https://trashport.shop",
             "https://www.trashport.shop",
             "https://trashport.com",
-            "http://13.232.202.220",
+            # Add EC2 IP via DJANGO_CSRF_TRUSTED_ORIGINS env var in production .env
             "http://localhost:8001",
             "http://127.0.0.1:8001",
         ]

@@ -51,10 +51,10 @@ jobs:
               set_env_var "DJANGO_EMAIL_PORT" "465"
               set_env_var "DJANGO_EMAIL_USE_SSL" "True"
               set_env_var "DJANGO_EMAIL_USE_TLS" "False"
-              set_env_var "DJANGO_EMAIL_HOST_USER" "albertcyriac443@gmail.com"
-              set_env_var "DJANGO_EMAIL_HOST_PASSWORD" "jteustnqureuvptq"
-              set_env_var "DJANGO_DEFAULT_FROM_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
-              set_env_var "DJANGO_SERVER_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
+              set_env_var "DJANGO_EMAIL_HOST_USER" "${{ secrets.EMAIL_HOST_USER }}"
+              set_env_var "DJANGO_EMAIL_HOST_PASSWORD" "${{ secrets.EMAIL_HOST_PASSWORD }}"
+              set_env_var "DJANGO_DEFAULT_FROM_EMAIL" "TrashPort <${{ secrets.EMAIL_HOST_USER }}>"
+              set_env_var "DJANGO_SERVER_EMAIL" "TrashPort <${{ secrets.EMAIL_HOST_USER }}>"
               echo "✅ Successfully updated production .env email credentials and Port 465 SSL configuration."
             fi
 

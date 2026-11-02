@@ -10,7 +10,7 @@ DEBUG = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
-    default="DSTnNUI41z2UIY4ZH107TfYMmeNCE0low80fgCTv7VNf04PPSF0o4WPYmuxKov94",
+    default="django-insecure-replace-me-set-DJANGO_SECRET_KEY-in-your-env-file",
 )
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS",
@@ -23,13 +23,11 @@ CSRF_TRUSTED_ORIGINS = list(
             default=env.list("CSRF_TRUSTED_ORIGINS", default=[]),
         )
         + [
-            "http://localhost:8001",
-            "http://127.0.0.1:8001",
             "http://localhost:8000",
             "http://127.0.0.1:8000",
             "https://trashport.shop",
             "https://www.trashport.shop",
-            "http://13.232.202.220",
+            # Add EC2 IP via DJANGO_CSRF_TRUSTED_ORIGINS env var in production .env
         ]
     )
 )

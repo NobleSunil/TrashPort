@@ -283,7 +283,7 @@ EMAIL_TIMEOUT = 10
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = ['"Albert Cyriac" <albertcyriac04@gmail.com>']
+ADMINS = [env("DJANGO_ADMIN_EMAIL", default="\"Admin\" <admin@trashport.shop>")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings
