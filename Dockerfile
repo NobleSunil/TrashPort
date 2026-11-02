@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # -----------------------------------------------------------------------------
 # Stage 2: Final Minimal Runtime Image
 # -----------------------------------------------------------------------------
-FROM python:3.13-slim-bookworm AS runner
+FROM python:3.15-slim-bookworm AS runner
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
